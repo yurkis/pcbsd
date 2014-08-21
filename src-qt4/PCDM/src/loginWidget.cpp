@@ -295,7 +295,8 @@ void LoginWidget::setDesktops(QStringList text, QStringList icon, QStringList in
   desktopIcons = icon; //save for later
   desktopInfo = info; //save for later
   for(int i=0; i<text.length(); i++){
-    listDE->addItem(text[i]);
+      QIcon anIcon(desktopIcons[i]);
+      listDE->addItem(anIcon, text[i]);
   }
 }
 
