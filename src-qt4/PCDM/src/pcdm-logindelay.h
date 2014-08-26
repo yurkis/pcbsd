@@ -20,6 +20,9 @@ public:
 
 	bool continueLogin;
 
+protected:
+    virtual void keyPressEvent(QKeyEvent *event);
+
 private:
 	Ui::loginDelay *ui; //designer file
 	QTimer *delay;

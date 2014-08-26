@@ -1,6 +1,8 @@
 #include "pcdm-logindelay.h"
 #include "ui_pcdm-logindelay.h"
 
+#include <QKeyEvent>
+
 loginDelay::loginDelay(int seconds, QString username) : QDialog(), ui(new Ui::loginDelay){
   ui->setupUi(this); //load the designer files
   continueLogin = false; //in case it is closed early somehow
@@ -23,7 +25,15 @@ loginDelay::~loginDelay(){
 
 void loginDelay::start(){
   this->show();
-  delay->start();
+    delay->start();
+}
+
+void loginDelay::keyPressEvent(QKeyEvent *event)
+{
+    if (event->key() == Qt::Key_Escape)
+    {
+        cancelLogin();
+    }
 }
 
 void loginDelay::updateTimer(){
