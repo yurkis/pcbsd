@@ -9,12 +9,14 @@ TEMPLATE = app
 
 SOURCES += main.cpp \
     pwrserver.cpp \
-    acpiinfo.cpp
+    acpiinfo.cpp \
+    sysctlutils.cpp
 
 HEADERS += \
     pwrserver.h \
     pwrd.h \
-    acpiinfo.h
+    acpiinfo.h \
+    sysctlutils.h
 
 QMAKE_LIBDIR = /usr/local/lib/qt5 /usr/local/lib
 LIBS += -L/usr/local/lib
