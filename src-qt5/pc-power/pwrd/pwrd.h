@@ -5,9 +5,19 @@
 #include <QVector>
 #include <QStringList>
 
+typedef enum
+{
+    BATT_CHARGING = 0,
+    BATT_DISCHARGING,
+    BATT_CRITICAL,
+    BATT_STATE_UNKNOWN
+}PWRBatteryState;
+
 typedef struct _PWRCurrentInfo
 {
     bool         onACPower;         //< trueif PC on AC power
+    unsigned int batteryRate;       //< Battery rate in percents (0..100)
+    PWRBatteryState batteryState;   //< Current battery state
     unsigned int powerConsumption;  //< Current power consumption (in mW)
     unsigned int batteryTime;       //< Battery lifetime (in minutes)
     unsigned int backlightLevel;    //< Backlight brightness in percents (0..100)

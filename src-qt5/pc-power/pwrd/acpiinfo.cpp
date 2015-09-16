@@ -62,6 +62,25 @@ bool getBatteryInfo(int batt, PWRBatteryHardware &hwout, PWRSuppllyInfo& info)
         }
     }
 
+    info.batteryState = BATT_STATE_UNKNOWN;
+    switch (battio.bst.state)
+    {
+        case ACPI_BATT_STAT_CHARGING:
+            info.batteryState = BATT_CHARGING;
+            break;
+        case ACPI_BATT_STAT_DISCHARG:
+            info.batteryState = BATT_DISCHARGING;
+            break;
+        case ACPI_BATT_STAT_CRITICAL:
+            info.batteryState = BATT_CRITICAL;
+            break;
+    };
+
+    info.batteryRate = battio.bst.rate;
+
+    //info.batteryRate = (battio.battinfo.cap>=0)?battio.battinfo.cap:0;
+
+
     // Close ACPI device
     close(acpifd);
 

@@ -9,6 +9,7 @@
 #include "pwrserver.h"
 
 #include "acpiinfo.h"
+#include "sysctlutils.h"
 
 const char* const LOCK_FILE = "/var/run/pc-pwr";
 
@@ -85,6 +86,8 @@ int main(int argc, char *argv[])
     qDebug()<<info.powerConsumption;
     qDebug()<<hw.model;
     qDebug()<<hw.OEMInfo;
+
+    qDebug()<<sysctl("hw.acpi.suspend_state");
 
 
     s = new PwrServer(&a);
