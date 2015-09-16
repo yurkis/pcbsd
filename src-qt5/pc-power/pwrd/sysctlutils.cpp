@@ -3,7 +3,7 @@
 #include <sys/types.h>
 #include <sys/sysctl.h>
 
-QString Utils::sysctl(QString sysctl)
+QString sysctl(QString sysctl)
 {
    char result[1000];
    size_t len = sizeof(result);
