@@ -57,7 +57,7 @@ typedef struct _PWRBacklightHardware
     {
         hasBacklight = false;
     }
-}WRBacklightInfo;
+}PWRBacklightHardware;
 
 typedef struct _PWRACPIInfo
 {
@@ -76,6 +76,20 @@ typedef struct _PWRACPIInfo
     }
 }PWRACPIInfo;
 
+
+typedef struct _PWRProfile
+{
+    QString name;
+    QString description;
+    QString btnPowerSate;
+    QString btnSleepSate;
+    QString lidSwitchSate;
+    unsigned int lcdBrightness;
+    _PWRProfile()
+    {
+        lcdBrightness = 75;
+    }
+}PWRProfile;
 
 #endif // PWRD_H
 

@@ -8,9 +8,6 @@
 
 #include <signal.h>
 
-//const char* const PIPE_NAME = "/var/run/pc-pwrd.pipe";
-const char* const PIPE_NAME = "/home/yurkis/pc-pwrd.pipe";
-
 PwrServer::PwrServer(QObject *parent): QObject(parent)
 {
     curSock = NULL;
@@ -23,25 +20,27 @@ PwrServer::~PwrServer()
     stop();
 }
 
-bool PwrServer::start()
+bool PwrServer::start(QStringList args)
 {
-    if( !QLocalServer::removeServer(PIPE_NAME) )
+    settings.load();
+
+    if( !QLocalServer::removeServer(settings.pipeName) )
     {
         qDebug() << "A previous instance of the pc-pwrd server is still running! Exiting...";
         exit(1);
     }
-    if( server->listen(PIPE_NAME) )
+    if( server->listen(settings.pipeName) )
     {
         QFile::setPermissions("/var/run/syscache.pipe",
                               QFile::ReadUser | QFile::WriteUser
                             | QFile::ReadGroup | QFile::WriteGroup
                             | QFile::ReadOther | QFile::WriteOther);
 
-        qDebug() << "pc-pwrd now listening for connections at "<<PIPE_NAME;
+        qDebug() << "pc-pwrd now listening for connections at "<<settings.pipeName;
     }
     else
     {
-        qDebug() << "Error: pc-pwrd could not create pipe at "<<PIPE_NAME;
+        qDebug() << "Error: pc-pwrd could not create pipe at "<<settings.pipeName;
         return false;
     }
     return true;
@@ -53,7 +52,7 @@ void PwrServer::stop()
     {
         server->close();
     }
-    QLocalServer::removeServer(PIPE_NAME); //clean up
+    QLocalServer::removeServer(settings.pipeName); //clean up
 
     QCoreApplication::exit(0);
 }

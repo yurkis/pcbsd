@@ -1,4 +1,4 @@
-#include "acpiinfo.h"
+#include "battery.h"
 
 #include <dev/acpica/acpiio.h>
 #include <sys/ioctl.h>
@@ -12,7 +12,7 @@ static const char* const ACPIDEV = "/dev/acpi";
 static int      acpifd;
 
 
-bool getBatteryInfo(int batt, PWRBatteryHardware &hwout, PWRSuppllyInfo& info)
+bool getBatteryHWInfo(int batt, PWRBatteryHardware &hwout, PWRSuppllyInfo& info)
 {
     // Open ACPI device
     acpifd = open(ACPIDEV, O_RDWR);

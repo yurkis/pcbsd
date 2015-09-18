@@ -8,7 +8,7 @@
 #include <sys/stat.h>
 #include "pwrserver.h"
 
-#include "acpiinfo.h"
+#include "battery.h"
 #include "sysctlutils.h"
 
 const char* const LOCK_FILE = "/var/run/pc-pwr";
@@ -59,40 +59,47 @@ static void init_daemon()
     signal(SIGTERM,globalSignalHandler); /* catch kill signal */
 }
 
-int main(int argc, char *argv[])
+void debug()
 {
-    bool isForeground = true;
-
-    QCoreApplication a(argc, argv);
-
-
-    for(int i=1; i<argc; i++)
-    {
-        if (QString(argv[i]) == QString("-d"))
-        {
-            isForeground = false;
-        }
-    }
-
-    if (!isForeground)
-        init_daemon();
-
-
     PWRBatteryHardware hw;
     PWRSuppllyInfo info;
 
-    getBatteryInfo(0, hw, info);
+    getBatteryHWInfo(0, hw, info);
     qDebug()<<hw.hasBattery;
     qDebug()<<info.powerConsumption;
     qDebug()<<hw.model;
     qDebug()<<hw.OEMInfo;
 
     qDebug()<<sysctl("hw.acpi.suspend_state");
+    setSysctl("security.jail.allow_raw_sockets", 0);
+    qDebug()<<sysctlAsInt("security.jail.allow_raw_sockets");
+}
 
+int main(int argc, char *argv[])
+{
+    bool isForeground = true;
+    QStringList serverArgs;
+    QCoreApplication a(argc, argv);
+
+
+    for(int i=1; i<argc; i++)
+    {
+
+        if (QString(argv[i]) == QString("-d"))
+        {
+            isForeground = false;
+            continue;
+        }
+
+        serverArgs<<QString(argv[i]);
+    }
+
+    if (!isForeground)
+        init_daemon();
 
     s = new PwrServer(&a);
 
-    if (s->start())
+    if (s->start(serverArgs))
     {
         return a.exec();
     }

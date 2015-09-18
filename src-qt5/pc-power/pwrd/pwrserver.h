@@ -6,6 +6,10 @@
 #include <QLocalServer>
 #include <QMap>
 #include <QTextStream>
+#include <QVector>
+
+#include "pwrd.h"
+#include "settingsreader.h"
 
 class PwrServer : public QObject{
     Q_OBJECT
@@ -13,9 +17,9 @@ public:
     PwrServer(QObject *parent=0);
     ~PwrServer();
 
-
-
 private:
+
+    PWRServerSettings settings;
 
     typedef struct _SConnection
     {
@@ -27,10 +31,17 @@ private:
     QLocalSocket *curSock;
     QMap<QLocalSocket*, SConnection> connections;
 
+    PWRBatteryHardware   battHW;
+    PWRBacklightHardware backlightHW;
+    PWRACPIInfo          ACPIInfo;
+
+    QVector<PWRProfile>  profiles;
+    PWRProfile           currProfile;
+
 signals:
 
 public slots:
-    bool start();
+    bool start(QStringList args = QStringList());
     void stop();
 
     void signalHandler(int sig);
@@ -40,6 +51,7 @@ private slots:
     void onNewConnection();
     void onRequest();
     void onDisconnect();
+
 };
 
 #endif // PWRSERVER_H
