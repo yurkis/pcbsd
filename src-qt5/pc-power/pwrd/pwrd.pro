@@ -11,14 +11,16 @@ SOURCES += main.cpp \
     pwrserver.cpp \
     sysctlutils.cpp \
     battery.cpp \
-    settingsreader.cpp
+    settingsreader.cpp \
+    backlight.cpp
 
 HEADERS += \
     pwrserver.h \
     pwrd.h \
     sysctlutils.h \
     battery.h \
-    settingsreader.h
+    settingsreader.h \
+    backlight.h
 
 QMAKE_LIBDIR = /usr/local/lib/qt5 /usr/local/lib
 LIBS += -L/usr/local/lib

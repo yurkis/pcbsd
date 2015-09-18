@@ -35,6 +35,8 @@ private:
     PWRBacklightHardware backlightHW;
     PWRACPIInfo          ACPIInfo;
 
+    PWRSuppllyInfo       current;
+
     QVector<PWRProfile>  profiles;
     PWRProfile           currProfile;
 

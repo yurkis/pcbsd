@@ -57,3 +57,17 @@ bool setSysctl(QString sysctlName, long long value)
     }
     return true;
 }
+
+bool sysctlPresent(QString sysctlName)
+{
+    int mib[64];
+    size_t len = sysctlName.split(".").size();
+    if (len>=64)
+        return false;
+
+    if (sysctlnametomib(sysctlName.toLocal8Bit(), mib, &len) < 0)
+    {
+        return false;
+    }
+    return true;
+}

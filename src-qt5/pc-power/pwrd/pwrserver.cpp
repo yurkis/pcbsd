@@ -1,4 +1,5 @@
 #include "pwrserver.h"
+#include "battery.h"
 
 #include <QCoreApplication>
 #include <QFile>
@@ -23,6 +24,7 @@ PwrServer::~PwrServer()
 bool PwrServer::start(QStringList args)
 {
     settings.load();
+    getBatteryHWInfo(0, battHW, current);
 
     if( !QLocalServer::removeServer(settings.pipeName) )
     {
