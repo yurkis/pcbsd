@@ -12,7 +12,8 @@ SOURCES += main.cpp \
     sysctlutils.cpp \
     battery.cpp \
     settingsreader.cpp \
-    backlight.cpp
+    backlight.cpp \
+    profilereader.cpp
 
 HEADERS += \
     pwrserver.h \
@@ -20,7 +21,8 @@ HEADERS += \
     sysctlutils.h \
     battery.h \
     settingsreader.h \
-    backlight.h
+    backlight.h \
+    profilereader.h
 
 QMAKE_LIBDIR = /usr/local/lib/qt5 /usr/local/lib
 LIBS += -L/usr/local/lib

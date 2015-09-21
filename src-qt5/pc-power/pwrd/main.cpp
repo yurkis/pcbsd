@@ -10,6 +10,7 @@
 
 #include "battery.h"
 #include "sysctlutils.h"
+#include "profilereader.h"
 
 const char* const LOCK_FILE = "/var/run/pc-pwr";
 
@@ -61,7 +62,7 @@ static void init_daemon()
 
 void debug()
 {
-    PWRBatteryHardware hw;
+    /*PWRBatteryHardware hw;
     PWRSuppllyInfo info;
 
     getBatteryHWInfo(0, hw, info);
@@ -73,6 +74,13 @@ void debug()
     qDebug()<<sysctl("hw.acpi.suspend_state");
     setSysctl("security.jail.allow_raw_sockets", 0);
     qDebug()<<sysctlAsInt("security.jail.allow_raw_sockets");
+    */
+    PWRProfileReader rdr;
+    rdr.read("/home/yurkis//projects/my-pcbsd/src-qt5/pc-power/pwrd/conf/profiles/pc-fullpower.profile");
+    qDebug()<<rdr.name;
+    qDebug()<<rdr.lcdBrightness;
+
+
 }
 
 int main(int argc, char *argv[])
@@ -98,6 +106,8 @@ int main(int argc, char *argv[])
         init_daemon();
 
     s = new PwrServer(&a);
+
+    debug();
 
     if (s->start(serverArgs))
     {

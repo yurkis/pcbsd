@@ -6,8 +6,11 @@
 #include <QDebug>
 #include <QTimer>
 #include <QTextStream>
+#include <QDir>
 
 #include <signal.h>
+
+#include "backlight.h"
 
 PwrServer::PwrServer(QObject *parent): QObject(parent)
 {
@@ -21,10 +24,60 @@ PwrServer::~PwrServer()
     stop();
 }
 
+void PwrServer::readSettings(QString confFile)
+{
+    settings.load(confFile);
+
+    profiles.clear();
+
+    //read all profiles
+    QString path = settings.profilesPath;
+    qDebug()<<settings.profilesPath;
+    QDir dir(path);
+    if (!dir.exists(path))
+    {
+        profiles.push_back(PWRProfileReader());
+        currProfile = PWRProfileReader();
+        return;
+    }
+    QStringList dir_list =dir.entryList(QStringList("*.profile"));
+
+    for (int i=0; i<dir_list.size(); i++)
+    {
+        PWRProfileReader item;
+        if (item.read(dir.absoluteFilePath(dir_list[i])))
+        {
+            profiles.push_back(item);
+        }
+        qDebug()<<item.name;
+    }
+    if (!profiles.size())
+    {
+        profiles.push_back(PWRProfileReader());
+        currProfile = PWRProfileReader();
+    }
+    qDebug()<<profiles.size();
+}
+
 bool PwrServer::start(QStringList args)
 {
-    settings.load();
+    Q_UNUSED(args)
+
+    QString confFile = DEF_CONFIG_FILE;
+    for(int i=0; i<args.size(); i++)
+    {
+        if ((args[i] == "-c")&&(i<args.size()-1))
+        {
+            confFile = args[++i];
+            continue;
+        }
+    }
+    qDebug()<<confFile;
+
+    readSettings(confFile);
+
     getBatteryHWInfo(0, battHW, current);
+    getBacklightHWInfo(backlightHW);
 
     if( !QLocalServer::removeServer(settings.pipeName) )
     {

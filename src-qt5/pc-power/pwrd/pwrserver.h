@@ -10,6 +10,7 @@
 
 #include "pwrd.h"
 #include "settingsreader.h"
+#include "profilereader.h"
 
 class PwrServer : public QObject{
     Q_OBJECT
@@ -37,8 +38,10 @@ private:
 
     PWRSuppllyInfo       current;
 
-    QVector<PWRProfile>  profiles;
-    PWRProfile           currProfile;
+    QVector<PWRProfileReader>  profiles;
+    PWRProfileReader           currProfile;
+
+    void readSettings(QString confFile = QString());
 
 signals:
 
