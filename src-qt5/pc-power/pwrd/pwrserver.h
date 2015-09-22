@@ -28,20 +28,26 @@ private:
         QTextStream*  stream;
     }SConnection;
 
+
     QLocalServer *server;
     QLocalSocket *curSock;
     QMap<QLocalSocket*, SConnection> connections;
 
-    PWRBatteryHardware   battHW;
-    PWRBacklightHardware backlightHW;
-    PWRACPIInfo          ACPIInfo;
+    PWRHWInfo                     hwInfo;
+    QVector<PWRBatteryHardware>   battHW;
+    QVector<PWRBacklightHardware> backlightHW;
+    //PWRButtons          buttons;
+
+    QVector<PWRSuppllyInfo>       currState;
 
     PWRSuppllyInfo       current;
 
     QVector<PWRProfileReader>  profiles;
     PWRProfileReader           currProfile;
 
+    void checkHardware();
     void readSettings(QString confFile = QString());
+    void checkState();
 
 signals:
 
@@ -56,6 +62,7 @@ private slots:
     void onNewConnection();
     void onRequest();
     void onDisconnect();
+    void onStateChanged();
 
 };
 

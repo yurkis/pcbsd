@@ -3,7 +3,7 @@
 
 #include "pwrd.h"
 
-void getBacklightHWInfo(PWRBacklightHardware& out);
+bool getBacklightHWInfo(int num, PWRBacklightHardware& out);
 
 #endif // BACKLIGHT_H
 

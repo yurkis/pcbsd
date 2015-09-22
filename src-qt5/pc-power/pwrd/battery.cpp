@@ -30,7 +30,6 @@ bool getBatteryHWInfo(int batt, PWRBatteryHardware &hwout, PWRSuppllyInfo& info)
         return false;
 
     // Get battery H/W info
-    hwout.hasBattery = true;
     hwout.OEMInfo = QString(battio.bif.oeminfo);
     hwout.model = QString (battio.bif.model);
     hwout.serial = QString (battio.bif.serial);
@@ -86,3 +85,4 @@ bool getBatteryHWInfo(int batt, PWRBatteryHardware &hwout, PWRSuppllyInfo& info)
 
     return true;
 }
+

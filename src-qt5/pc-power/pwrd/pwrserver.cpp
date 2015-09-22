@@ -1,5 +1,31 @@
+/**************************************************************************
+*   Copyright (C) 2015 by Yuri Momotyuk                                   *
+*   yurkis@pcbsd.org                                                      *
+*                                                                         *
+*   Permission is hereby granted, free of charge, to any person obtaining *
+*   a copy of this software and associated documentation files (the       *
+*   "Software"), to deal in the Software without restriction, including   *
+*   without limitation the rights to use, copy, modify, merge, publish,   *
+*   distribute, sublicense, and/or sell copies of the Software, and to    *
+*   permit persons to whom the Software is furnished to do so, subject to *
+*   the following conditions:                                             *
+*                                                                         *
+*   The above copyright notice and this permission notice shall be        *
+*   included in all copies or substantial portions of the Software.       *
+*                                                                         *
+*   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,       *
+*   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF    *
+*   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.*
+*   IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR     *
+*   OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, *
+*   ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR *
+*   OTHER DEALINGS IN THE SOFTWARE.                                       *
+***************************************************************************/
+
 #include "pwrserver.h"
 #include "battery.h"
+#include "backlight.h"
+#include "sysctlutils.h"
 
 #include <QCoreApplication>
 #include <QFile>
@@ -10,22 +36,65 @@
 
 #include <signal.h>
 
-#include "backlight.h"
+#define _str_constant static const char* const
 
+_str_constant SLEEP_BUTTON_SYSCTL = "hw.acpi.sleep_button_state";
+_str_constant LID_SYSCTL = "hw.acpi.lid_switch_state";
+_str_constant POSSIBLE_STATES_SYSCTL = "hw.acpi.supported_sleep_state";
+
+///////////////////////////////////////////////////////////////////////////////
 PwrServer::PwrServer(QObject *parent): QObject(parent)
 {
     curSock = NULL;
     server = new QLocalServer(this);
-    connect(server, SIGNAL(newConnection()), this, SLOT(onNewConnection()));
+    connect(server, SIGNAL(newConnection()), this, SLOT(onNewConnection()));    
 }
 
+///////////////////////////////////////////////////////////////////////////////
 PwrServer::~PwrServer()
 {
     stop();
 }
 
+///////////////////////////////////////////////////////////////////////////////
+void PwrServer::checkHardware()
+{
+    int i=0;
+
+    PWRBatteryHardware    batthw;
+    PWRBacklightHardware  backlighthw;
+    PWRSuppllyInfo        currbatt;
+
+    battHW.clear();
+    currState.clear();
+    backlightHW.clear();
+
+    // Ugly code for getting number of abtteries, I know
+    while(getBatteryHWInfo(i++, batthw, currbatt))
+    {
+        battHW.push_back(batthw);
+        currState.push_back(currbatt);
+    }
+    hwInfo.numBatteries = battHW.size();
+
+    // Ugly code for getting number of backlights, yes I know
+    i=0;
+    while(getBacklightHWInfo(i++, backlighthw))
+    {
+        backlightHW.push_back(backlighthw);
+    }
+    hwInfo.numBacklights = backlightHW.size();
+
+    hwInfo.hasSleepButton = sysctlPresent(SLEEP_BUTTON_SYSCTL);
+    hwInfo.hasLid = sysctlPresent(LID_SYSCTL);
+    hwInfo.possibleACPIStates = sysctl(POSSIBLE_STATES_SYSCTL).split(" ");
+}
+
+///////////////////////////////////////////////////////////////////////////////
 void PwrServer::readSettings(QString confFile)
 {
+    checkHardware();
+
     settings.load(confFile);
 
     profiles.clear();
@@ -36,6 +105,7 @@ void PwrServer::readSettings(QString confFile)
     QDir dir(path);
     if (!dir.exists(path))
     {
+        //set single default profile
         profiles.push_back(PWRProfileReader());
         currProfile = PWRProfileReader();
         return;
@@ -49,16 +119,21 @@ void PwrServer::readSettings(QString confFile)
         {
             profiles.push_back(item);
         }
-        qDebug()<<item.name;
     }
     if (!profiles.size())
     {
         profiles.push_back(PWRProfileReader());
         currProfile = PWRProfileReader();
     }
-    qDebug()<<profiles.size();
 }
 
+///////////////////////////////////////////////////////////////////////////////
+void PwrServer::checkState()
+{
+
+}
+
+///////////////////////////////////////////////////////////////////////////////
 bool PwrServer::start(QStringList args)
 {
     Q_UNUSED(args)
@@ -74,10 +149,7 @@ bool PwrServer::start(QStringList args)
     }
     qDebug()<<confFile;
 
-    readSettings(confFile);
-
-    getBatteryHWInfo(0, battHW, current);
-    getBacklightHWInfo(backlightHW);
+    readSettings(confFile);    
 
     if( !QLocalServer::removeServer(settings.pipeName) )
     {
@@ -101,6 +173,7 @@ bool PwrServer::start(QStringList args)
     return true;
 }
 
+///////////////////////////////////////////////////////////////////////////////
 void PwrServer::stop()
 {
     if(server->isListening())
@@ -112,6 +185,7 @@ void PwrServer::stop()
     QCoreApplication::exit(0);
 }
 
+///////////////////////////////////////////////////////////////////////////////
 void PwrServer::signalHandler(int sig)
 {
     switch(sig) {
@@ -124,6 +198,7 @@ void PwrServer::signalHandler(int sig)
     }//switch
 }
 
+///////////////////////////////////////////////////////////////////////////////
 void PwrServer::onNewConnection()
 {
     qDebug()<<"---------- New connection";
@@ -147,6 +222,7 @@ void PwrServer::onNewConnection()
     connections[conn.sock]= conn;
 }
 
+///////////////////////////////////////////////////////////////////////////////
 void PwrServer::onRequest()
 {
     qDebug()<<"---------- onRequest";
@@ -170,6 +246,7 @@ void PwrServer::onRequest()
     }
 }
 
+///////////////////////////////////////////////////////////////////////////////
 void PwrServer::onDisconnect()
 {
     qDebug()<<"---------- onDisconnect";
@@ -190,6 +267,12 @@ void PwrServer::onDisconnect()
     delete connections[sender].stream;
 
     connections.remove(sender);
+
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void PwrServer::onStateChanged()
+{
 
 }
 

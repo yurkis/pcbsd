@@ -10,20 +10,19 @@ typedef enum
     BATT_CHARGING = 0,
     BATT_DISCHARGING,
     BATT_CRITICAL,
-    BATT_STATE_UNKNOWN
+    BATT_STATE_UNKNOWN,
+    BATT_STATE_MAX
 }PWRBatteryState;
 
-typedef struct _PWRCurrentInfo
-{
-    bool         onACPower;         //< trueif PC on AC power
+typedef struct _PWRSuppllyInfo
+{    
     unsigned int batteryRate;       //< Battery rate in percents (0..100)
     PWRBatteryState batteryState;   //< Current battery state
     unsigned int powerConsumption;  //< Current power consumption (in mW)
     unsigned int batteryTime;       //< Battery lifetime (in minutes)
     unsigned int backlightLevel;    //< Backlight brightness in percents (0..100)
-    _PWRCurrentInfo()
+    _PWRSuppllyInfo()
     {
-        onACPower = true;
         powerConsumption = 0;
         batteryTime = 0;
         backlightLevel = 0;
@@ -32,7 +31,6 @@ typedef struct _PWRCurrentInfo
 
 typedef struct _PWRBatteryHardware
 {
-    bool         hasBattery;       //< True if PC has battery
     QString      OEMInfo;          //< OEM name
     QString      model;            //< Battery model
     QString      serial;           //< Battery serial number
@@ -41,8 +39,7 @@ typedef struct _PWRBatteryHardware
     unsigned int lastFullCapacity; //< Last full charrrged capacity (in mWh)
     unsigned int designVoltage;    //< Design voltage (in mV)
     _PWRBatteryHardware()
-    {
-        hasBattery = false;
+    {        
         designCapacity = 0;
         lastFullCapacity = 0;
         designVoltage = 0;
@@ -51,30 +48,29 @@ typedef struct _PWRBatteryHardware
 
 typedef struct _PWRBacklightHardware
 {
-    bool hasBacklight;
     QVector<unsigned int> backlightLevels;
     _PWRBacklightHardware()
     {
-        hasBacklight = false;
+
     }
 }PWRBacklightHardware;
 
-typedef struct _PWRACPIInfo
+typedef struct _PWRHWInfo
 {
+    int numBatteries;
+    int numBacklights;
     bool hasSleepButton;             //< True if PC has 'sleep' button
     bool hasLid;                     //< True for notebooks
     QStringList possibleACPIStates;  //< Possible sleep states for PC ("S3","S4","S5" for example)
-    QString powerBtnSleepState;      //< Sleep state for power button (sleep state eg "S5" or "NONE")
-    QString sleepBtnSleepState;      //< Sleep state for power button (sleep state or "NONE")
-    QString lidSleepState;           //< Sleep state for notebook lid (sleep state or "NONE")
-    QString suspendSleepState;       //< Sleep state for 'suspend' (sleep state or "NONE")
-    QString standbySleepState;       //< Sleep state for 'standby' (sleep state or "NONE")
 
-    _PWRACPIInfo(){
+    _PWRHWInfo()
+    {
+        numBatteries = 0;
+        numBacklights = 0;
         hasSleepButton = false;
         hasLid = false;
     }
-}PWRACPIInfo;
+}PWRHWInfo;
 
 
 typedef struct _PWRProfile
