@@ -8,9 +8,10 @@
 #include <QTextStream>
 #include <QVector>
 
-#include "pwrd.h"
+#include "pwrdtypes.h"
 #include "settingsreader.h"
 #include "profilereader.h"
+#include "serialize.h"
 
 class PwrServer : public QObject{
     Q_OBJECT
@@ -33,9 +34,9 @@ private:
     QLocalSocket *curSock;
     QMap<QLocalSocket*, SConnection> connections;
 
-    PWRHWInfo                     hwInfo;
-    QVector<PWRBatteryHardware>   battHW;
-    QVector<PWRBacklightHardware> backlightHW;
+    JSONHWInfo                     hwInfo;
+    QVector<JSONBatteryHardware>   battHW;
+    QVector<JSONBacklightHardware> backlightHW;
     //PWRButtons          buttons;
 
     QVector<PWRSuppllyInfo>       currState;

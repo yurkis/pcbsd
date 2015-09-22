@@ -1,7 +1,7 @@
 #ifndef BACKLIGHT_H
 #define BACKLIGHT_H
 
-#include "pwrd.h"
+#include "pwrdtypes.h"
 
 bool getBacklightHWInfo(int num, PWRBacklightHardware& out);
 

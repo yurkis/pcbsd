@@ -1,7 +1,7 @@
 #ifndef PROFILEREADER_H
 #define PROFILEREADER_H
 
-#include "pwrd.h"
+#include "pwrdtypes.h"
 
 typedef struct _PWRProfileReader:public PWRProfile
 {

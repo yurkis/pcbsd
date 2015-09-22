@@ -13,16 +13,21 @@ SOURCES += main.cpp \
     battery.cpp \
     settingsreader.cpp \
     backlight.cpp \
-    profilereader.cpp
+    profilereader.cpp \
+    ../common/src/serialize.cpp
 
 HEADERS += \
     pwrserver.h \
-    pwrd.h \
     sysctlutils.h \
     battery.h \
     settingsreader.h \
     backlight.h \
-    profilereader.h
+    profilereader.h \
+    ../common/include/pwrdtypes.h \
+    ../common/include/protocol.h \
+    ../common/include/serialize.h
+
+INCLUDEPATH += ../common/include /usr/local/include/pwrd
 
 QMAKE_LIBDIR = /usr/local/lib/qt5 /usr/local/lib
 LIBS += -L/usr/local/lib

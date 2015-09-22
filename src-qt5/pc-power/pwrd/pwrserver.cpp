@@ -26,6 +26,7 @@
 #include "battery.h"
 #include "backlight.h"
 #include "sysctlutils.h"
+#include "serialize.h"
 
 #include <QCoreApplication>
 #include <QFile>
@@ -61,8 +62,8 @@ void PwrServer::checkHardware()
 {
     int i=0;
 
-    PWRBatteryHardware    batthw;
-    PWRBacklightHardware  backlighthw;
+    JSONBatteryHardware    batthw;
+    JSONBacklightHardware  backlighthw;
     PWRSuppllyInfo        currbatt;
 
     battHW.clear();
@@ -88,6 +89,12 @@ void PwrServer::checkHardware()
     hwInfo.hasSleepButton = sysctlPresent(SLEEP_BUTTON_SYSCTL);
     hwInfo.hasLid = sysctlPresent(LID_SYSCTL);
     hwInfo.possibleACPIStates = sysctl(POSSIBLE_STATES_SYSCTL).split(" ");
+
+    qDebug()<<hwInfo.toJSONString();
+    QJsonObject obj;
+    QVector2JSON("batteries", battHW, obj);
+    qDebug()<<QJsonObject2String(obj);
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////
