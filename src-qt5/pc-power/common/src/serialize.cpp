@@ -17,6 +17,13 @@ QString JSONSerializer::toJSONString()
     return QJsonObject2String(obj);
 }
 
+QJsonObject JSONSerializer::toJSON()
+{
+    QJsonObject obj;
+    toJSON(obj);
+    return obj;
+}
+
 void JSONHWInfo::toJSON(QJsonObject &json)
 {
     json["numBatteries"] = numBatteries;

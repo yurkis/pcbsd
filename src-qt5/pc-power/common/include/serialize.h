@@ -12,6 +12,7 @@ typedef struct JSONSerializer
     virtual bool fromJSON(QJsonObject &json)=0;
 
     QString toJSONString();
+    QJsonObject toJSON();
 
 }JSONSerializer;
 
@@ -26,6 +27,21 @@ void QVector2JSON(QString array_name, QVector<T> vec, QJsonObject &obj)
         arr.append(obj);
     }
     obj[array_name] = arr;
+}
+
+template <typename T>
+QJsonObject QVector2JSON(QString array_name, QVector<T> vec)
+{
+    QJsonObject obj;
+    QJsonArray arr;
+    for(int i=0; i< vec.size(); i++)
+    {
+        QJsonObject obj;
+        vec[i].toJSON(obj);
+        arr.append(obj);
+    }
+    obj[array_name] = arr;
+    return obj;
 }
 
 QString QJsonObject2String(QJsonObject obj);

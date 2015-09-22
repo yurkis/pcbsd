@@ -95,6 +95,8 @@ void PwrServer::checkHardware()
     QVector2JSON("batteries", battHW, obj);
     qDebug()<<QJsonObject2String(obj);
 
+    qDebug()<<QJsonObject2String(QVector2JSON("backlights", backlightHW));
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////
