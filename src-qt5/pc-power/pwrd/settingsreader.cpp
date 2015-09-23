@@ -28,10 +28,11 @@
 #include <QDebug>
 #include <QFile>
 
+#include "pwrdtypes.h"
+
 ///////////////////////////////////////////////////////////////////////////////
 #define _str_constant static const char* const
 
-_str_constant DEF_PIPE_NAME = "/var/run/pwrd.pipe";
 _str_constant DEF_PROFILES_PATH = "/usr/local/share/pcbsd/pwrd/profiles/";
 static const int DEF_POLLING_BATTERY_TIME = 1000;
 _str_constant DEF_DEVD_PIPE = "/var/run/devd.pipe";
@@ -44,7 +45,7 @@ _str_constant CONF_FIELD_BATTER_POLLING = "battery_polling";
 ///////////////////////////////////////////////////////////////////////////////
 _PWRServerSettings::_PWRServerSettings()
 {
-    pipeName = DEF_PIPE_NAME;
+    pipeName = DEF_PWRD_PIPE_NAME;
     devdPipeName = DEF_DEVD_PIPE;
     profilesPath = DEF_PROFILES_PATH;
     battPollingTime = DEF_POLLING_BATTERY_TIME;
@@ -61,7 +62,7 @@ bool _PWRServerSettings::load(QString file)
             return false;
     Reader.setIniCodec("UTF-8");
 
-    pipeName = Reader.value(CONF_FIELD_PIPE_NAME, DEF_PIPE_NAME).toString();
+    pipeName = Reader.value(CONF_FIELD_PIPE_NAME, DEF_PWRD_PIPE_NAME).toString();
     devdPipeName = Reader.value(CONF_FIELD_DEVD_PIPE, DEF_DEVD_PIPE).toString();
     profilesPath = Reader.value(CONF_FIELD_PROFILES_PATH, DEF_PROFILES_PATH).toString();
     battPollingTime =Reader.value(CONF_FIELD_BATTER_POLLING, DEF_POLLING_BATTERY_TIME).toInt();

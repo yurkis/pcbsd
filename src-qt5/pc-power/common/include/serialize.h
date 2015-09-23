@@ -8,13 +8,19 @@
 
 typedef struct JSONSerializer
 {
+public:
     virtual void toJSON(QJsonObject &json)=0;
-    virtual bool fromJSON(QJsonObject &json)=0;
+    virtual bool fromJSON(const QJsonObject &json)=0;
+    virtual QString myname()=0;
 
     QString toJSONString();
-    QJsonObject toJSON();
+    virtual QJsonObject toJSON();
 
 }JSONSerializer;
+
+#define JSON_STRUCT(name)\
+    virtual QString myname(){return name;};\
+    using JSONSerializer::toJSON;   //that behavour surpise me :(
 
 template <typename T>
 void QVector2JSON(QString array_name, QVector<T> vec, QJsonObject &obj)
@@ -46,22 +52,25 @@ QJsonObject QVector2JSON(QString array_name, QVector<T> vec)
 
 QString QJsonObject2String(QJsonObject obj);
 
-typedef struct JSONHWInfo: public PWRHWInfo, JSONSerializer
+typedef struct JSONHWInfo: public PWRHWInfo, public JSONSerializer
 {
+    JSON_STRUCT("HWInfo");
     virtual void toJSON(QJsonObject &json);
-    virtual bool fromJSON(QJsonObject &json);
+    virtual bool fromJSON(const QJsonObject &json);
 }JSONHWInfo;
 
 typedef struct JSONBatteryHardware: public PWRBatteryHardware, JSONSerializer
 {
+    JSON_STRUCT("BatteryHardware");
     virtual void toJSON(QJsonObject &json);
-    virtual bool fromJSON(QJsonObject &json);
+    virtual bool fromJSON(const QJsonObject &json);
 }JSONBatteryHardware;
 
 typedef struct JSONBacklightHardware: public PWRBacklightHardware, JSONSerializer
 {
+    JSON_STRUCT("BacklightHardware");
     virtual void toJSON(QJsonObject &json);
-    virtual bool fromJSON(QJsonObject &json);
+    virtual bool fromJSON(const QJsonObject &json);
 }JSONBacklightHardware;
 
 

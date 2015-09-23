@@ -14,7 +14,8 @@ SOURCES += main.cpp \
     settingsreader.cpp \
     backlight.cpp \
     profilereader.cpp \
-    ../common/src/serialize.cpp
+    ../common/src/serialize.cpp \
+    ../common/src/protocol.cpp
 
 HEADERS += \
     pwrserver.h \

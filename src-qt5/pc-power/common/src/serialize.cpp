@@ -3,6 +3,8 @@
 #include <QJsonDocument>
 #include <QDebug>
 
+#define FIELD(json_field, structure_field)\
+    if (json.find(json_field) != json.end()) structure_field = json[json_field]
 
 QString QJsonObject2String(QJsonObject obj)
 {
@@ -39,9 +41,22 @@ void JSONHWInfo::toJSON(QJsonObject &json)
     json["possibleACPIStates"] = arr;
 }
 
-bool JSONHWInfo::fromJSON(QJsonObject &json)
+bool JSONHWInfo::fromJSON(const QJsonObject &json)
 {
-
+    FIELD("numBatteries", numBatteries).toInt();
+    FIELD("numBacklights", numBacklights).toInt();
+    FIELD("hasSleepButton", hasSleepButton).toInt();
+    QJsonArray arr;
+    possibleACPIStates.clear();
+    if (json.find("possibleACPIStates") != json.end())
+    {
+        arr = json["possibleACPIStates"].toArray();
+        for(int i=0; i<arr.size(); i++)
+        {
+            possibleACPIStates<<arr[i].toString();
+        }
+    }
+    return true;
 }
 
 void JSONBatteryHardware::toJSON(QJsonObject &json)
@@ -55,7 +70,7 @@ void JSONBatteryHardware::toJSON(QJsonObject &json)
     json["designVoltage"] = (int)designVoltage;
 }
 
-bool JSONBatteryHardware::fromJSON(QJsonObject &json)
+bool JSONBatteryHardware::fromJSON(const QJsonObject &json)
 {
 
 }
@@ -70,7 +85,7 @@ void JSONBacklightHardware::toJSON(QJsonObject &json)
     json["backlightLevels"] = arr;
 }
 
-bool JSONBacklightHardware::fromJSON(QJsonObject &json)
+bool JSONBacklightHardware::fromJSON(const QJsonObject &json)
 {
 
 }

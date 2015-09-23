@@ -34,6 +34,10 @@
 #include <QTimer>
 #include <QTextStream>
 #include <QDir>
+#include <QJsonObject>
+#include <QJsonDocument>
+
+#include "protocol.h"
 
 #include <signal.h>
 
@@ -110,7 +114,6 @@ void PwrServer::readSettings(QString confFile)
 
     //read all profiles
     QString path = settings.profilesPath;
-    qDebug()<<settings.profilesPath;
     QDir dir(path);
     if (!dir.exists(path))
     {
@@ -143,6 +146,27 @@ void PwrServer::checkState()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+void PwrServer::sendResponse(QJsonObject resp, QTextStream *stream)
+{
+    QString jsontext = QJsonObjectToMessage(resp);
+    qDebug()<<jsontext;
+    (*stream)<<jsontext;
+    stream->flush();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void PwrServer::oncmdGetHWInfo(QTextStream *stream)
+{
+    QJsonObject resp;
+
+    resp[hwInfo.myname()] = hwInfo.toJSON();
+    QVector2JSON("battHW", battHW, resp);
+    QVector2JSON("backlightHW", backlightHW, resp);
+
+    sendResponse(resp, stream);
+}
+
+///////////////////////////////////////////////////////////////////////////////
 bool PwrServer::start(QStringList args)
 {
     Q_UNUSED(args)
@@ -156,7 +180,6 @@ bool PwrServer::start(QStringList args)
             continue;
         }
     }
-    qDebug()<<confFile;
 
     readSettings(confFile);    
 
@@ -251,7 +274,21 @@ void PwrServer::onRequest()
     {
         QString line;
         line = connections[sender].stream->readLine();
+
+        QJsonDocument jsonResponse = QJsonDocument::fromJson(line.toUtf8());
+        QJsonObject root = jsonResponse.object();
+
+        if (root.find(MSGTYPE_COMMAND) != root.end())
+        {
+            qDebug()<<"COMMAND";
+            if (root[MSGTYPE_COMMAND] == COMMAND_HWINFO)
+            {
+                oncmdGetHWInfo(connections[sender].stream);
+            }
+        }
+
         qDebug()<<line;
+
     }
 }
 

@@ -49,6 +49,9 @@ private:
     void checkHardware();
     void readSettings(QString confFile = QString());
     void checkState();
+    void sendResponse(QJsonObject resp, QTextStream*  stream);
+
+    void oncmdGetHWInfo(QTextStream*  stream);
 
 signals:
 

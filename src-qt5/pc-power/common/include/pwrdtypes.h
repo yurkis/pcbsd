@@ -5,6 +5,8 @@
 #include <QVector>
 #include <QStringList>
 
+static const char* const DEF_PWRD_PIPE_NAME = "/var/run/pwrd.pipe";
+
 typedef enum
 {
     BATT_CHARGING = 0,
