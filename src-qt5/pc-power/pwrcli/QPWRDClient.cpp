@@ -34,7 +34,6 @@ QPWRDClient::~QPWRDClient()
 bool QPWRDClient::connect(QString pipe)
 {
     Q_D(QPWRDClient);
-    qDebug()<<d;
     if (d->sock.state() == QLocalSocket::ConnectedState)
     {
         d->sock.disconnect();
@@ -96,7 +95,7 @@ bool QPWRDClient::getHardwareInfo(PWRDHardwareInfo& out)
         {
             JSONBatteryHardware entry;
             entry.fromJSON(arr[i].toObject());
-            batteries.push_back(entry);
+            out.batteries.push_back(entry);
         }
     }
 
@@ -107,9 +106,10 @@ bool QPWRDClient::getHardwareInfo(PWRDHardwareInfo& out)
         {
             JSONBacklightHardware entry;
             entry.fromJSON(arr[i].toObject());
-            backlights.push_back(entry);
+            out.backlights.push_back(entry);
         }
     }
+
     return true;
 }
 

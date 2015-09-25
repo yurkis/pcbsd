@@ -39,6 +39,7 @@ void PWRCLI::cmdHWInfo()
 
     qcout()<<"Basic ACPI: "<<"\n";
     qcout()<<"\t"<<"Baklights:"<<info.basic.numBacklights<<"\n";
+    qcout()<<"\t"<<"Batteries:"<<info.basic.numBatteries<<"\n";    
     if (info.basic.possibleACPIStates.size())
     {
         qcout()<<"\t"<<"Supported ACPI power states:"<<"\n";
@@ -59,7 +60,7 @@ void PWRCLI::cmdHWInfo()
         {
             capAh = info.batteries[i].designCapacity / info.batteries[i].designVoltage * 1000;
             capLastAh = info.batteries[i].lastFullCapacity / info.batteries[i].designVoltage * 1000;
-            health = capLastAh / capAh * 100;
+            health = capLastAh * 100 / capAh;
         }
 
         qcout()<<QString("Battery %1:").arg(i)<<"\n";
