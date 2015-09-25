@@ -160,8 +160,8 @@ void PwrServer::oncmdGetHWInfo(QTextStream *stream)
     QJsonObject resp;
 
     resp[hwInfo.myname()] = hwInfo.toJSON();
-    QVector2JSON("battHW", battHW, resp);
-    QVector2JSON("backlightHW", backlightHW, resp);
+    QVector2JSON(JSONBatteryHardware().myname(), battHW, resp);
+    QVector2JSON(JSONBacklightHardware().myname(), backlightHW, resp);
 
     sendResponse(resp, stream);
 }
@@ -190,7 +190,7 @@ bool PwrServer::start(QStringList args)
     }
     if( server->listen(settings.pipeName) )
     {
-        QFile::setPermissions("/var/run/syscache.pipe",
+        QFile::setPermissions(settings.pipeName,
                               QFile::ReadUser | QFile::WriteUser
                             | QFile::ReadGroup | QFile::WriteGroup
                             | QFile::ReadOther | QFile::WriteOther);
