@@ -54,17 +54,28 @@ void PWRCLI::cmdHWInfo()
 
     for (int i=0; i<info.batteries.size(); i++)
     {
-        int capAh = info.batteries[i].designCapacity / info.batteries[i].designVoltage * 1000;
-        int capLastAh = info.batteries[i].lastFullCapacity / info.batteries[i].designVoltage * 1000;
-        int health = capLastAh / capAh * 100;
+        int capAh,  capLastAh, health;
+        if(info.batteries[i].designVoltage)
+        {
+            capAh = info.batteries[i].designCapacity / info.batteries[i].designVoltage * 1000;
+            capLastAh = info.batteries[i].lastFullCapacity / info.batteries[i].designVoltage * 1000;
+            health = capLastAh / capAh * 100;
+        }
 
         qcout()<<QString("Battery %1:").arg(i)<<"\n";
         qcout()<<"\t"<<"OEM             :"<<info.batteries[i].OEMInfo<<"\n";
         qcout()<<"\t"<<"Model           :"<<info.batteries[i].model<<"\n";
         qcout()<<"\t"<<"Type            :"<<info.batteries[i].type<<"\n";
         qcout()<<"\t"<<"Serial          :"<<info.batteries[i].serial<<"\n";
-        qcout()<<"\t"<<"Design capacity :"<<info.batteries[i].designCapacity<<" mWh ("<<capAh<<" mAh)\n";
-        qcout()<<"\t"<<"Last capacity   :"<<info.batteries[i].lastFullCapacity<<" mWh ("<<capLastAh<<" mAh) health - "<<health<<"%\n";
+        qcout()<<"\t"<<"Design capacity :"<<info.batteries[i].designCapacity<<" mWh ";
+        if (capAh) qcout()<<"("<<capAh<<" mAh)";
+        qcout()<<"\n";
+        qcout()<<"\t"<<"Last capacity   :"<<info.batteries[i].lastFullCapacity<<" mWh ";
+        if (capLastAh)
+        {
+            qcout()<<"("<<capLastAh<<" mAh) health - "<<health<<"%";
+        }
+        qcout()<<"\n";
         qcout()<<"\t"<<"Design volatage :"<<info.batteries[i].designVoltage<<"mV\n";
     }
 }
