@@ -72,7 +72,14 @@ void JSONBatteryHardware::toJSON(QJsonObject &json)
 
 bool JSONBatteryHardware::fromJSON(const QJsonObject &json)
 {
-
+    FIELD("OEMInfo", OEMInfo).toString();
+    FIELD("model", model).toString();
+    FIELD("serial", serial).toString();
+    FIELD("type", type).toString();
+    FIELD("designCapacity", designCapacity).toInt();
+    FIELD("lastFullCapacity", lastFullCapacity).toInt();
+    FIELD("designVoltage", designVoltage).toInt();
+    return true;
 }
 
 void JSONBacklightHardware::toJSON(QJsonObject &json)
@@ -87,7 +94,7 @@ void JSONBacklightHardware::toJSON(QJsonObject &json)
 
 bool JSONBacklightHardware::fromJSON(const QJsonObject &json)
 {
-
+    return true;
 }
 
 
