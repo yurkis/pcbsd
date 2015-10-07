@@ -25,6 +25,7 @@
 #include "pwrserver.h"
 #include "battery.h"
 #include "backlight.h"
+#include "intel_backlight.h"
 #include "sysctlutils.h"
 #include "serialize.h"
 
@@ -43,9 +44,12 @@
 
 #define _str_constant static const char* const
 
+
+_str_constant DEVD_PIPE = "/var/run/devd.pipe";
 _str_constant SLEEP_BUTTON_SYSCTL = "hw.acpi.sleep_button_state";
 _str_constant LID_SYSCTL = "hw.acpi.lid_switch_state";
 _str_constant POSSIBLE_STATES_SYSCTL = "hw.acpi.supported_sleep_state";
+_str_constant ACLINE_SYSCTL = "hw.acpi.acline";
 
 ///////////////////////////////////////////////////////////////////////////////
 PwrServer::PwrServer(QObject *parent): QObject(parent)
@@ -90,6 +94,9 @@ void PwrServer::checkHardware()
     }
     hwInfo.numBacklights = backlightHW.size();
 
+    // If using intel_backlight port and intel_backlight exist
+    settings.usingIntel_backlight &= hasIntelBacklight();
+
     hwInfo.hasSleepButton = sysctlPresent(SLEEP_BUTTON_SYSCTL);
     hwInfo.hasLid = sysctlPresent(LID_SYSCTL);
     hwInfo.possibleACPIStates = sysctl(POSSIBLE_STATES_SYSCTL).split(" ");
@@ -117,8 +124,7 @@ void PwrServer::readSettings(QString confFile)
     QDir dir(path);
     if (!dir.exists(path))
     {
-        //set single default profile
-        profiles.push_back(PWRProfileReader());
+        profiles[PWRProfileReader().id] = PWRProfileReader();
         currProfile = PWRProfileReader();
         return;
     }
@@ -129,20 +135,14 @@ void PwrServer::readSettings(QString confFile)
         PWRProfileReader item;
         if (item.read(dir.absoluteFilePath(dir_list[i])))
         {
-            profiles.push_back(item);
+            profiles[item.id] = item;
         }
     }
     if (!profiles.size())
     {
-        profiles.push_back(PWRProfileReader());
+        profiles[PWRProfileReader().id] = PWRProfileReader();
         currProfile = PWRProfileReader();
     }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-void PwrServer::checkState()
-{
-
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -164,6 +164,43 @@ void PwrServer::oncmdGetHWInfo(QTextStream *stream)
     QVector2JSON(JSONBacklightHardware().myname(), backlightHW, resp);
 
     sendResponse(resp, stream);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+PWRProfileReader PwrServer::findProfile(QString id)
+{
+    PWRProfileReader ret = PWRProfileReader();
+    if (profiles.contains(id))
+        ret = profiles[id];
+    return ret;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void PwrServer::applyProfile(QString id)
+{
+    PWRProfileReader p = findProfile(id);
+    qDebug()<<"Changing profile to "<<id;
+    setblGlobalLevel( p.lcdBrightness);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+int PwrServer::blGlobalLevel()
+{
+    if (settings.usingIntel_backlight)
+        return IBLBacklightLevel();
+    if (backlightHW.size())
+        return backlightLevel(0);
+    return 100;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void PwrServer::setblGlobalLevel(int value)
+{
+    if (settings.usingIntel_backlight)
+       setIBLBacklightLevel(value);
+    else
+        for (int i=0; i<backlightHW.size(); i++)
+            setBacklightLevel(i, value);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -202,6 +239,25 @@ bool PwrServer::start(QStringList args)
         qDebug() << "Error: pc-pwrd could not create pipe at "<<settings.pipeName;
         return false;
     }
+
+    //devd socket setup
+    if (devdSocket.state() == QLocalSocket::ConnectedState)
+    {
+        devdSocket.disconnect();
+        devdSocket.waitForDisconnected();
+    }
+    devdSocket.connectToServer(DEVD_PIPE);
+    if (!devdSocket.waitForConnected())
+    {
+        qDebug()<<"Unable to connet to devd";
+    }
+    qDebug()<<"Connected to devd...";
+    devdStream = new QTextStream(&devdSocket);
+    //connect(server, SIGNAL(newConnection()), this, SLOT(onNewConnection()));
+    connect(&devdSocket, SIGNAL(readyRead()), this, SLOT(onDEVDEvent()));
+
+    onACPower = sysctlAsInt(ACLINE_SYSCTL) == 1;
+
     return true;
 }
 
@@ -228,6 +284,22 @@ void PwrServer::signalHandler(int sig)
             QTimer::singleShot(0, this, SLOT(stop()));
             break;
     }//switch
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void PwrServer::onDEVDEvent()
+{
+    QTextStream* devdStream = new QTextStream(&devdSocket);
+    QStringList ev = devdStream->readLine().split(" ");
+    QString sys,subsys;
+    //"!system=ACPI", "subsystem=ACAD", "type=\_SB_.PCI0.AC0_", "notify=0x01"
+    if (ev.size()<3)
+        return;
+    if (ev[0].replace("!system=", "") != "ACPI")
+        return;
+    if (ev[1].replace("subsystem=","") != "ACAD")
+        return;
+    QTimer::singleShot(0, this, SLOT(checkState()));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -317,8 +389,15 @@ void PwrServer::onDisconnect()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void PwrServer::onStateChanged()
+void PwrServer::checkState()
 {
+    bool currPower = sysctlAsInt(ACLINE_SYSCTL) == 1;
+    if (currPower == onACPower)
+        return;
+    onACPower = currPower;
 
+    applyProfile(onACPower?settings.onACProfile:settings.onBatteryProfile);
+
+    qDebug()<<"state changed";
 }
 

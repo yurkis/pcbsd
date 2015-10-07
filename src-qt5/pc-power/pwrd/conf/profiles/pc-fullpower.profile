@@ -1,6 +1,7 @@
 #PC like 
 [general]
-name="Desktop like. Full power."
+id="desktop"
+description="Desktop like. Full power."
 [buttons]
 lid=NONE
 sleep=S3

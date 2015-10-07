@@ -38,7 +38,7 @@ _str_constant DEF_LID_STATE = "S3";
 _str_constant DEF_NAME = "Default";
 
 _str_constant GENERAL_GROUP = "";//"general";
-_str_constant NAME_FIELD = "name";
+_str_constant NAME_FIELD = "id";
 _str_constant DESCRIPTION_FIELD = "description";
 
 _str_constant BUTTONS_GROUP = "buttons";
@@ -53,7 +53,7 @@ _str_constant BACKLIGHT_FIELD = "backlight";
 ///////////////////////////////////////////////////////////////////////////////
 _PWRProfileReader::_PWRProfileReader()
 {
-    name = DEF_NAME;
+    id = DEF_NAME;
     btnPowerSate = DEF_POWER_BTN_STATE;
     btnSleepSate = DEF_SLEEP_BTN_STATE;
     lidSwitchSate = DEF_LID_STATE;
@@ -72,7 +72,7 @@ bool _PWRProfileReader::read(QString file)
     Reader.setIniCodec("UTF-8");
 
     Reader.beginGroup(GENERAL_GROUP);
-    name = Reader.value(NAME_FIELD, QString(DEF_NAME)).toString();
+    id = Reader.value(NAME_FIELD, QString(DEF_NAME)).toString();
     description = Reader.value(DESCRIPTION_FIELD).toString();
     Reader.endGroup();
 

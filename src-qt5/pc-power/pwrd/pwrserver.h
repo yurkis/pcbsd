@@ -34,6 +34,9 @@ private:
     QLocalSocket *curSock;
     QMap<QLocalSocket*, SConnection> connections;
 
+    QLocalSocket devdSocket;
+    QTextStream* devdStream;
+
     JSONHWInfo                     hwInfo;
     QVector<JSONBatteryHardware>   battHW;
     QVector<JSONBacklightHardware> backlightHW;
@@ -41,17 +44,24 @@ private:
 
     QVector<PWRSuppllyInfo>       currState;
 
-    PWRSuppllyInfo       current;
+    bool onACPower;
 
-    QVector<PWRProfileReader>  profiles;
+    QMap<QString, PWRProfileReader>  profiles;
     PWRProfileReader           currProfile;
 
     void checkHardware();
     void readSettings(QString confFile = QString());
-    void checkState();
+    //void checkState();
     void sendResponse(QJsonObject resp, QTextStream*  stream);
 
     void oncmdGetHWInfo(QTextStream*  stream);
+
+
+    PWRProfileReader findProfile(QString id);
+    void applyProfile(QString id);
+
+    int blGlobalLevel();
+    void setblGlobalLevel(int value);
 
 signals:
 
@@ -60,13 +70,14 @@ public slots:
     void stop();
 
     void signalHandler(int sig);
+    void onDEVDEvent();
 
 
 private slots:
     void onNewConnection();
     void onRequest();
     void onDisconnect();
-    void onStateChanged();
+    void checkState();
 
 };
 

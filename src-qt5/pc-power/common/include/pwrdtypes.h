@@ -77,7 +77,7 @@ typedef struct _PWRHWInfo
 
 typedef struct _PWRProfile
 {
-    QString name;
+    QString id;
     QString description;
     QString btnPowerSate;
     QString btnSleepSate;

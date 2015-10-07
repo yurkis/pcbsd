@@ -41,6 +41,13 @@ _str_constant CONF_FIELD_PIPE_NAME = "pipe";
 _str_constant CONF_FIELD_DEVD_PIPE = "devd_pipe";
 _str_constant CONF_FIELD_PROFILES_PATH = "profiles_path";
 _str_constant CONF_FIELD_BATTER_POLLING = "battery_polling";
+_str_constant CONF_FIELD_INTEL_BACKLIGHT = "use_intel_backlight";
+
+_str_constant CONF_PROFILES_GROUP = "profiles";
+_str_constant CONF_ON_AC_POWER = "on_ac_power";
+_str_constant CONF_ON_BATTERY = "on_battery";
+_str_constant CONF_ON_LOW_BATTERY = "on_low_battery";
+_str_constant DEF_PROFILE = "";
 
 ///////////////////////////////////////////////////////////////////////////////
 _PWRServerSettings::_PWRServerSettings()
@@ -66,6 +73,16 @@ bool _PWRServerSettings::load(QString file)
     devdPipeName = Reader.value(CONF_FIELD_DEVD_PIPE, DEF_DEVD_PIPE).toString();
     profilesPath = Reader.value(CONF_FIELD_PROFILES_PATH, DEF_PROFILES_PATH).toString();
     battPollingTime =Reader.value(CONF_FIELD_BATTER_POLLING, DEF_POLLING_BATTERY_TIME).toInt();
+    usingIntel_backlight =  Reader.value(CONF_FIELD_INTEL_BACKLIGHT, 0).toInt() == 1;
+
+    Reader.beginGroup(CONF_PROFILES_GROUP);
+    onBatteryProfile = Reader.value(CONF_ON_BATTERY, DEF_PROFILE).toString();
+    onACProfile = Reader.value(CONF_ON_AC_POWER, DEF_PROFILE).toString();
+    onLowBatteryProfile = Reader.value(CONF_ON_LOW_BATTERY, DEF_PROFILE).toString();
+
+    qDebug()<<onBatteryProfile;
+    qDebug()<<onACProfile;
+    qDebug()<<onLowBatteryProfile;
 
     return true;
 }

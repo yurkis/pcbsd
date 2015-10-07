@@ -5,6 +5,7 @@
 #define _str_constant static const char* const
 _str_constant DEF_BAKLIGHT_ENABLED_SYSCTL = "hw.acpi.video.lcd%1.active";
 _str_constant DEF_BAKLIGHT_LEVELS_SYSCTL = "hw.acpi.video.lcd%1.levels";
+_str_constant LCD_BRIGHTNESS_SYSCTL = "hw.acpi.video.lcd%1.brightness";
 
 bool getBacklightHWInfo(int num, PWRBacklightHardware &out)
 {
@@ -34,4 +35,19 @@ bool getBacklightHWInfo(int num, PWRBacklightHardware &out)
         if (!found) out.backlightLevels.push_back(val);
     }
     return true;
+}
+
+bool setBacklightLevel(int num, int percentage)
+{
+    qDebug()<<num<<" "<<percentage;
+    if (!sysctlPresent(QString(DEF_BAKLIGHT_ENABLED_SYSCTL).arg(num)))
+         return false;
+    return setSysctl(QString(LCD_BRIGHTNESS_SYSCTL).arg(num), percentage);
+}
+
+int backlightLevel(int num)
+{
+    if (!sysctlPresent(QString(LCD_BRIGHTNESS_SYSCTL).arg(num)))
+        return false;
+    return sysctlAsInt(QString(LCD_BRIGHTNESS_SYSCTL).arg(num));
 }

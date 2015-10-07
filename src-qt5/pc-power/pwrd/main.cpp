@@ -11,6 +11,7 @@
 #include "battery.h"
 #include "sysctlutils.h"
 #include "profilereader.h"
+#include "intel_backlight.h"
 
 const char* const LOCK_FILE = "/var/run/pc-pwr";
 
@@ -75,10 +76,12 @@ void debug()
     setSysctl("security.jail.allow_raw_sockets", 0);
     qDebug()<<sysctlAsInt("security.jail.allow_raw_sockets");
     */
-    PWRProfileReader rdr;
-    rdr.read("/home/yurkis//projects/my-pcbsd/src-qt5/pc-power/pwrd/conf/profiles/pc-fullpower.profile");
-    qDebug()<<rdr.name;
-    qDebug()<<rdr.lcdBrightness;
+    //PWRProfileReader rdr;
+    //rdr.read("/home/yurkis//projects/my-pcbsd/src-qt5/pc-power/pwrd/conf/profiles/pc-fullpower.profile");
+    //qDebug()<<rdr.id;
+    //qDebug()<<rdr.lcdBrightness;
+    setIBLBacklightLevel(30);
+    qDebug()<<IBLBacklightLevel();
 
 
 }

@@ -11,6 +11,10 @@ typedef struct _PWRServerSettings
     QString devdPipeName;
     QString profilesPath;
     unsigned int battPollingTime;
+    QString onBatteryProfile;
+    QString onACProfile;
+    QString onLowBatteryProfile;
+    bool usingIntel_backlight;
 
     _PWRServerSettings();
     bool load(QString file = DEF_CONFIG_FILE);

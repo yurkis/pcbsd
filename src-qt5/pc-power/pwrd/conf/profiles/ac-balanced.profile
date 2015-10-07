@@ -1,5 +1,6 @@
 [general]
-name="AC power balanced"
+id="balanced_ac"
+description="AC power balanced"
 [buttons]
 lid=S3
 sleep=S3
