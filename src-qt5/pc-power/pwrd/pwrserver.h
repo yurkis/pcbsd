@@ -20,47 +20,62 @@ public:
     ~PwrServer();
 
 private:
-
+    //! pwrd settings
     PWRServerSettings settings;
 
+    //! Structure holds pwrd pipe client connection
     typedef struct _SConnection
     {
-        QLocalSocket* sock;
-        QTextStream*  stream;
+        QLocalSocket* sock;    ///< Local socket
+        QTextStream*  stream;  ///< Text stream associated with sock
     }SConnection;
 
-
+    //! Local pipe server object
     QLocalServer *server;
-    QLocalSocket *curSock;
+    //! Client connections
     QMap<QLocalSocket*, SConnection> connections;
-
+    //! devd pipe connection socket
     QLocalSocket devdSocket;
+    //! text stream associated with devdSocket
     QTextStream* devdStream;
 
+    //! Device hardware info
     JSONHWInfo                     hwInfo;
+    //! Hardware info for all installet batteries
     QVector<JSONBatteryHardware>   battHW;
+    //! Hardware info for all found backlights
     QVector<JSONBacklightHardware> backlightHW;
-    //PWRButtons          buttons;
 
     QVector<PWRSuppllyInfo>       currState;
 
+    //! True if system is on AC power
     bool onACPower;
 
+    //! Power profiles (key is profile id)
     QMap<QString, PWRProfileReader>  profiles;
+
     PWRProfileReader           currProfile;
 
+    //! Get all hadware info
     void checkHardware();
+    //! Read daemon configuration
     void readSettings(QString confFile = QString());
-    //void checkState();
+
+    //! Send responce to client
     void sendResponse(QJsonObject resp, QTextStream*  stream);
 
+    //! GetHWInfo command handler
     void oncmdGetHWInfo(QTextStream*  stream);
+    void oncmdGetBacklight(QTextStream*  stream);
+    void oncmdSetBacklight(QJsonObject req, QTextStream*  stream);
 
 
     PWRProfileReader findProfile(QString id);
     void applyProfile(QString id);
 
+    //! Get backlight level (if more than one get lcd0 level)
     int blGlobalLevel();
+    //! Set backlight level (for all backlights if more than one)
     void setblGlobalLevel(int value);
 
 signals:
@@ -69,14 +84,20 @@ public slots:
     bool start(QStringList args = QStringList());
     void stop();
 
+    //! UNIX signal handler
     void signalHandler(int sig);
+    //! Reads event from devd when present
     void onDEVDEvent();
 
 
 private slots:
+    //! New client connection handler
     void onNewConnection();
+    //! Client request handler
     void onRequest();
+    //! Client disconnect handler
     void onDisconnect();
+    //! Check power state and apply new profile when state changed
     void checkState();
 
 };

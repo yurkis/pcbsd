@@ -113,6 +113,50 @@ bool QPWRDClient::getHardwareInfo(PWRDHardwareInfo& out)
     return true;
 }
 
+int QPWRDClient::getBacklightLevel(int backlight)
+{
+    Q_D(QPWRDClient);
+
+    QJsonObject request;
+    QTextStream stream(&d->sock);
+    request[MSGTYPE_COMMAND] = QString (COMMAND_GET_BACKLIGHT);
+    //request[BACKLIGHT_NUMBER] = QString::number(backlight);
+
+    stream<<QJsonObjectToMessage(request);
+    stream.flush();
+
+    if (!d->sock.waitForReadyRead())
+        return false;
+
+    QString respstr = stream.readLine();
+    QJsonDocument resp = QJsonDocument::fromJson(respstr.toUtf8());
+    QJsonObject root = resp.object();
+
+    return 0;
+}
+
+bool QPWRDClient::setBacklightLevel(int level, int backlight)
+{
+    Q_D(QPWRDClient);
+
+    QJsonObject request;
+    QTextStream stream(&d->sock);
+    request[MSGTYPE_COMMAND] = QString (COMMAND_SET_BACKLIGHT);
+    request[BACKLIGHT_NUMBER] = QString::number(backlight);
+
+    stream<<QJsonObjectToMessage(request);
+    stream.flush();
+
+    if (!d->sock.waitForReadyRead())
+        return false;
+
+    QString respstr = stream.readLine();
+    QJsonDocument resp = QJsonDocument::fromJson(respstr.toUtf8());
+    QJsonObject root = resp.object();
+
+    return true;
+}
+
 void QPWRDClient::pwrdRead()
 {
 

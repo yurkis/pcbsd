@@ -5,7 +5,7 @@
 #include <QString>
 
 #include "QPWRDClient.h"
-
+#include <QStringList>
 class PWRCLI : public QObject
 {
     Q_OBJECT
@@ -18,6 +18,7 @@ private:
 
     void cmdHelp();
     void cmdHWInfo();
+    void cmdSetBacklight(QStringList args);
 
 signals:
     void finished();

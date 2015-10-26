@@ -14,28 +14,14 @@ _str_constant MSGTYPE_DATA = "data";
 _str_constant MSGTYPE_EVENT = "event";
 
 _str_constant COMMAND_HWINFO = "hwinfo";
+_str_constant COMMAND_GET_BACKLIGHT = "getbacklight";
+_str_constant COMMAND_SET_BACKLIGHT = "setbacklight";
+_str_constant BACKLIGHT_NUMBER = "bl";
+_str_constant BACKLIGHT_LEVELS = "levels";
+_str_constant BACKLIGHT_VALUE = "val";
 
 QString QJsonObjectToMessage(QJsonObject obj);
-/*
 
-
-QString MakeProtocolJSON(QString MsgTypeName, QString MsgTypeValue, QJsonObject payload = QJsonObject());
-QString MakeProtocolJSON(QString MsgTypeName, QJsonObject payload);
-
-QString MakeCommandJSON(QString command_name, QJsonObject payload = QJsonObject());
-
-typedef struct PWRProtocolMessage:public JSONSerializer
-{
-    QString msgtype;
-    QJsonObject payload;
-
-    void addPayload(JSONSerializer object);
-
-    virtual void toJSON(QJsonObject &json);
-    virtual bool fromJSON(QJsonObject &json);
-}PWRProtocolMessage;
-
-*/
 
 #endif // PROTOCOL_H
 

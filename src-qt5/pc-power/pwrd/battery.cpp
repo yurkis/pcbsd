@@ -5,13 +5,14 @@
 #include <fcntl.h>
 #include <stdio.h>
 
+///////////////////////////////////////////////////////////////////////////////
 static const char* const ACPIDEV = "/dev/acpi";
 #define UNKNOWN_CAP 0xffffffff
 #define UNKNOWN_VOLTAGE 0xffffffff
 
 static int      acpifd;
 
-
+///////////////////////////////////////////////////////////////////////////////
 bool getBatteryHWInfo(int batt, PWRBatteryHardware &hwout, PWRSuppllyInfo& info)
 {
     // Open ACPI device

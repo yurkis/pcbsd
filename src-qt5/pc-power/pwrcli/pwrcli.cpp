@@ -81,6 +81,29 @@ void PWRCLI::cmdHWInfo()
     }
 }
 
+void PWRCLI::cmdSetBacklight(QStringList args)
+{
+    qDebug()<<args;
+    if (!args.size())
+        return;
+    int num = 0;
+    int brightness;
+    QString str = args[0];
+    if (args.size()>1)
+    {
+        num = str.toInt();
+        str = args[1];
+    }
+    QString sign="";
+    if (str.startsWith("+") || str.startsWith("-"))
+    {
+        sign = str[0];
+        str=str.right(str.length()-1);
+    }
+    qDebug()<<str<<sign;
+
+}
+
 void PWRCLI::run()
 {
     QStringList args = QCoreApplication::arguments();
@@ -90,10 +113,8 @@ void PWRCLI::run()
         emit finished();
         return;
     }
-    QString arg1 = args[1];
-
-    qDebug()<<arg1;
-    qDebug()<<args.size();
+    int arg=1;
+    QString arg1 = args[arg];
 
     if (arg1 == "-pipe")
     {
@@ -105,7 +126,11 @@ void PWRCLI::run()
         }
         pipeName = args[2];
         arg1 = args[3];
+        arg=3;
     }
+
+    qDebug()<<arg1;
+    qDebug()<<args.size();
 
     if (arg1 == "-help")
     {
@@ -117,8 +142,18 @@ void PWRCLI::run()
         cmdHWInfo();
         emit finished();
     }
+    else if(arg1 == "setbacklight")
+    {
+        cmdSetBacklight(args.mid(arg+1));
+        emit finished();
+    }
 
-
+    if (!client->connect(pipeName))
+    {
+        qCritical()<<"Unable connect to pwrd";
+        return;
+    }
+    //client->getBacklightLevel();
 
     emit finished();
 }

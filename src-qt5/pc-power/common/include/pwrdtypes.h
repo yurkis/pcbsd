@@ -7,6 +7,8 @@
 
 static const char* const DEF_PWRD_PIPE_NAME = "/var/run/pwrd.pipe";
 
+const int PWR_ALL = -1;
+
 typedef enum
 {
     BATT_CHARGING = 0,

@@ -54,7 +54,6 @@ _str_constant ACLINE_SYSCTL = "hw.acpi.acline";
 ///////////////////////////////////////////////////////////////////////////////
 PwrServer::PwrServer(QObject *parent): QObject(parent)
 {
-    curSock = NULL;
     server = new QLocalServer(this);
     connect(server, SIGNAL(newConnection()), this, SLOT(onNewConnection()));    
 }
@@ -164,6 +163,36 @@ void PwrServer::oncmdGetHWInfo(QTextStream *stream)
     QVector2JSON(JSONBacklightHardware().myname(), backlightHW, resp);
 
     sendResponse(resp, stream);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void PwrServer::oncmdGetBacklight(QTextStream *stream)
+{
+    QJsonObject resp;
+    QJsonArray backlights;
+
+    if (settings.usingIntel_backlight)
+    {
+        QJsonObject obj;
+        obj[BACKLIGHT_VALUE] = IBLBacklightLevel();
+        backlights.append(obj);
+    }
+    else
+    {
+        for (int i=0; i<backlightHW.size(); i++)
+        {
+            QJsonObject obj;
+            obj[BACKLIGHT_VALUE] =backlightLevel(i);
+            backlights.append(obj);
+        }
+    }
+    resp[BACKLIGHT_LEVELS] = backlights;
+    sendResponse(resp, stream);
+}
+
+void PwrServer::oncmdSetBacklight(QJsonObject req, QTextStream *stream)
+{
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -356,6 +385,14 @@ void PwrServer::onRequest()
             if (root[MSGTYPE_COMMAND] == COMMAND_HWINFO)
             {
                 oncmdGetHWInfo(connections[sender].stream);
+            }
+            else if (root[MSGTYPE_COMMAND] == COMMAND_GET_BACKLIGHT)
+            {
+                oncmdGetBacklight(connections[sender].stream);
+            }
+            else if (root[MSGTYPE_COMMAND] == COMMAND_SET_BACKLIGHT)
+            {
+                oncmdSetBacklight(root, connections[sender].stream);
             }
         }
 
