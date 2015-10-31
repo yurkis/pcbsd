@@ -20,11 +20,18 @@ PWRCLI::PWRCLI(QObject *parent) : QObject(parent)
 void PWRCLI::cmdHelp()
 {
     qcout()<<"Power daemon clinet\n"<<"Usage:";
+    qcout()<<"pwrd [-pipe] [-help] command\n";
+    qcout()<<"   -pipe PIPENAME - set ull name of pwrd pipe\n";
+    qcout()<<"   -help - display this message and exin\n";
+    qcout()<<"Commands:\n";
+    qcout()<<"  hwinfo - display haedware info (related to beacklight, battery, etc)\n";
+    qcout()<<"  sb or stbrightness [NO] LEVEL - set brightness to LEVEL percents\n";
+    qcout()<<"                         for backlight # NO. Brightness may be relative\n";
+    qcout()<<"                         for example 'sb +25' or 'sb -10'\n";
 }
 
 void PWRCLI::cmdHWInfo()
 {
-    qDebug()<<pipeName;
     if (!client->connect(pipeName))
     {
         qCritical()<<"Unable connect to pwrd";
@@ -36,7 +43,6 @@ void PWRCLI::cmdHWInfo()
         qCritical()<<"Unable connect to get hardware info";
         return;
     }
-
     qcout()<<"Basic ACPI: "<<"\n";
     qcout()<<"\t"<<"Baklights:"<<info.basic.numBacklights<<"\n";
     qcout()<<"\t"<<"Batteries:"<<info.basic.numBatteries<<"\n";    
@@ -55,7 +61,7 @@ void PWRCLI::cmdHWInfo()
 
     for (int i=0; i<info.batteries.size(); i++)
     {
-        int capAh,  capLastAh, health;
+        int capAh=0,  capLastAh=0, health=0;
         if(info.batteries[i].designVoltage)
         {
             capAh = info.batteries[i].designCapacity / info.batteries[i].designVoltage * 1000;
@@ -83,24 +89,23 @@ void PWRCLI::cmdHWInfo()
 
 void PWRCLI::cmdSetBacklight(QStringList args)
 {
-    qDebug()<<args;
     if (!args.size())
         return;
-    int num = 0;
-    int brightness;
+    int num = PWR_ALL;
     QString str = args[0];
     if (args.size()>1)
     {
         num = str.toInt();
         str = args[1];
     }
-    QString sign="";
-    if (str.startsWith("+") || str.startsWith("-"))
+
+    if (!client->connect(pipeName))
     {
-        sign = str[0];
-        str=str.right(str.length()-1);
+        qCritical()<<"Unable connect to pwrd";
+        return;
     }
-    qDebug()<<str<<sign;
+
+    client->setBacklightLevel(str, num);
 
 }
 
@@ -129,9 +134,6 @@ void PWRCLI::run()
         arg=3;
     }
 
-    qDebug()<<arg1;
-    qDebug()<<args.size();
-
     if (arg1 == "-help")
     {
         cmdHelp();
@@ -142,17 +144,17 @@ void PWRCLI::run()
         cmdHWInfo();
         emit finished();
     }
-    else if(arg1 == "setbacklight")
+    else if((arg1 == "setbrightness") || (arg1 == "sb"))
     {
         cmdSetBacklight(args.mid(arg+1));
         emit finished();
     }
 
-    if (!client->connect(pipeName))
-    {
-        qCritical()<<"Unable connect to pwrd";
-        return;
-    }
+//    if (!client->connect(pipeName))
+//    {
+//        qCritical()<<"Unable connect to pwrd";
+//        return;
+//    }
     //client->getBacklightLevel();
 
     emit finished();

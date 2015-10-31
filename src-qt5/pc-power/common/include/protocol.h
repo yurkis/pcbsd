@@ -13,6 +13,11 @@ _str_constant MSGTYPE_COMMAND = "command";
 _str_constant MSGTYPE_DATA = "data";
 _str_constant MSGTYPE_EVENT = "event";
 
+_str_constant MSG_RESULT = "result";
+_str_constant MSG_RESULT_SUCCESS = "success";
+_str_constant MSG_RESULT_FAIL = "fail";
+_str_constant MSG_RESULT_FAIL_REASON = "reason";
+
 _str_constant COMMAND_HWINFO = "hwinfo";
 _str_constant COMMAND_GET_BACKLIGHT = "getbacklight";
 _str_constant COMMAND_SET_BACKLIGHT = "setbacklight";

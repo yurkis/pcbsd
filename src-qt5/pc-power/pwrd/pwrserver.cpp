@@ -64,6 +64,21 @@ PwrServer::~PwrServer()
     stop();
 }
 
+static QJsonObject RESULT_SUCCESS()
+{
+    QJsonObject res;
+    res[MSG_RESULT] = MSG_RESULT_SUCCESS;
+    return res;
+}
+
+static QJsonObject RESULT_FAIL(QString reason = QString("Unknown reason"))
+{
+    QJsonObject res;
+    res[MSG_RESULT] = MSG_RESULT_FAIL;
+    res[MSG_RESULT_FAIL_REASON] = reason;
+    return res;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 void PwrServer::checkHardware()
 {
@@ -149,26 +164,26 @@ void PwrServer::sendResponse(QJsonObject resp, QTextStream *stream)
 {
     QString jsontext = QJsonObjectToMessage(resp);
     qDebug()<<jsontext;
-    (*stream)<<jsontext;
+    (*stream)<<jsontext<<"\n";
     stream->flush();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void PwrServer::oncmdGetHWInfo(QTextStream *stream)
+QJsonObject PwrServer::oncmdGetHWInfo()
 {
-    QJsonObject resp;
+    QJsonObject resp = RESULT_SUCCESS();
 
     resp[hwInfo.myname()] = hwInfo.toJSON();
     QVector2JSON(JSONBatteryHardware().myname(), battHW, resp);
     QVector2JSON(JSONBacklightHardware().myname(), backlightHW, resp);
 
-    sendResponse(resp, stream);
+    return resp;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void PwrServer::oncmdGetBacklight(QTextStream *stream)
+QJsonObject PwrServer::oncmdGetBacklight()
 {
-    QJsonObject resp;
+    QJsonObject resp = RESULT_SUCCESS();
     QJsonArray backlights;
 
     if (settings.usingIntel_backlight)
@@ -187,11 +202,79 @@ void PwrServer::oncmdGetBacklight(QTextStream *stream)
         }
     }
     resp[BACKLIGHT_LEVELS] = backlights;
-    sendResponse(resp, stream);
+    return resp;
 }
 
-void PwrServer::oncmdSetBacklight(QJsonObject req, QTextStream *stream)
+///////////////////////////////////////////////////////////////////////////////
+QJsonObject PwrServer::oncmdSetBacklight(QJsonObject req)
 {
+    QJsonObject resp = RESULT_SUCCESS();
+
+    int no = PWR_ALL;
+    bool is_relative=false;
+    int val;
+    int start, end;
+    if (req.find(BACKLIGHT_VALUE)==req.end())
+    {
+        return RESULT_FAIL("Bad request");
+    }
+    QString val_s = req[BACKLIGHT_VALUE].toString();
+    val_s = val_s.trimmed();
+    is_relative = (val_s.startsWith("-") || val_s.startsWith("+"));
+    val = val_s.toInt();
+
+    if (req.find(BACKLIGHT_NUMBER)==req.end())
+    {
+        no = PWR_ALL;
+    }
+    else
+    {
+        no = req[BACKLIGHT_NUMBER].toInt();
+        if ((no<0) || (no>=backlightHW.size()))
+            return RESULT_FAIL("Bad backlight number");
+    }
+
+    if (no == PWR_ALL)
+    {
+        start = 0; end = backlightHW.size();
+    }
+    else
+    {
+        start = no; end= no+1;
+    }
+
+    if (settings.usingIntel_backlight)
+    {
+        //only one backlight using with Intel_backlight port
+        start =0; end=1;
+    }
+    for(int i=start; i<end; i++)
+    {
+        if (!is_relative)
+        {
+            if (val<0) val = 5;
+            if (val>100) val = 100;
+
+            if (!settings.usingIntel_backlight)
+            {
+                setBacklightLevel(i, val);
+            }
+            else
+            {
+                setIBLBacklightLevel(val);
+            }
+        }// if direct value
+        else
+        {
+            int curr = (!settings.usingIntel_backlight)?backlightLevel(i):IBLBacklightLevel();
+            val=val+curr;
+            if (val<0) val = 0;
+            if (val>100) val = 100;
+            (!settings.usingIntel_backlight)?setBacklightLevel(i, val):setIBLBacklightLevel(val);
+        }
+    }
+
+    return resp;
 
 }
 
@@ -378,26 +461,31 @@ void PwrServer::onRequest()
 
         QJsonDocument jsonResponse = QJsonDocument::fromJson(line.toUtf8());
         QJsonObject root = jsonResponse.object();
+        QJsonObject resp = RESULT_FAIL("Bad request");
+        try{
+          if (root.find(MSGTYPE_COMMAND) != root.end())
+          {
+              qDebug()<<"COMMAND";
 
-        if (root.find(MSGTYPE_COMMAND) != root.end())
-        {
-            qDebug()<<"COMMAND";
-            if (root[MSGTYPE_COMMAND] == COMMAND_HWINFO)
-            {
-                oncmdGetHWInfo(connections[sender].stream);
-            }
-            else if (root[MSGTYPE_COMMAND] == COMMAND_GET_BACKLIGHT)
-            {
-                oncmdGetBacklight(connections[sender].stream);
-            }
-            else if (root[MSGTYPE_COMMAND] == COMMAND_SET_BACKLIGHT)
-            {
-                oncmdSetBacklight(root, connections[sender].stream);
-            }
+              if (root[MSGTYPE_COMMAND] == COMMAND_HWINFO)
+              {
+                resp = oncmdGetHWInfo();
+              }
+              else if (root[MSGTYPE_COMMAND] == COMMAND_GET_BACKLIGHT)
+              {
+                  resp = oncmdGetBacklight();
+              }
+              else if (root[MSGTYPE_COMMAND] == COMMAND_SET_BACKLIGHT)
+              {
+                  resp = oncmdSetBacklight(root);
+              }
+          }
+        }catch(...){
+            resp = RESULT_FAIL("Internal error");
         }
 
         qDebug()<<line;
-
+        sendResponse(resp, connections[sender].stream);
     }
 }
 

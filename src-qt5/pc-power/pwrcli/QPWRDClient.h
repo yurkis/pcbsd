@@ -27,7 +27,9 @@ public:
     virtual void disconnect();
     virtual bool getHardwareInfo(PWRDHardwareInfo &out);
     virtual int getBacklightLevel(int backlight = 0);
-    virtual bool setBacklightLevel(int backlight = PWR_ALL);
+    virtual bool setBacklightLevel(int level, int backlight = PWR_ALL);
+    virtual bool setBacklightLevelRelative(int level, int backlight = PWR_ALL);
+    virtual bool setBacklightLevel(QString level, int backlight = PWR_ALL);
 
 signals:
     void backlightLevelChanged(unsigned int backlightNum, unsigned int level);

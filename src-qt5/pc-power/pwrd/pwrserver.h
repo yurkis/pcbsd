@@ -65,9 +65,9 @@ private:
     void sendResponse(QJsonObject resp, QTextStream*  stream);
 
     //! GetHWInfo command handler
-    void oncmdGetHWInfo(QTextStream*  stream);
-    void oncmdGetBacklight(QTextStream*  stream);
-    void oncmdSetBacklight(QJsonObject req, QTextStream*  stream);
+    QJsonObject oncmdGetHWInfo();
+    QJsonObject oncmdGetBacklight();
+    QJsonObject oncmdSetBacklight(QJsonObject req);
 
 
     PWRProfileReader findProfile(QString id);
