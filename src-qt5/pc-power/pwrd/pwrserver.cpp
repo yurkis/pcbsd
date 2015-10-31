@@ -332,6 +332,26 @@ bool PwrServer::start(QStringList args)
 
     readSettings(confFile);    
 
+    //devd socket setup
+    if (devdSocket.state() == QLocalSocket::ConnectedState)
+    {
+        devdSocket.disconnect();
+        devdSocket.waitForDisconnected();
+    }
+    devdSocket.connectToServer(DEVD_PIPE);
+    if (!devdSocket.waitForConnected())
+    {
+        qDebug()<<"Unable to connet to devd";
+    }
+    qDebug()<<"Connected to devd...";
+    devdStream = new QTextStream(&devdSocket);
+    //connect(server, SIGNAL(newConnection()), this, SLOT(onNewConnection()));
+    connect(&devdSocket, SIGNAL(readyRead()), this, SLOT(onDEVDEvent()));
+
+    onACPower = sysctlAsInt(ACLINE_SYSCTL) == 1;
+
+    checkState(true);
+
     if( !QLocalServer::removeServer(settings.pipeName) )
     {
         qDebug() << "A previous instance of the pc-pwrd server is still running! Exiting...";
@@ -351,24 +371,6 @@ bool PwrServer::start(QStringList args)
         qDebug() << "Error: pc-pwrd could not create pipe at "<<settings.pipeName;
         return false;
     }
-
-    //devd socket setup
-    if (devdSocket.state() == QLocalSocket::ConnectedState)
-    {
-        devdSocket.disconnect();
-        devdSocket.waitForDisconnected();
-    }
-    devdSocket.connectToServer(DEVD_PIPE);
-    if (!devdSocket.waitForConnected())
-    {
-        qDebug()<<"Unable to connet to devd";
-    }
-    qDebug()<<"Connected to devd...";
-    devdStream = new QTextStream(&devdSocket);
-    //connect(server, SIGNAL(newConnection()), this, SLOT(onNewConnection()));
-    connect(&devdSocket, SIGNAL(readyRead()), this, SLOT(onDEVDEvent()));
-
-    onACPower = sysctlAsInt(ACLINE_SYSCTL) == 1;
 
     return true;
 }
@@ -514,10 +516,10 @@ void PwrServer::onDisconnect()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void PwrServer::checkState()
+void PwrServer::checkState(bool force)
 {
     bool currPower = sysctlAsInt(ACLINE_SYSCTL) == 1;
-    if (currPower == onACPower)
+    if ((currPower == onACPower) && (!force))
         return;
     onACPower = currPower;
 

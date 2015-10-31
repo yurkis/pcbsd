@@ -98,7 +98,7 @@ private slots:
     //! Client disconnect handler
     void onDisconnect();
     //! Check power state and apply new profile when state changed
-    void checkState();
+    void checkState(bool force=false);
 
 };
 
