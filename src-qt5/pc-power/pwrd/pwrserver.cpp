@@ -305,6 +305,19 @@ QJsonObject PwrServer::oncmdSetBacklight(QJsonObject req)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+QJsonObject PwrServer::oncmdGetActiveProfiles()
+{
+    QJsonObject resp = RESULT_SUCCESS();
+    resp[ON_AC_POWER_PROFILE_ID] = settings.onACProfile;
+    resp[ON_AC_POWER_PROFILE_NAME] = findProfile(settings.onACProfile).description;
+    resp[ON_BATTERY_PROFILE_ID] = settings.onBatteryProfile;
+    resp[ON_BATTERY_PROFILE_NAME] = findProfile(settings.onBatteryProfile).description;
+    resp[ON_LOW_BATTERY_PROFILE_ID] = settings.onLowBatteryProfile;
+    resp[ON_LOW_BATTERY_PROFILE_NAME] = findProfile(settings.onLowBatteryProfile).description;
+    return resp;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 PWRProfileReader PwrServer::findProfile(QString id)
 {
     PWRProfileReader ret = PWRProfileReader();
@@ -506,6 +519,10 @@ void PwrServer::onRequest()
               else if (root[MSGTYPE_COMMAND] == COMMAND_SET_BACKLIGHT)
               {
                   resp = oncmdSetBacklight(root);
+              }
+              else if (root[MSGTYPE_COMMAND] == COMMAND_ACTIVE_PROFILES)
+              {
+                  resp = oncmdGetActiveProfiles();
               }
           }
         }catch(...){

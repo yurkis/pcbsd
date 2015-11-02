@@ -15,6 +15,7 @@ public:
         : q_ptr(parent){}
 
     QLocalSocket sock;
+    QString lastError;
 
 private:
 QPWRDClient * const q_ptr;
@@ -57,6 +58,12 @@ void QPWRDClient::disconnect()
         d->sock.disconnect();
         d->sock.waitForDisconnected();
     }
+}
+
+QString QPWRDClient::lastPWRDError()
+{
+    Q_D(QPWRDClient);
+    return d->lastError;
 }
 
 bool QPWRDClient::getHardwareInfo(PWRDHardwareInfo& out)
@@ -164,6 +171,49 @@ bool QPWRDClient::setBacklightLevel(QString level, int backlight)
     QJsonDocument resp = QJsonDocument::fromJson(respstr.toUtf8());
     QJsonObject root = resp.object();
 
+    return true;
+}
+
+bool QPWRDClient::getActiveProfiles(PWRProfileInfoBasic *ac_profile, PWRProfileInfoBasic *batt_profile, PWRProfileInfoBasic *low_batt_profile)
+{
+    Q_D(QPWRDClient);
+
+    d->lastError = "";
+    QJsonObject request;
+    QTextStream stream(&d->sock);
+    request[MSGTYPE_COMMAND] = QString (COMMAND_ACTIVE_PROFILES);
+    stream<<QJsonObjectToMessage(request);
+    stream.flush();
+
+    if (!d->sock.waitForReadyRead())
+        return false;
+
+    QString respstr = stream.readLine();
+    QJsonDocument resp = QJsonDocument::fromJson(respstr.toUtf8());
+    QJsonObject root = resp.object();
+
+    if (!root.contains(MSG_RESULT)) return false;
+    if (root[MSG_RESULT].toString() != QString(MSG_RESULT_SUCCESS))
+    {
+        if (root.contains(MSG_RESULT_FAIL_REASON)) d->lastError = root[MSG_RESULT_FAIL_REASON].toString();
+        return false;
+    }
+
+    if (ac_profile && root.contains(ON_AC_POWER_PROFILE_ID) && root.contains(ON_AC_POWER_PROFILE_NAME))
+    {
+        ac_profile->id = root[ON_AC_POWER_PROFILE_ID].toString();
+        ac_profile->name = root[ON_AC_POWER_PROFILE_NAME].toString();
+    }
+    if (batt_profile && root.contains(ON_BATTERY_PROFILE_ID) && root.contains(ON_BATTERY_PROFILE_NAME))
+    {
+        batt_profile->id = root[ON_BATTERY_PROFILE_ID].toString();
+        batt_profile->name = root[ON_BATTERY_PROFILE_NAME].toString();
+    }
+    if (low_batt_profile && root.contains(ON_LOW_BATTERY_PROFILE_ID) && root.contains(ON_LOW_BATTERY_PROFILE_NAME))
+    {
+        low_batt_profile->id = root[ON_LOW_BATTERY_PROFILE_ID].toString();
+        low_batt_profile->name = root[ON_LOW_BATTERY_PROFILE_NAME].toString();
+    }
     return true;
 }
 

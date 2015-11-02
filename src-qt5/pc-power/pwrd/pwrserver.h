@@ -68,6 +68,7 @@ private:
     QJsonObject oncmdGetHWInfo();
     QJsonObject oncmdGetBacklight();
     QJsonObject oncmdSetBacklight(QJsonObject req);
+    QJsonObject oncmdGetActiveProfiles();
 
 
     PWRProfileReader findProfile(QString id);

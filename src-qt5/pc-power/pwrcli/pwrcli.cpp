@@ -87,7 +87,7 @@ void PWRCLI::cmdHWInfo()
         }
     }
 
-    for (int i=0; i<info.batteries.size(); i++)l
+    for (int i=0; i<info.batteries.size(); i++)
     {
         int capAh=0,  capLastAh=0, health=0;
         if(info.batteries[i].designVoltage)
@@ -139,6 +139,29 @@ void PWRCLI::cmdSetBacklight(QStringList args)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+void PWRCLI::cmdGetActiveProfiles()
+{
+    PWRProfileInfoBasic ac,batt,low_batt;
+
+    if (!client->connect(pipeName))
+    {
+        qCritical()<<"Unable connect to pwrd";
+        return;
+    }
+
+    if (client->getActiveProfiles(&ac, &batt, &low_batt))
+    {
+        qcout()<<" On AC power : "<<ac.id<<"\t'"<<ac.name<<"'\n";
+        qcout()<<" On battery  : "<<batt.id<<"\t'"<<batt.name<<"'\n";
+        qcout()<<" On low power: "<<low_batt.id<<"\t'"<<low_batt.name<<"'\n";
+    }
+    else
+    {
+        qcout()<<"pwrd error: "<<client->lastPWRDError()<<"\n";
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
 void PWRCLI::run()
 {
     QStringList args = QCoreApplication::arguments();
@@ -177,6 +200,11 @@ void PWRCLI::run()
     else if((arg1 == "setbrightness") || (arg1 == "sb"))
     {
         cmdSetBacklight(args.mid(arg+1));
+        emit finished();
+    }
+    else if((arg1 == "activeprofiles") || (arg1 == "ap"))
+    {
+        cmdGetActiveProfiles();
         emit finished();
     }
 

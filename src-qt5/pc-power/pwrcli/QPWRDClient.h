@@ -13,6 +13,12 @@ typedef struct PWRDHardwareInfo
     QVector<PWRBacklightHardware>backlights;
 }PWRDHardwareInfo;
 
+typedef struct PWRProfileInfoBasic
+{
+    QString id;
+    QString name;
+}PWRProfileInfoBasic;
+
 class QPWRDClientPrivate;
 
 class QPWRDClient:public QObject
@@ -25,11 +31,13 @@ public:
 
     virtual bool connect(QString pipe = QString(DEF_PWRD_PIPE_NAME));
     virtual void disconnect();
+    virtual QString lastPWRDError();
     virtual bool getHardwareInfo(PWRDHardwareInfo &out);
     virtual int getBacklightLevel(int backlight = 0);
     virtual bool setBacklightLevel(int level, int backlight = PWR_ALL);
     virtual bool setBacklightLevelRelative(int level, int backlight = PWR_ALL);
     virtual bool setBacklightLevel(QString level, int backlight = PWR_ALL);
+    virtual bool getActiveProfiles(PWRProfileInfoBasic* ac_profile, PWRProfileInfoBasic* batt_profile, PWRProfileInfoBasic* low_batt_profile);
 
 signals:
     void backlightLevelChanged(unsigned int backlightNum, unsigned int level);

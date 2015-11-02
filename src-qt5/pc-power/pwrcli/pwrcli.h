@@ -19,6 +19,7 @@ private:
     void cmdHelp();
     void cmdHWInfo();
     void cmdSetBacklight(QStringList args);
+    void cmdGetActiveProfiles();
 
 signals:
     void finished();
