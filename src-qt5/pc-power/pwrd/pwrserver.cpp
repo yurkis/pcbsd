@@ -115,48 +115,74 @@ void PwrServer::checkHardware()
     hwInfo.hasLid = sysctlPresent(LID_SYSCTL);
     hwInfo.possibleACPIStates = sysctl(POSSIBLE_STATES_SYSCTL).split(" ");
 
-    qDebug()<<hwInfo.toJSONString();
-    QJsonObject obj;
-    QVector2JSON("batteries", battHW, obj);
-    qDebug()<<QJsonObject2String(obj);
-
-    qDebug()<<QJsonObject2String(QVector2JSON("backlights", backlightHW));
-
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 void PwrServer::readSettings(QString confFile)
 {
     checkHardware();
-
+    qDebug()<<"Load settings...";
     settings.load(confFile);
 
     profiles.clear();
 
-    //read all profiles
-    QString path = settings.profilesPath;
-    QDir dir(path);
-    if (!dir.exists(path))
-    {
-        profiles[PWRProfileReader().id] = PWRProfileReader();
-        currProfile = PWRProfileReader();
-        return;
-    }
-    QStringList dir_list =dir.entryList(QStringList("*.profile"));
+    qDebug()<<"Load profiles...";
 
-    for (int i=0; i<dir_list.size(); i++)
+    //Add default profile
+    profiles[PWRProfileReader().id] = PWRProfileReader();
+    currProfile = PWRProfileReader();
+
+    //at first read default profiles
+    QString path = settings.profilesPath + QString("/default/");
+    QDir dir(path);
+    if (dir.exists(path))
     {
-        PWRProfileReader item;
-        if (item.read(dir.absoluteFilePath(dir_list[i])))
+        QStringList dir_list =dir.entryList(QStringList("*.profile"));
+
+        for (int i=0; i<dir_list.size(); i++)
         {
-            profiles[item.id] = item;
+            PWRProfileReader item;
+            if (item.read(dir.absoluteFilePath(dir_list[i])))
+            {
+                profiles[item.id] = item;
+                qDebug()<<"    - "<<item.id<<"(default)";
+            }
         }
     }
-    if (!profiles.size())
+
+    // ..and then read user defined profiles
+    // if some profile id is equal to default profile id- override
+    path = settings.profilesPath;
+    dir = QDir(path);
+    if (dir.exists(path))
     {
-        profiles[PWRProfileReader().id] = PWRProfileReader();
-        currProfile = PWRProfileReader();
+        QStringList dir_list =dir.entryList(QStringList("*.profile"));
+
+        for (int i=0; i<dir_list.size(); i++)
+        {
+            PWRProfileReader item;
+            if (item.read(dir.absoluteFilePath(dir_list[i])))
+            {
+                profiles[item.id] = item;
+                qDebug()<<"    - "<<item.id;
+            }
+        }
     }
+
+    // Set defaults for profiles if not set in config file
+    if (!settings.onBatteryProfile.length())
+    {
+        settings.onBatteryProfile = (profiles.contains(DEF_ON_BATTERY_PROFILE_ID))?DEF_ON_BATTERY_PROFILE_ID:DEF_PROFILE_ID;
+    }
+    if (!settings.onACProfile.length())
+    {
+        settings.onACProfile = (profiles.contains(DEF_ON_AC_POWER_PROFILE_ID))?DEF_ON_AC_POWER_PROFILE_ID:DEF_PROFILE_ID;
+    }
+    if (!settings.onLowBatteryProfile.length())
+    {
+        settings.onLowBatteryProfile = (profiles.contains(DEF_ON_LOW_POWER_PROFILE_ID))?DEF_ON_LOW_POWER_PROFILE_ID:DEF_PROFILE_ID;
+    }
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -3,6 +3,8 @@
 
 #include "pwrdtypes.h"
 
+static const char* const DEF_PROFILE_ID = "default";
+
 typedef struct _PWRProfileReader:public PWRProfile
 {
     _PWRProfileReader();

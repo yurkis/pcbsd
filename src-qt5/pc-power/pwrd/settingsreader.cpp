@@ -33,7 +33,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 #define _str_constant static const char* const
 
-_str_constant DEF_PROFILES_PATH = "/usr/local/share/pcbsd/pwrd/profiles/";
+_str_constant DEF_PROFILES_PATH = "/usr/local/share/pcbsd/pwrd/";
 static const int DEF_POLLING_BATTERY_TIME = 1000;
 _str_constant DEF_DEVD_PIPE = "/var/run/devd.pipe";
 
@@ -79,10 +79,6 @@ bool _PWRServerSettings::load(QString file)
     onBatteryProfile = Reader.value(CONF_ON_BATTERY, DEF_PROFILE).toString();
     onACProfile = Reader.value(CONF_ON_AC_POWER, DEF_PROFILE).toString();
     onLowBatteryProfile = Reader.value(CONF_ON_LOW_BATTERY, DEF_PROFILE).toString();
-
-    qDebug()<<onBatteryProfile;
-    qDebug()<<onACProfile;
-    qDebug()<<onLowBatteryProfile;
 
     return true;
 }

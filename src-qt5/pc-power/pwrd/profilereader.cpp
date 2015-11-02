@@ -35,7 +35,7 @@ const unsigned int DEF_BACKLIGHT_LEVEL = 90;
 _str_constant DEF_POWER_BTN_STATE = "S5";
 _str_constant DEF_SLEEP_BTN_STATE = "S3";
 _str_constant DEF_LID_STATE = "S3";
-_str_constant DEF_NAME = "Default";
+_str_constant DEF_NAME = DEF_PROFILE_ID;
 
 _str_constant GENERAL_GROUP = "";//"general";
 _str_constant NAME_FIELD = "id";

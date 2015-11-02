@@ -39,7 +39,6 @@ bool getBacklightHWInfo(int num, PWRBacklightHardware &out)
 
 bool setBacklightLevel(int num, int percentage)
 {
-    qDebug()<<num<<" "<<percentage;
     if (!sysctlPresent(QString(DEF_BAKLIGHT_ENABLED_SYSCTL).arg(num)))
          return false;
     return setSysctl(QString(LCD_BRIGHTNESS_SYSCTL).arg(num), percentage);
