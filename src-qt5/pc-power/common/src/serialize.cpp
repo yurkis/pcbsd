@@ -98,3 +98,24 @@ bool JSONBacklightHardware::fromJSON(const QJsonObject &json)
 }
 
 
+
+void JSONProfile::toJSON(QJsonObject &json)
+{
+    json["id"] = id;
+    json["description"] = description;
+    json["btnPowerSate"] = btnPowerSate;
+    json["btnSleepSate"] = btnSleepSate;
+    json["lidSwitchSate"] = lidSwitchSate;
+    json["lcdBrightness"] = (int)lcdBrightness;
+}
+
+bool JSONProfile::fromJSON(const QJsonObject &json)
+{
+    FIELD("id", id).toString();
+    FIELD("description", description).toString();
+    FIELD("btnPowerSate", btnPowerSate).toString();
+    FIELD("btnSleepSate", btnSleepSate).toString();
+    FIELD("lidSwitchSate", lidSwitchSate).toString();
+    FIELD("lcdBrightness", lcdBrightness).toInt();
+    return true;
+}

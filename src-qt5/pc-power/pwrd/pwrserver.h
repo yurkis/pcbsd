@@ -13,6 +13,9 @@
 #include "profilereader.h"
 #include "serialize.h"
 
+class PProfile:public PWRProfileReader, public JSONProfile
+{};
+
 class PwrServer : public QObject{
     Q_OBJECT
 public:
@@ -52,9 +55,9 @@ private:
     bool onACPower;
 
     //! Power profiles (key is profile id)
-    QMap<QString, PWRProfileReader>  profiles;
+    QMap<QString, PProfile>  profiles;
 
-    PWRProfileReader           currProfile;
+    PProfile           currProfile;
 
     //! Get all hadware info
     void checkHardware();
@@ -70,6 +73,7 @@ private:
     QJsonObject oncmdSetBacklight(QJsonObject req);
     QJsonObject oncmdGetActiveProfiles();
     QJsonObject oncmdGetProfiles();
+    QJsonObject oncmdGetProfile(QJsonObject req);
 
 
     PWRProfileReader findProfile(QString id);

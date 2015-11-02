@@ -73,6 +73,13 @@ typedef struct JSONBacklightHardware: public PWRBacklightHardware, JSONSerialize
     virtual bool fromJSON(const QJsonObject &json);
 }JSONBacklightHardware;
 
+typedef struct JSONProfile:public virtual PWRProfile, public JSONSerializer
+{
+    JSON_STRUCT("Profile");
+    virtual void toJSON(QJsonObject &json);
+    virtual bool fromJSON(const QJsonObject &json);
+}JSONProfile;
+
 
 #endif // SERIALIZE_H
 

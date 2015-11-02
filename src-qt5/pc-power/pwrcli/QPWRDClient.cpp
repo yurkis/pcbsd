@@ -243,6 +243,26 @@ bool QPWRDClient::getProfiles(QVector<PWRProfileInfoBasic> &profiles)
     return true;
 }
 
+bool QPWRDClient::getProfile(QString profile_id, PWRProfile &out)
+{
+    Q_D(QPWRDClient);
+
+    d->lastError = "";
+
+    QJsonObject req, resp;
+
+    req[MSGTYPE_COMMAND] = COMMAND_GET_PROFILE;
+    if (profile_id.length())
+        req[PROFILE_ID] = profile_id;
+
+    if (!d->sendCommandReadResponce(req, resp)) return false;
+
+    JSONProfile resp_p;
+    if (!resp_p.fromJSON(resp)) return false;
+
+    out = resp_p;
+}
+
 void QPWRDClient::pwrdRead()
 {
 

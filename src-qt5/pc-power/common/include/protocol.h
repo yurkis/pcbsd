@@ -54,6 +54,13 @@ _str_constant PROFILE_NAME = "profile_name";
  * "{     "profiles": [         {             "profile_id": "balanced_ac",             "profile_name": "AC power balanced"         },         {             "profile_id": "balanced_batt",             "profile_name": "Battery balanced"         },         {             "profile_id": "default",             "profile_name": ""         },         {             "profile_id": "desktop",             "profile_name": "Desktop like. Full power."         },         {             "profile_id": "low_batt",             "profile_name": "Battery low power"         }     ],     "result": "success" } "
 */
 
+//get profile
+_str_constant COMMAND_GET_PROFILE = "getprofile";
+//using PROFILE_ID, if not present - current profile shown
+
+//current profile
+_str_constant COMMAND_GET_CURRENT_PROFILE = "getcurrprofile";
+
 QString QJsonObjectToMessage(QJsonObject obj);
 
 

@@ -46,13 +46,15 @@ PWRCLI::PWRCLI(QObject *parent) : QObject(parent)
 ///////////////////////////////////////////////////////////////////////////////
 void PWRCLI::cmdHelp()
 {
-    qcout()<<"Power daemon clinet\n"<<"Usage:";
+    qcout()<<"Power daemon clinet\n"<<"Usage:\n";
     qcout()<<"pwrd [-pipe] [-help] command\n";
     qcout()<<"   -pipe PIPENAME - set ull name of pwrd pipe\n";
-    qcout()<<"   -help - display this message and exin\n";
+    qcout()<<"   -help - display this message and exit\n";
     qcout()<<"Commands:\n";
     qcout()<<"  hwinfo - display haedware info (related to beacklight, battery, etc)\n";
-    qcout()<<"  sb or stbrightness [NO] LEVEL - set brightness to LEVEL percents\n";
+    qcout()<<"  ap or activeprofiles - show active profiles\n";
+    qcout()<<"  lp or listprofiles - show all profiles\n";
+    qcout()<<"  sb or setbrightness [NO] LEVEL - set brightness to LEVEL percents\n";
     qcout()<<"                         for backlight # NO. Brightness may be relative\n";
     qcout()<<"                         for example 'sb +25' or 'sb -10'\n";
 }
@@ -192,6 +194,35 @@ void PWRCLI::cmdListProfiles()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+void PWRCLI::cmdShowProfile(QStringList args)
+{
+    if (!client->connect(pipeName))
+    {
+        qCritical()<<"Unable connect to pwrd";
+        return;
+    }
+
+    PWRProfile profile;
+    QString id;
+
+    if (args.size()) id = args[0];
+
+    if (!client->getProfile(id, profile))
+    {
+        qcout()<<"pwrd error: "<<client->lastPWRDError()<<"\n";
+        return;
+    }
+
+    qcout()<<"Profile "<<profile.id<<"\n";
+    qcout()<<" Description :"<<profile.description<<"\n";
+    qcout()<<" LCD backlight level: "<<profile.lcdBrightness<<"%\n";
+    qcout()<<" State of buttons:\n";
+    qcout()<<"   Power button:"<<profile.btnPowerSate<<"\n";
+    qcout()<<"   Sleep button:"<<profile.btnSleepSate<<"\n";
+    qcout()<<"   List switch :"<<profile.lidSwitchSate<<"\n";
+}
+
+///////////////////////////////////////////////////////////////////////////////
 void PWRCLI::run()
 {
     QStringList args = QCoreApplication::arguments();
@@ -240,6 +271,11 @@ void PWRCLI::run()
     else if((arg1 == "listprofiles") || (arg1 == "lp"))
     {
         cmdListProfiles();
+        emit finished();
+    }
+    else if((arg1 == "profile") )
+    {
+        cmdShowProfile(args.mid(arg+1));
         emit finished();
     }
 

@@ -39,6 +39,7 @@ public:
     virtual bool setBacklightLevel(QString level, int backlight = PWR_ALL);
     virtual bool getActiveProfiles(PWRProfileInfoBasic* ac_profile, PWRProfileInfoBasic* batt_profile, PWRProfileInfoBasic* low_batt_profile);
     virtual bool getProfiles(QVector<PWRProfileInfoBasic>& profiles);
+    virtual bool getProfile(QString profile_id, PWRProfile& out);
 
 signals:
     void backlightLevelChanged(unsigned int backlightNum, unsigned int level);

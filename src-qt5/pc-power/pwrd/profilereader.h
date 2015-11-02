@@ -5,7 +5,7 @@
 
 static const char* const DEF_PROFILE_ID = "default";
 
-typedef struct _PWRProfileReader:public PWRProfile
+typedef struct _PWRProfileReader: public virtual PWRProfile
 {
     _PWRProfileReader();
     bool read(QString file);

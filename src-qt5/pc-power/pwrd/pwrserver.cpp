@@ -129,8 +129,8 @@ void PwrServer::readSettings(QString confFile)
     qDebug()<<"Load profiles...";
 
     //Add default profile
-    profiles[PWRProfileReader().id] = PWRProfileReader();
-    currProfile = PWRProfileReader();
+    profiles[PProfile().id] = PProfile();
+    currProfile = PProfile();
 
     //at first read default profiles
     QString path = settings.profilesPath + QString("/default/");
@@ -141,7 +141,7 @@ void PwrServer::readSettings(QString confFile)
 
         for (int i=0; i<dir_list.size(); i++)
         {
-            PWRProfileReader item;
+            PProfile item;
             if (item.read(dir.absoluteFilePath(dir_list[i])))
             {
                 profiles[item.id] = item;
@@ -160,7 +160,7 @@ void PwrServer::readSettings(QString confFile)
 
         for (int i=0; i<dir_list.size(); i++)
         {
-            PWRProfileReader item;
+            PProfile item;
             if (item.read(dir.absoluteFilePath(dir_list[i])))
             {
                 profiles[item.id] = item;
@@ -331,6 +331,28 @@ QJsonObject PwrServer::oncmdGetProfiles()
     }
     resp[PROFILES_ARRAY] = arr;
 
+    return resp;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+QJsonObject PwrServer::oncmdGetProfile(QJsonObject req)
+{
+    QJsonObject resp = RESULT_SUCCESS();
+    PProfile profile;
+    if (req.contains(PROFILE_ID))
+    {
+        QString id = req[PROFILE_ID].toString();
+        if (!profiles.contains(id))
+        {
+            return RESULT_FAIL("Profile not found");
+        }
+        profile = profiles[id];
+    }
+    else
+    {
+        profile = currProfile;
+    }
+    profile.toJSON(resp);
     return resp;
 }
 
@@ -544,6 +566,10 @@ void PwrServer::onRequest()
               else if (root[MSGTYPE_COMMAND] == COMMAND_GET_PROFILES)
               {
                   resp = oncmdGetProfiles();
+              }
+              else if (root[MSGTYPE_COMMAND] == COMMAND_GET_PROFILE)
+              {
+                  resp = oncmdGetProfile(root);
               }
           }
         }catch(...){
