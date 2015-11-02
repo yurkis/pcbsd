@@ -18,15 +18,18 @@ _str_constant MSG_RESULT_SUCCESS = "success";
 _str_constant MSG_RESULT_FAIL = "fail";
 _str_constant MSG_RESULT_FAIL_REASON = "reason";
 
+//get hardware info command
 _str_constant COMMAND_HWINFO = "hwinfo";
 
 _str_constant COMMAND_GET_BACKLIGHT = "getbacklight";
 
+//set backlight command
 _str_constant COMMAND_SET_BACKLIGHT = "setbacklight";
 _str_constant BACKLIGHT_NUMBER = "bl";
 _str_constant BACKLIGHT_LEVELS = "levels";
 _str_constant BACKLIGHT_VALUE = "val";
 
+//get active  profiles command
 _str_constant COMMAND_ACTIVE_PROFILES = "getactiveprofiles";
 _str_constant ON_AC_POWER_PROFILE_ID = "on_ac_id";
 _str_constant ON_AC_POWER_PROFILE_NAME = "on_ac_name";
@@ -34,6 +37,11 @@ _str_constant ON_BATTERY_PROFILE_ID = "on_batt_id";
 _str_constant ON_BATTERY_PROFILE_NAME = "on_batt_name";
 _str_constant ON_LOW_BATTERY_PROFILE_ID = "on_low_batt_id";
 _str_constant ON_LOW_BATTERY_PROFILE_NAME = "on_low_batt_name";
+/* EXAMPLE:
+ * "{     "command": "getactiveprofiles" } "
+ =================
+ * "{     "on_ac_id": "balanced_ac",     "on_ac_name": "AC power balanced",     "on_batt_id": "balanced_batt",     "on_batt_name": "Battery balanced",     "on_low_batt_id": "low_batt",     "on_low_batt_name": "Battery low power",     "result": "success" } "
+*/
 
 QString QJsonObjectToMessage(QJsonObject obj);
 

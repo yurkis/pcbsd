@@ -16,11 +16,36 @@ public:
 
     QLocalSocket sock;
     QString lastError;
+    bool sendCommandReadResponce(QJsonObject request, QJsonObject& responce);
 
 private:
 QPWRDClient * const q_ptr;
 Q_DECLARE_PUBLIC(QPWRDClient);
 };
+
+bool QPWRDClientPrivate::sendCommandReadResponce(QJsonObject request, QJsonObject &responce)
+{
+    if (sock.state() != QLocalSocket::ConnectedState)
+    {
+        lastError = "Not conected to pwrd";
+        return false;
+    }
+    QTextStream stream(&sock);
+    stream<<QJsonObjectToMessage(request);
+    stream.flush();
+    if (!sock.waitForReadyRead())
+        return false;
+    QString respstr = stream.readLine();
+    QJsonDocument resp = QJsonDocument::fromJson(respstr.toUtf8());
+    responce = resp.object();
+    if (!responce.contains(MSG_RESULT)) return false;
+    if (responce[MSG_RESULT].toString() != QString(MSG_RESULT_SUCCESS))
+    {
+        if (responce.contains(MSG_RESULT_FAIL_REASON)) lastError = responce[MSG_RESULT_FAIL_REASON].toString();
+        return false;
+    }
+    return true;
+}
 
 QPWRDClient::QPWRDClient(QObject *parent):QObject(parent),d_ptr(new QPWRDClientPrivate(this))
 {
@@ -70,17 +95,11 @@ bool QPWRDClient::getHardwareInfo(PWRDHardwareInfo& out)
 {
     Q_D(QPWRDClient);
 
-    QJsonObject request;
-    QTextStream stream(&d->sock);
+    QJsonObject request, root;
+
     request[MSGTYPE_COMMAND] = QString (COMMAND_HWINFO);
 
-    stream<<QJsonObjectToMessage(request);
-    stream.flush();
-    if (!d->sock.waitForReadyRead())
-        return false;
-    QString respstr = stream.readLine();
-    QJsonDocument resp = QJsonDocument::fromJson(respstr.toUtf8());
-    QJsonObject root = resp.object();
+    if (!d->sendCommandReadResponce(request, root)) return false;
 
     JSONHWInfo basic;
 
@@ -154,24 +173,14 @@ bool QPWRDClient::setBacklightLevel(QString level, int backlight)
 {
     Q_D(QPWRDClient);
 
-    QJsonObject request;
-    QTextStream stream(&d->sock);
+    QJsonObject request, root;
+
     request[MSGTYPE_COMMAND] = QString (COMMAND_SET_BACKLIGHT);
     request[BACKLIGHT_NUMBER] = QString::number(backlight);
     request[BACKLIGHT_VALUE] = level;
 
-    qDebug()<<QJsonObjectToMessage(request);
-    stream<<QJsonObjectToMessage(request);
-    stream.flush();
+    return d->sendCommandReadResponce(request, root);
 
-    if (!d->sock.waitForReadyRead())
-        return false;
-
-    QString respstr = stream.readLine();
-    QJsonDocument resp = QJsonDocument::fromJson(respstr.toUtf8());
-    QJsonObject root = resp.object();
-
-    return true;
 }
 
 bool QPWRDClient::getActiveProfiles(PWRProfileInfoBasic *ac_profile, PWRProfileInfoBasic *batt_profile, PWRProfileInfoBasic *low_batt_profile)
@@ -180,24 +189,11 @@ bool QPWRDClient::getActiveProfiles(PWRProfileInfoBasic *ac_profile, PWRProfileI
 
     d->lastError = "";
     QJsonObject request;
-    QTextStream stream(&d->sock);
+    QJsonObject root;
+
     request[MSGTYPE_COMMAND] = QString (COMMAND_ACTIVE_PROFILES);
-    stream<<QJsonObjectToMessage(request);
-    stream.flush();
 
-    if (!d->sock.waitForReadyRead())
-        return false;
-
-    QString respstr = stream.readLine();
-    QJsonDocument resp = QJsonDocument::fromJson(respstr.toUtf8());
-    QJsonObject root = resp.object();
-
-    if (!root.contains(MSG_RESULT)) return false;
-    if (root[MSG_RESULT].toString() != QString(MSG_RESULT_SUCCESS))
-    {
-        if (root.contains(MSG_RESULT_FAIL_REASON)) d->lastError = root[MSG_RESULT_FAIL_REASON].toString();
-        return false;
-    }
+    if (!d->sendCommandReadResponce(request, root)) return false;
 
     if (ac_profile && root.contains(ON_AC_POWER_PROFILE_ID) && root.contains(ON_AC_POWER_PROFILE_NAME))
     {
@@ -221,4 +217,6 @@ void QPWRDClient::pwrdRead()
 {
 
 }
+
+
 

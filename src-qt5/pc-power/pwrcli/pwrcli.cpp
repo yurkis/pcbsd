@@ -68,7 +68,7 @@ void PWRCLI::cmdHWInfo()
     PWRDHardwareInfo info;
     if (!client->getHardwareInfo(info))
     {
-        qCritical()<<"Unable connect to get hardware info";
+        qcout()<<"pwrd error: "<<client->lastPWRDError()<<"\n";
         return;
     }
     qcout()<<"Basic ACPI: "<<"\n";
@@ -134,7 +134,10 @@ void PWRCLI::cmdSetBacklight(QStringList args)
         return;
     }
 
-    client->setBacklightLevel(str, num);
+    if (!client->setBacklightLevel(str, num))
+    {
+        qcout()<<"pwrd error: "<<client->lastPWRDError()<<"\n";
+    }
 
 }
 
