@@ -25,6 +25,7 @@ Q_DECLARE_PUBLIC(QPWRDClient);
 
 bool QPWRDClientPrivate::sendCommandReadResponce(QJsonObject request, QJsonObject &responce)
 {
+    lastError = "";
     if (sock.state() != QLocalSocket::ConnectedState)
     {
         lastError = "Not conected to pwrd";
@@ -210,6 +211,35 @@ bool QPWRDClient::getActiveProfiles(PWRProfileInfoBasic *ac_profile, PWRProfileI
         low_batt_profile->id = root[ON_LOW_BATTERY_PROFILE_ID].toString();
         low_batt_profile->name = root[ON_LOW_BATTERY_PROFILE_NAME].toString();
     }
+    return true;
+}
+
+bool QPWRDClient::getProfiles(QVector<PWRProfileInfoBasic> &profiles)
+{
+    Q_D(QPWRDClient);
+
+    d->lastError = "";
+    profiles.clear();
+
+    QJsonObject req, resp;
+
+    req[MSGTYPE_COMMAND] = COMMAND_GET_PROFILES;
+    if (!d->sendCommandReadResponce(req, resp)) return false;
+
+    if (!resp.contains(PROFILES_ARRAY)) return false;
+    if (!resp[PROFILES_ARRAY].isArray()) return false;
+    QJsonArray arr = resp[PROFILES_ARRAY].toArray();
+    for (int i=0; i<arr.size(); i++)
+    {
+        PWRProfileInfoBasic item;
+        QJsonObject e = arr[i].toObject();
+        if (!e.contains(PROFILE_ID)) continue;
+        item.id = e[PROFILE_ID].toString();
+        if (e.contains(PROFILE_NAME)) item.name = e[PROFILE_NAME].toString();
+
+        profiles.push_back(item);
+    }
+
     return true;
 }
 

@@ -43,6 +43,17 @@ _str_constant ON_LOW_BATTERY_PROFILE_NAME = "on_low_batt_name";
  * "{     "on_ac_id": "balanced_ac",     "on_ac_name": "AC power balanced",     "on_batt_id": "balanced_batt",     "on_batt_name": "Battery balanced",     "on_low_batt_id": "low_batt",     "on_low_batt_name": "Battery low power",     "result": "success" } "
 */
 
+//get all profiles
+_str_constant COMMAND_GET_PROFILES = "getprofiles";
+_str_constant PROFILES_ARRAY = "profiles";
+_str_constant PROFILE_ID = "profile_id";
+_str_constant PROFILE_NAME = "profile_name";
+/* EXAMPLE
+ * "{     "command": "getprofiles" } "
+ =================
+ * "{     "profiles": [         {             "profile_id": "balanced_ac",             "profile_name": "AC power balanced"         },         {             "profile_id": "balanced_batt",             "profile_name": "Battery balanced"         },         {             "profile_id": "default",             "profile_name": ""         },         {             "profile_id": "desktop",             "profile_name": "Desktop like. Full power."         },         {             "profile_id": "low_batt",             "profile_name": "Battery low power"         }     ],     "result": "success" } "
+*/
+
 QString QJsonObjectToMessage(QJsonObject obj);
 
 

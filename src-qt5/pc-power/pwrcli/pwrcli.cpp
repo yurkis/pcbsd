@@ -154,13 +154,40 @@ void PWRCLI::cmdGetActiveProfiles()
 
     if (client->getActiveProfiles(&ac, &batt, &low_batt))
     {
-        qcout()<<" On AC power : "<<ac.id<<"\t'"<<ac.name<<"'\n";
-        qcout()<<" On battery  : "<<batt.id<<"\t'"<<batt.name<<"'\n";
-        qcout()<<" On low power: "<<low_batt.id<<"\t'"<<low_batt.name<<"'\n";
+        qcout()<<"State        Profile is\t\tProfile description\n";
+        qcout()<<"-------------------------------------------------------\n";
+        qcout()<<" On AC power : "<<ac.id<<"\t\t'"<<ac.name<<"'\n";
+        qcout()<<" On battery  : "<<batt.id<<"\t\t'"<<batt.name<<"'\n";
+        qcout()<<" On low power: "<<low_batt.id<<"\t\t'"<<low_batt.name<<"'\n";
     }
     else
     {
         qcout()<<"pwrd error: "<<client->lastPWRDError()<<"\n";
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void PWRCLI::cmdListProfiles()
+{
+    if (!client->connect(pipeName))
+    {
+        qCritical()<<"Unable connect to pwrd";
+        return;
+    }
+
+    QVector<PWRProfileInfoBasic> profiles;
+
+    if (!client->getProfiles(profiles))
+    {
+        qcout()<<"pwrd error: "<<client->lastPWRDError()<<"\n";
+    }
+
+    qcout()<<"Profile is\t\tProfile description\n";
+    qcout()<<"-------------------------------------------------------\n";
+
+    for (int i=0; i<profiles.size(); i++)
+    {
+        qcout()<<profiles[i].id<<"\t\t"<<profiles[i].name<<"\n";
     }
 }
 
@@ -208,6 +235,11 @@ void PWRCLI::run()
     else if((arg1 == "activeprofiles") || (arg1 == "ap"))
     {
         cmdGetActiveProfiles();
+        emit finished();
+    }
+    else if((arg1 == "listprofiles") || (arg1 == "lp"))
+    {
+        cmdListProfiles();
         emit finished();
     }
 

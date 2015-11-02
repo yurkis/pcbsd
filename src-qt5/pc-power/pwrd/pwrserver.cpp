@@ -318,6 +318,23 @@ QJsonObject PwrServer::oncmdGetActiveProfiles()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+QJsonObject PwrServer::oncmdGetProfiles()
+{
+    QJsonObject resp = RESULT_SUCCESS();
+    QJsonArray arr;
+    for (auto pi = profiles.begin(); pi != profiles.end(); ++pi)
+    {
+        QJsonObject item;
+        item[PROFILE_ID] = pi->id;
+        item[PROFILE_NAME] = pi->description;
+        arr.append(item);
+    }
+    resp[PROFILES_ARRAY] = arr;
+
+    return resp;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 PWRProfileReader PwrServer::findProfile(QString id)
 {
     PWRProfileReader ret = PWRProfileReader();
@@ -523,6 +540,10 @@ void PwrServer::onRequest()
               else if (root[MSGTYPE_COMMAND] == COMMAND_ACTIVE_PROFILES)
               {
                   resp = oncmdGetActiveProfiles();
+              }
+              else if (root[MSGTYPE_COMMAND] == COMMAND_GET_PROFILES)
+              {
+                  resp = oncmdGetProfiles();
               }
           }
         }catch(...){
