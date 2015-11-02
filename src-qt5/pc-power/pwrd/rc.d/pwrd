@@ -1,0 +1,40 @@
+#!/bin/sh
+# $FreeBSD$
+
+# PROVIDE: syscache
+# REQUIRE: LOGIN cleanvar
+# KEYWORD: shutdown
+
+#
+# Add the following lines to /etc/rc.conf to enable syscache:
+# syscache_enable (bool):		Set to "NO" by default.
+#				Set it to "YES" to enable syscache 
+
+. /etc/rc.subr
+
+name="pwrd"
+rcvar=pwrd_enable
+
+start_cmd="pwrd_start"
+stop_cmd="pwrd_stop"
+
+pwrd_stop()
+{
+  if [ -e "/var/run/pwrd.pid" ] ; then
+    pkill -9 -F /var/run/pwrd.pid
+  fi
+}
+
+pwrd_start()
+{
+  export PATH="${PATH}:/usr/local/bin:/usr/local/sbin"
+  pwrd_stop
+  echo "Starting pwrd..."
+  if [ -e "/var/run/pwrd.pipe" ] ; then
+    rm /var/run/pwrd.pipe >/dev/null 2>/dev/null
+  fi
+  
+  /usr/local/sbin/pwrd -d >/dev/null 2>/dev/null
+}
+
+run_rc_command "$1"

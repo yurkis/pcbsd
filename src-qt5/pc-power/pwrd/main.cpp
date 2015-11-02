@@ -13,7 +13,7 @@
 #include "profilereader.h"
 #include "intel_backlight.h"
 
-const char* const LOCK_FILE = "/var/run/pc-pwr";
+const char* const LOCK_FILE = "/var/run/pwrd.pid";
 
 static PwrServer *s = NULL;
 
