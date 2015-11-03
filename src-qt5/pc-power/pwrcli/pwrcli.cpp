@@ -37,6 +37,15 @@ inline QTextStream& qcout()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+QString strAlign(const QString& str, int length)
+{
+    QString out = str;
+    length = length - str.length();
+    for(int i=0; i<length; i++, out+=' ');
+    return out;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 PWRCLI::PWRCLI(QObject *parent) : QObject(parent)
 {
     client = new QPWRDClient(this);
@@ -46,17 +55,19 @@ PWRCLI::PWRCLI(QObject *parent) : QObject(parent)
 ///////////////////////////////////////////////////////////////////////////////
 void PWRCLI::cmdHelp()
 {
-    qcout()<<"Power daemon clinet\n"<<"Usage:\n";
+    qcout()<<"Power daemon client\n"<<"Usage:\n";
     qcout()<<"pwrd [-pipe] [-help] command\n";
-    qcout()<<"   -pipe PIPENAME - set ull name of pwrd pipe\n";
+    qcout()<<"   -pipe PIPENAME - set full name of pwrd pipe\n";
     qcout()<<"   -help - display this message and exit\n";
     qcout()<<"Commands:\n";
-    qcout()<<"  hwinfo - display haedware info (related to beacklight, battery, etc)\n";
-    qcout()<<"  ap or activeprofiles - show active profiles\n";
-    qcout()<<"  lp or listprofiles - show all profiles\n";
     qcout()<<"  sb or setbrightness [NO] LEVEL - set brightness to LEVEL percents\n";
     qcout()<<"                         for backlight # NO. Brightness may be relative\n";
     qcout()<<"                         for example 'sb +25' or 'sb -10'\n";
+    qcout()<<"  hwinfo - display hardware info (related to beacklight, battery, etc)\n";
+    qcout()<<"  ap or activeprofiles - show active profiles\n";
+    qcout()<<"  lp or listprofiles - show all profiles\n";
+    qcout()<<"  profile [NAME] - display profile NAME info. If name is blank\n";
+    qcout()<<"                         display current profile info\n";
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -156,11 +167,11 @@ void PWRCLI::cmdGetActiveProfiles()
 
     if (client->getActiveProfiles(&ac, &batt, &low_batt))
     {
-        qcout()<<"State        Profile is\t\tProfile description\n";
+        qcout()<<"State        Profile id\t\tProfile description\n";
         qcout()<<"-------------------------------------------------------\n";
-        qcout()<<" On AC power : "<<ac.id<<"\t\t'"<<ac.name<<"'\n";
-        qcout()<<" On battery  : "<<batt.id<<"\t\t'"<<batt.name<<"'\n";
-        qcout()<<" On low power: "<<low_batt.id<<"\t\t'"<<low_batt.name<<"'\n";
+        qcout()<<" On AC power : "<<strAlign(ac.id,18)<<ac.name<<"'\n";
+        qcout()<<" On battery  : "<<strAlign(batt.id,18)<<batt.name<<"'\n";
+        qcout()<<" On low power: "<<strAlign(low_batt.id,18)<<low_batt.name<<"'\n";
     }
     else
     {
@@ -189,7 +200,7 @@ void PWRCLI::cmdListProfiles()
 
     for (int i=0; i<profiles.size(); i++)
     {
-        qcout()<<profiles[i].id<<"\t\t"<<profiles[i].name<<"\n";
+        qcout()<<strAlign(profiles[i].id,24)<<profiles[i].name<<"\n";
     }
 }
 

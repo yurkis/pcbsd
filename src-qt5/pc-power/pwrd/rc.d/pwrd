@@ -1,40 +1,47 @@
 #!/bin/sh
 # $FreeBSD$
 
-# PROVIDE: syscache
-# REQUIRE: LOGIN cleanvar
+# PROVIDE: pwrd
+# REQUIRE: DAEMON cleanvar devd
 # KEYWORD: shutdown
 
 #
-# Add the following lines to /etc/rc.conf to enable syscache:
-# syscache_enable (bool):		Set to "NO" by default.
+# Add the following lines to /etc/rc.conf to enable pwrd:
+# pwrd_enable (bool):		Set to "NO" by default.
 #				Set it to "YES" to enable syscache 
 
 . /etc/rc.subr
 
-name="pwrd"
+name=pwrd
 rcvar=pwrd_enable
 
-start_cmd="pwrd_start"
-stop_cmd="pwrd_stop"
+command="/usr/local/sbin/${name}"
+command_args="-d"
+pidfile="/var/run/${name}.pid"
+start_precmd="pwrd_start"
+stop_postcmd="pwrd_stop"
 
 pwrd_stop()
 {
-  if [ -e "/var/run/pwrd.pid" ] ; then
-    pkill -9 -F /var/run/pwrd.pid
-  fi
+   if [ -e "$pidfile" ] ; then
+    rm $pidfile >/dev/null 2>/dev/null
+   fi
+   if [ -e "/var/run/pwrd.pipe" ] ; then
+    rm /var/run/pwrd.pipe >/dev/null 2>/dev/null
+   fi
 }
 
 pwrd_start()
 {
   export PATH="${PATH}:/usr/local/bin:/usr/local/sbin"
-  pwrd_stop
-  echo "Starting pwrd..."
+  #pwrd_stop
+
   if [ -e "/var/run/pwrd.pipe" ] ; then
     rm /var/run/pwrd.pipe >/dev/null 2>/dev/null
   fi
   
-  /usr/local/sbin/pwrd -d >/dev/null 2>/dev/null
+  #/usr/local/sbin/pwrd -d >/dev/null 2>/dev/null
 }
 
+load_rc_config $name
 run_rc_command "$1"

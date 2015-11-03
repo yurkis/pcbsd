@@ -4,5 +4,5 @@
 
 QString QJsonObjectToMessage(QJsonObject obj)
 {
-    return QJsonObject2String(obj).replace("\n"," ");
+    return QJsonObject2String(obj).replace('\n',' ');
 }
