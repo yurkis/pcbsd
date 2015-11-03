@@ -98,6 +98,8 @@ bool QPWRDClient::getHardwareInfo(PWRDHardwareInfo& out)
 
     QJsonObject request, root;
 
+    d->lastError = "";
+
     request[MSGTYPE_COMMAND] = QString (COMMAND_HWINFO);
 
     if (!d->sendCommandReadResponce(request, root)) return false;
@@ -137,26 +139,40 @@ bool QPWRDClient::getHardwareInfo(PWRDHardwareInfo& out)
     return true;
 }
 
-int QPWRDClient::getBacklightLevel(int backlight)
+bool QPWRDClient::getAllBacklighsLevel(QVector<int>& out)
 {
     Q_D(QPWRDClient);
 
-    QJsonObject request;
-    QTextStream stream(&d->sock);
+    d->lastError = "";
+
+    QJsonObject request, root;
+
+    out.clear();
+
     request[MSGTYPE_COMMAND] = QString (COMMAND_GET_BACKLIGHT);
-    //request[BACKLIGHT_NUMBER] = QString::number(backlight);
 
-    stream<<QJsonObjectToMessage(request);
-    stream.flush();
+    if (!d->sendCommandReadResponce(request, root)) return false;
 
-    if (!d->sock.waitForReadyRead())
-        return false;
+    if (!root.contains(BACKLIGHT_LEVELS)) return false;
+    if (!root[BACKLIGHT_LEVELS].isArray()) return false;
+    QJsonArray arr = root[BACKLIGHT_LEVELS].toArray();
+    for (int i=0;i<arr.size(); i++)
+    {
+        out.push_back(arr[i].toInt());
+    }
 
-    QString respstr = stream.readLine();
-    QJsonDocument resp = QJsonDocument::fromJson(respstr.toUtf8());
-    QJsonObject root = resp.object();
+    return true;
+}
 
-    return 0;
+bool QPWRDClient::getBacklightLevel(int backlight, int &out)
+{
+    QVector<int> levels;
+    if (!getAllBacklighsLevel(levels)) return false;
+
+    if (backlight >= levels.size()) return false;
+
+    out = levels[backlight];
+    return true;
 }
 
 bool QPWRDClient::setBacklightLevel(int level, int backlight)
@@ -261,6 +277,8 @@ bool QPWRDClient::getProfile(QString profile_id, PWRProfile &out)
     if (!resp_p.fromJSON(resp)) return false;
 
     out = resp_p;
+
+    return true;
 }
 
 void QPWRDClient::pwrdRead()

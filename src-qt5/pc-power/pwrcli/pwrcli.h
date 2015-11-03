@@ -22,6 +22,7 @@ private:
     void cmdGetActiveProfiles();
     void cmdListProfiles();
     void cmdShowProfile(QStringList args);
+    void cmdGetBacklightLevels();
 
 signals:
     void finished();

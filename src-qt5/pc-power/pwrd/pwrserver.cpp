@@ -122,12 +122,13 @@ void PwrServer::checkHardware()
 void PwrServer::readSettings(QString confFile)
 {
     checkHardware();
-    qDebug()<<"Load settings...";
+    qDebug()<<"Load settings from "<<confFile<<" ...";
     settings.load(confFile);
+    if (settings.usingIntel_backlight) qDebug()<<"Using intel_backlight for LCD brightness";
 
     profiles.clear();
 
-    qDebug()<<"Load profiles...";
+    qDebug()<<"Load profiles from "<<settings.profilesPath<<" ...";
 
     //Add default profile
     profiles[PProfile().id] = PProfile();
@@ -200,9 +201,24 @@ QJsonObject PwrServer::oncmdGetHWInfo()
 {
     QJsonObject resp = RESULT_SUCCESS();
 
-    resp[hwInfo.myname()] = hwInfo.toJSON();
+    if (!settings.usingIntel_backlight)
+    {
+        resp[hwInfo.myname()] = hwInfo.toJSON();
+        QVector2JSON(JSONBacklightHardware().myname(), backlightHW, resp);
+    }
+    else
+    {
+        //if using intel_backlight transmit fake hardware info
+        JSONHWInfo fakeinfo = hwInfo;
+        fakeinfo.numBacklights = 1;
+        resp[fakeinfo.myname()] = fakeinfo.toJSON();
+
+        QVector<JSONBacklightHardware> fakevec;
+        JSONBacklightHardware fake;
+        fakevec.push_back(fake);
+        QVector2JSON(JSONBacklightHardware().myname(), fakevec, resp);
+    }
     QVector2JSON(JSONBatteryHardware().myname(), battHW, resp);
-    QVector2JSON(JSONBacklightHardware().myname(), backlightHW, resp);
 
     return resp;
 }
@@ -216,16 +232,18 @@ QJsonObject PwrServer::oncmdGetBacklight()
     if (settings.usingIntel_backlight)
     {
         QJsonObject obj;
-        obj[BACKLIGHT_VALUE] = IBLBacklightLevel();
-        backlights.append(obj);
+        //obj[BACKLIGHT_VALUE] = IBLBacklightLevel();
+        //backlights.append(obj);
+        backlights.append(IBLBacklightLevel());
     }
     else
     {
         for (int i=0; i<backlightHW.size(); i++)
         {
-            QJsonObject obj;
-            obj[BACKLIGHT_VALUE] =backlightLevel(i);
-            backlights.append(obj);
+            //QJsonObject obj;
+            //obj[BACKLIGHT_VALUE] =backlightLevel(i);
+            //backlights.append(obj);
+            backlights.append(backlightLevel(i));
         }
     }
     resp[BACKLIGHT_LEVELS] = backlights;
@@ -257,8 +275,18 @@ QJsonObject PwrServer::oncmdSetBacklight(QJsonObject req)
     else
     {
         no = req[BACKLIGHT_NUMBER].toInt();
-        if ((no<0) || (no>=backlightHW.size()))
-            return RESULT_FAIL("Bad backlight number");
+        if (no != PWR_ALL)
+        {
+            if (!settings.usingIntel_backlight)
+            {
+                if ((no<0) || (no>=backlightHW.size()))
+                    return RESULT_FAIL("Bad backlight number");
+            }
+            else
+            {
+                if (no != 0) return RESULT_FAIL("Bad backlight number");
+            }
+        }
     }
 
     if (no == PWR_ALL)

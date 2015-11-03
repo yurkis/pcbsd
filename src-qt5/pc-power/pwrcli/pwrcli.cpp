@@ -233,6 +233,28 @@ void PWRCLI::cmdShowProfile(QStringList args)
     qcout()<<"   List switch :"<<profile.lidSwitchSate<<"\n";
 }
 
+void PWRCLI::cmdGetBacklightLevels()
+{
+    if (!client->connect(pipeName))
+    {
+        qCritical()<<"Unable connect to pwrd";
+        return;
+    }
+
+    QVector<int> levels;
+    if (!client->getAllBacklighsLevel(levels))
+    {
+        qcout()<<"pwrd error: "<<client->lastPWRDError()<<"\n";
+        return;
+    }
+
+    for (int i=0; i<levels.size(); i++)
+    {
+        qcout()<<"Backlight #"<<i<<" brightness: "<<levels[i]<<"%\n";
+    }
+
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 void PWRCLI::run()
 {
@@ -287,6 +309,11 @@ void PWRCLI::run()
     else if((arg1 == "profile") )
     {
         cmdShowProfile(args.mid(arg+1));
+        emit finished();
+    }
+    else if((arg1 == "backlight") || (arg1 == "b"))
+    {
+        cmdGetBacklightLevels();
         emit finished();
     }
 

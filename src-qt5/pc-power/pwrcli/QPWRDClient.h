@@ -33,7 +33,8 @@ public:
     virtual void disconnect();
     virtual QString lastPWRDError();
     virtual bool getHardwareInfo(PWRDHardwareInfo &out);
-    virtual int getBacklightLevel(int backlight = 0);
+    virtual bool getAllBacklighsLevel(QVector<int>& out);
+    virtual bool getBacklightLevel(int backlight, int& out);
     virtual bool setBacklightLevel(int level, int backlight = PWR_ALL);
     virtual bool setBacklightLevelRelative(int level, int backlight = PWR_ALL);
     virtual bool setBacklightLevel(QString level, int backlight = PWR_ALL);
