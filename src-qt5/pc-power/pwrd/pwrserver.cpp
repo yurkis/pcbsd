@@ -25,6 +25,7 @@
 #include "pwrserver.h"
 #include "battery.h"
 #include "backlight.h"
+#include "buttons.h"
 #include "intel_backlight.h"
 #include "sysctlutils.h"
 #include "serialize.h"
@@ -371,6 +372,10 @@ void PwrServer::applyProfile(QString id)
     PWRProfileReader p = findProfile(id);
     qDebug()<<"Changing profile to "<<id;
     setblGlobalLevel( p.lcdBrightness);
+
+    setSleepBtnSleepState(p.btnSleepSate);
+    setPowerBtnSleepState(p.btnPowerSate);
+    setLidSleepState(p.lidSwitchSate);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -391,6 +396,27 @@ void PwrServer::setblGlobalLevel(int value)
     else
         for (int i=0; i<backlightHW.size(); i++)
             setBacklightLevel(i, value);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void PwrServer::onSuspend()
+{
+    qDebug()<<"Preparing to suspend...";
+    if (settings.usingIntel_backlight)
+    {
+        savedBacklight = IBLBacklightLevel();
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void PwrServer::onResume()
+{
+    qDebug()<<"Performing resume...";
+    if (settings.usingIntel_backlight)
+    {
+        setIBLBacklightLevel(savedBacklight);
+    }
+    checkState();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -485,13 +511,24 @@ void PwrServer::onDEVDEvent()
     QStringList ev = devdStream->readLine().split(" ");
     QString sys,subsys;
     //"!system=ACPI", "subsystem=ACAD", "type=\_SB_.PCI0.AC0_", "notify=0x01"
+    //qDebug()<<ev;
     if (ev.size()<3)
         return;
     if (ev[0].replace("!system=", "") != "ACPI")
         return;
-    if (ev[1].replace("subsystem=","") != "ACAD")
+    if (ev[1].replace("subsystem=","") == "ACAD")
+    {
+        QTimer::singleShot(0, this, SLOT(checkState()));
         return;
-    QTimer::singleShot(0, this, SLOT(checkState()));
+    }
+    else if (ev[1].replace("subsystem=","") == "Suspend")
+    {
+        onSuspend();
+    }
+    else if (ev[1].replace("subsystem=","") == "Resume")
+    {
+        onResume();
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////

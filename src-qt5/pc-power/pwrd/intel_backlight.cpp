@@ -75,4 +75,5 @@ bool setIBLBacklightLevel(int percentage)
 bool hasIntelBacklight()
 {
     return QFile::exists("/usr/local/bin/intel_backlight");
+    //TODO: check output (shows is hardware supported)
 }

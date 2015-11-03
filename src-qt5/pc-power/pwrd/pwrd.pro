@@ -16,7 +16,8 @@ SOURCES += main.cpp \
     profilereader.cpp \
     ../common/src/serialize.cpp \
     ../common/src/protocol.cpp \
-    intel_backlight.cpp
+    intel_backlight.cpp \
+    buttons.cpp
 
 HEADERS += \
     pwrserver.h \
@@ -28,7 +29,8 @@ HEADERS += \
     ../common/include/pwrdtypes.h \
     ../common/include/protocol.h \
     ../common/include/serialize.h \
-    intel_backlight.h
+    intel_backlight.h \
+    buttons.h
 
 INCLUDEPATH += ../common/include /usr/local/include/pwrd
 

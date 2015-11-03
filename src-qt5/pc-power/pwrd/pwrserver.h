@@ -59,6 +59,8 @@ private:
 
     PProfile           currProfile;
 
+    int savedBacklight;
+
     //! Get all hadware info
     void checkHardware();
     //! Read daemon configuration
@@ -83,6 +85,9 @@ private:
     int blGlobalLevel();
     //! Set backlight level (for all backlights if more than one)
     void setblGlobalLevel(int value);
+
+    void onSuspend();
+    void onResume();
 
 signals:
 
