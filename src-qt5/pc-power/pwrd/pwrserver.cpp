@@ -383,11 +383,11 @@ void PwrServer::onDisconnect()
         return;
     }
 
-    delete connections[sender].sock;
-    delete connections[sender].stream;
-
-    connections.remove(sender);
-
+    if (connections.contains(sender))
+    {
+        delete connections[sender].stream;
+        connections.remove(sender);
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -410,8 +410,9 @@ void PwrServer::onRequest()
     {
         QString line;
         line = connections[sender].stream->readLine();
-        QJsonObject resp = parseCommand(line);
-        //sendResponse(resp, connections[sender].stream);
+
+        QJsonObject resp= parseCommand(line);
+
         QString jsontext = QJsonObjectToMessage(resp);
         qDebug()<<jsontext;
         (*connections[sender].stream)<<jsontext<<"\n";

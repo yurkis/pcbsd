@@ -70,6 +70,7 @@ private:
     QJsonObject oncmdGetActiveProfiles();
     QJsonObject oncmdGetProfiles();
     QJsonObject oncmdGetProfile(QJsonObject req);
+    QJsonObject oncmdGetCurrentProfile();
 
 
     PWRProfileReader findProfile(QString id);

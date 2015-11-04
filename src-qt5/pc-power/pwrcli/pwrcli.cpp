@@ -68,6 +68,7 @@ void PWRCLI::cmdHelp()
     qcout()<<"  lp or listprofiles - show all profiles\n";
     qcout()<<"  profile [NAME] - display profile NAME info. If name is blank\n";
     qcout()<<"                         display current profile info\n";
+    qcout()<<"  currprofile - display current profile name\n";
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -256,6 +257,28 @@ void PWRCLI::cmdGetBacklightLevels()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+void PWRCLI::cmdGetCurrentProfile()
+{
+    if (!client->connect(pipeName))
+    {
+        qCritical()<<"Unable connect to pwrd";
+        return;
+    }
+
+    PWRProfileInfoBasic info;
+
+    if (!client->getCurrentProfileID(info))
+    {
+        qcout()<<"pwrd error: "<<client->lastPWRDError()<<"\n";
+        return;
+    }
+
+    qcout()<<"Current profile:\n";
+    qcout()<<"  ID: "<<info.id<<"\n";
+    qcout()<<"  Description: "<<info.id<<"\n";
+}
+
+///////////////////////////////////////////////////////////////////////////////
 void PWRCLI::run()
 {
     QStringList args = QCoreApplication::arguments();
@@ -316,7 +339,11 @@ void PWRCLI::run()
         cmdGetBacklightLevels();
         emit finished();
     }
-
+    else if((arg1 == "currprofile") || (arg1 == "cp"))
+    {
+        cmdGetCurrentProfile();
+        emit finished();
+    }
     emit finished();
 }
 

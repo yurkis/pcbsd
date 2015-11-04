@@ -63,6 +63,10 @@ QJsonObject PwrServer::parseCommand(QString line)
           {
               resp = oncmdGetProfile(root);
           }
+          else if (root[MSGTYPE_COMMAND] == COMMAND_GET_CURRENT_PROFILE)
+          {
+              resp = oncmdGetCurrentProfile();
+          }
       }
     }catch(...){
         resp = RESULT_FAIL("Internal error");
@@ -253,5 +257,14 @@ QJsonObject PwrServer::oncmdGetProfile(QJsonObject req)
         profile = currProfile;
     }
     profile.toJSON(resp);
+    return resp;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+QJsonObject PwrServer::oncmdGetCurrentProfile()
+{
+    QJsonObject resp = RESULT_SUCCESS();
+    resp[PROFILE_ID] = currProfile.id;
+    resp[PROFILE_NAME] = currProfile.description;
     return resp;
 }

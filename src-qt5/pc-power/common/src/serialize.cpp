@@ -94,6 +94,7 @@ void JSONBacklightHardware::toJSON(QJsonObject &json)
 
 bool JSONBacklightHardware::fromJSON(const QJsonObject &json)
 {
+    Q_UNUSED(json);
     return true;
 }
 

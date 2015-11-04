@@ -281,6 +281,25 @@ bool QPWRDClient::getProfile(QString profile_id, PWRProfile &out)
     return true;
 }
 
+bool QPWRDClient::getCurrentProfileID(PWRProfileInfoBasic &out)
+{
+    Q_D(QPWRDClient);
+
+    d->lastError = "";
+
+    QJsonObject req, resp;
+    out = PWRProfileInfoBasic();
+
+    req[MSGTYPE_COMMAND] = COMMAND_GET_CURRENT_PROFILE;
+
+    if (!d->sendCommandReadResponce(req, resp)) return false;
+
+    if (resp.contains(PROFILE_ID)) out.id = resp[PROFILE_ID].toString();
+    if (resp.contains(PROFILE_NAME)) out.name = resp[PROFILE_NAME].toString();
+
+    return true;
+}
+
 void QPWRDClient::pwrdRead()
 {
 
