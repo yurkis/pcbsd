@@ -13,9 +13,6 @@
 #include "profilereader.h"
 #include "serialize.h"
 
-class PProfile:public PWRProfileReader, public JSONProfile
-{};
-
 class PwrServer : public QObject{
     Q_OBJECT
 public:
@@ -55,9 +52,9 @@ private:
     bool onACPower;
 
     //! Power profiles (key is profile id)
-    QMap<QString, PProfile>  profiles;
+    QMap<QString, PWRProfileReader>  profiles;
 
-    PProfile           currProfile;
+    PWRProfileReader         currProfile;
 
     int savedBacklight;
 
@@ -66,8 +63,7 @@ private:
     //! Read daemon configuration
     void readSettings(QString confFile = QString());
 
-    //! Send responce to client
-    void sendResponse(QJsonObject resp, QTextStream*  stream);
+    QJsonObject parseCommand(QString line);
 
     //! GetHWInfo command handler
     QJsonObject oncmdGetHWInfo();

@@ -2,10 +2,12 @@
 #define PROFILEREADER_H
 
 #include "pwrdtypes.h"
+#include "../common/include/serialize.h"
+
 
 static const char* const DEF_PROFILE_ID = "default";
 
-typedef struct _PWRProfileReader: public virtual PWRProfile
+typedef struct _PWRProfileReader: public JSONProfile
 {
     _PWRProfileReader();
     bool read(QString file);

@@ -2,7 +2,7 @@ QT += core network
 QT -= gui
 
 TARGET = pwrd
-CONFIG += console
+CONFIG += console c++11
 #CONFIG -= app_bundle
 
 TEMPLATE = app
@@ -10,27 +10,28 @@ TEMPLATE = app
 SOURCES += main.cpp \
     pwrserver.cpp \
     sysctlutils.cpp \
-    battery.cpp \
+    hw/battery.cpp \
     settingsreader.cpp \
-    backlight.cpp \
+    hw/backlight.cpp \
     profilereader.cpp \
     ../common/src/serialize.cpp \
     ../common/src/protocol.cpp \
-    intel_backlight.cpp \
-    buttons.cpp
+    hw/intel_backlight.cpp \
+    hw/buttons.cpp \
+    comm_handlers.cpp
 
 HEADERS += \
     pwrserver.h \
     sysctlutils.h \
-    battery.h \
+    hw/battery.h \
     settingsreader.h \
-    backlight.h \
+    hw/backlight.h \
     profilereader.h \
     ../common/include/pwrdtypes.h \
     ../common/include/protocol.h \
     ../common/include/serialize.h \
-    intel_backlight.h \
-    buttons.h
+    hw/intel_backlight.h \
+    hw/buttons.h
 
 INCLUDEPATH += ../common/include /usr/local/include/pwrd
 

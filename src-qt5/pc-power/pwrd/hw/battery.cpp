@@ -4,6 +4,7 @@
 #include <sys/ioctl.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <unistd.h>
 
 ///////////////////////////////////////////////////////////////////////////////
 static const char* const ACPIDEV = "/dev/acpi";

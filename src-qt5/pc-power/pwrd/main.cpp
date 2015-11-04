@@ -8,10 +8,12 @@
 #include <sys/stat.h>
 #include "pwrserver.h"
 
-#include "battery.h"
+#include "hw/battery.h"
+#include "hw/intel_backlight.h"
+
 #include "sysctlutils.h"
 #include "profilereader.h"
-#include "intel_backlight.h"
+
 
 const char* const LOCK_FILE = "/var/run/pwrd.pid";
 
