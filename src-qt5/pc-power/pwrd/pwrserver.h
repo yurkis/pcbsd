@@ -46,8 +46,6 @@ private:
     //! Hardware info for all found backlights
     QVector<JSONBacklightHardware> backlightHW;
 
-    QVector<PWRSuppllyInfo>       currState;
-
     //! True if system is on AC power
     bool onACPower;
 

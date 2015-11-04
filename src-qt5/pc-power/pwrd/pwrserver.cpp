@@ -72,17 +72,14 @@ void PwrServer::checkHardware()
 
     JSONBatteryHardware    batthw;
     JSONBacklightHardware  backlighthw;
-    PWRSuppllyInfo        currbatt;
 
     battHW.clear();
-    currState.clear();
     backlightHW.clear();
 
     // Ugly code for getting number of abtteries, I know
-    while(getBatteryHWInfo(i++, batthw, currbatt))
+    while(getBatteryHWInfo(i++, batthw))
     {
         battHW.push_back(batthw);
-        currState.push_back(currbatt);
     }
     hwInfo.numBatteries = battHW.size();
 

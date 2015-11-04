@@ -18,20 +18,20 @@ typedef enum
     BATT_STATE_MAX
 }PWRBatteryState;
 
-typedef struct _PWRSuppllyInfo
-{    
-    unsigned int batteryRate;       //< Battery rate in percents (0..100)
+typedef struct _PWRBatteryState
+{
     PWRBatteryState batteryState;   //< Current battery state
+    unsigned int batteryRate;       //< Battery rate in percents (0..100)
     unsigned int powerConsumption;  //< Current power consumption (in mW)
     unsigned int batteryTime;       //< Battery lifetime (in minutes)
-    unsigned int backlightLevel;    //< Backlight brightness in percents (0..100)
-    _PWRSuppllyInfo()
+    _PWRBatteryState()
     {
-        powerConsumption = 0;
+        batteryState = BATT_STATE_UNKNOWN;
+        batteryRate = 0;
         batteryTime = 0;
-        backlightLevel = 0;
+        powerConsumption = 0;
     }
-}PWRSuppllyInfo;
+}PWRBatteryStatus;
 
 typedef struct _PWRBatteryHardware
 {

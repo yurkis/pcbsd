@@ -4,8 +4,8 @@
 
 #include "pwrdtypes.h"
 
-bool getBatteryHWInfo(int batt, PWRBatteryHardware& hwout, PWRSuppllyInfo &info);
-bool isOnBattery();
+bool getBatteryHWInfo(int batt, PWRBatteryHardware& hwout);
+bool getBatteryStatus(int batt, PWRBatteryStatus& info);
 
 #endif // ACPIINFO_H
 
