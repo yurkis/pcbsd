@@ -67,6 +67,14 @@ QJsonObject PwrServer::parseCommand(QString line)
           {
               resp = oncmdGetCurrentProfile();
           }
+          else if (root[MSGTYPE_COMMAND] == COMMAND_AC_STATUS)
+          {
+              resp = oncmdGetAcStatus();
+          }
+          else if (root[MSGTYPE_COMMAND] == COMMAND_GET_BATT_STATE)
+          {
+              resp = oncmdGetBattState();
+          }
       }
     }catch(...){
         resp = RESULT_FAIL("Internal error");
@@ -268,3 +276,30 @@ QJsonObject PwrServer::oncmdGetCurrentProfile()
     resp[PROFILE_NAME] = currProfile.description;
     return resp;
 }
+
+///////////////////////////////////////////////////////////////////////////////
+QJsonObject PwrServer::oncmdGetAcStatus()
+{
+    QJsonObject resp = RESULT_SUCCESS();
+    resp[AC_POWER] = isOnACPower();
+    return resp;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+QJsonObject PwrServer::oncmdGetBattState()
+{
+    QJsonObject resp = RESULT_SUCCESS();
+    QJsonArray arr;
+    for(int i=0; i<battHW.size(); i++)
+    {
+        JSONBatteryStatus item;
+        if (getBatteryStatus(i, item))
+        {
+            arr.append(item.toJSON());
+        }
+    }
+    resp[JSONBatteryStatus().myname()] = arr;
+
+    return resp;
+}
+

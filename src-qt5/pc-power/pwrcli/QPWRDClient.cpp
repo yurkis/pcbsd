@@ -23,6 +23,7 @@ QPWRDClient * const q_ptr;
 Q_DECLARE_PUBLIC(QPWRDClient);
 };
 
+///////////////////////////////////////////////////////////////////////////////
 bool QPWRDClientPrivate::sendCommandReadResponce(QJsonObject request, QJsonObject &responce)
 {
     lastError = "";
@@ -48,16 +49,18 @@ bool QPWRDClientPrivate::sendCommandReadResponce(QJsonObject request, QJsonObjec
     return true;
 }
 
+///////////////////////////////////////////////////////////////////////////////
 QPWRDClient::QPWRDClient(QObject *parent):QObject(parent),d_ptr(new QPWRDClientPrivate(this))
 {
 }
 
-
+///////////////////////////////////////////////////////////////////////////////
 QPWRDClient::~QPWRDClient()
 {
 
 }
 
+///////////////////////////////////////////////////////////////////////////////
 bool QPWRDClient::connect(QString pipe)
 {
     Q_D(QPWRDClient);
@@ -76,6 +79,7 @@ bool QPWRDClient::connect(QString pipe)
     return true;
 }
 
+///////////////////////////////////////////////////////////////////////////////
 void QPWRDClient::disconnect()
 {
     Q_D(QPWRDClient);
@@ -92,6 +96,7 @@ QString QPWRDClient::lastPWRDError()
     return d->lastError;
 }
 
+///////////////////////////////////////////////////////////////////////////////
 bool QPWRDClient::getHardwareInfo(PWRDHardwareInfo& out)
 {
     Q_D(QPWRDClient);
@@ -139,6 +144,7 @@ bool QPWRDClient::getHardwareInfo(PWRDHardwareInfo& out)
     return true;
 }
 
+///////////////////////////////////////////////////////////////////////////////
 bool QPWRDClient::getAllBacklighsLevel(QVector<int>& out)
 {
     Q_D(QPWRDClient);
@@ -164,6 +170,7 @@ bool QPWRDClient::getAllBacklighsLevel(QVector<int>& out)
     return true;
 }
 
+///////////////////////////////////////////////////////////////////////////////
 bool QPWRDClient::getBacklightLevel(int backlight, int &out)
 {
     QVector<int> levels;
@@ -175,17 +182,20 @@ bool QPWRDClient::getBacklightLevel(int backlight, int &out)
     return true;
 }
 
+///////////////////////////////////////////////////////////////////////////////
 bool QPWRDClient::setBacklightLevel(int level, int backlight)
 {
     return setBacklightLevel(QString::number(level), backlight);
 }
 
+///////////////////////////////////////////////////////////////////////////////
 bool QPWRDClient::setBacklightLevelRelative(int level, int backlight)
 {
     QString sign = (level<0)?QString("-"):QString("+");
     return setBacklightLevel(sign + QString::number(level), backlight);
 }
 
+///////////////////////////////////////////////////////////////////////////////
 bool QPWRDClient::setBacklightLevel(QString level, int backlight)
 {
     Q_D(QPWRDClient);
@@ -200,6 +210,7 @@ bool QPWRDClient::setBacklightLevel(QString level, int backlight)
 
 }
 
+///////////////////////////////////////////////////////////////////////////////
 bool QPWRDClient::getActiveProfiles(PWRProfileInfoBasic *ac_profile, PWRProfileInfoBasic *batt_profile, PWRProfileInfoBasic *low_batt_profile)
 {
     Q_D(QPWRDClient);
@@ -230,6 +241,7 @@ bool QPWRDClient::getActiveProfiles(PWRProfileInfoBasic *ac_profile, PWRProfileI
     return true;
 }
 
+///////////////////////////////////////////////////////////////////////////////
 bool QPWRDClient::getProfiles(QVector<PWRProfileInfoBasic> &profiles)
 {
     Q_D(QPWRDClient);
@@ -259,6 +271,7 @@ bool QPWRDClient::getProfiles(QVector<PWRProfileInfoBasic> &profiles)
     return true;
 }
 
+///////////////////////////////////////////////////////////////////////////////
 bool QPWRDClient::getProfile(QString profile_id, PWRProfile &out)
 {
     Q_D(QPWRDClient);
@@ -281,6 +294,7 @@ bool QPWRDClient::getProfile(QString profile_id, PWRProfile &out)
     return true;
 }
 
+///////////////////////////////////////////////////////////////////////////////
 bool QPWRDClient::getCurrentProfileID(PWRProfileInfoBasic &out)
 {
     Q_D(QPWRDClient);
@@ -296,6 +310,53 @@ bool QPWRDClient::getCurrentProfileID(PWRProfileInfoBasic &out)
 
     if (resp.contains(PROFILE_ID)) out.id = resp[PROFILE_ID].toString();
     if (resp.contains(PROFILE_NAME)) out.name = resp[PROFILE_NAME].toString();
+
+    return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+bool QPWRDClient::getACLineState(bool isOnACPower)
+{
+    Q_D(QPWRDClient);
+
+    d->lastError = "";
+
+    QJsonObject req, resp;
+    isOnACPower = true;
+
+    req[MSGTYPE_COMMAND] = COMMAND_AC_STATUS;
+
+    if (!d->sendCommandReadResponce(req, resp)) return false;
+
+    if (resp.contains(AC_POWER)) isOnACPower = resp[AC_POWER].toBool();
+
+    return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+bool QPWRDClient::getBatteriesState(QVector<PWRBatteryStatus> batteries)
+{
+    Q_D(QPWRDClient);
+
+    d->lastError = "";
+
+    QJsonObject req, resp;
+    batteries.clear();
+
+    req[MSGTYPE_COMMAND] = COMMAND_GET_BATT_STATE;
+
+    if (!d->sendCommandReadResponce(req, resp)) return false;
+
+    if (!resp.contains(JSONBatteryStatus().myname())) return false;
+    if (!resp[JSONBatteryStatus().myname()].isArray()) return false;
+
+    QJsonArray arr = resp[JSONBatteryStatus().myname()].toArray();
+    for(int i=0; i<arr.size(); i++)
+    {
+        JSONBatteryStatus item;
+        if (!item.fromJSON(arr[i].toObject())) continue;
+        batteries.push_back(item);
+    }
 
     return true;
 }

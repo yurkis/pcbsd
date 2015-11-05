@@ -71,6 +71,8 @@ private:
     QJsonObject oncmdGetProfiles();
     QJsonObject oncmdGetProfile(QJsonObject req);
     QJsonObject oncmdGetCurrentProfile();
+    QJsonObject oncmdGetAcStatus();
+    QJsonObject oncmdGetBattState();
 
 
     PWRProfileReader findProfile(QString id);
@@ -80,6 +82,8 @@ private:
     int blGlobalLevel();
     //! Set backlight level (for all backlights if more than one)
     void setblGlobalLevel(int value);
+
+    bool isOnACPower();
 
     void onSuspend();
     void onResume();

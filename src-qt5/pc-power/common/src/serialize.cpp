@@ -120,3 +120,43 @@ bool JSONProfile::fromJSON(const QJsonObject &json)
     FIELD("lcdBrightness", lcdBrightness).toInt();
     return true;
 }
+
+/*    PWRBatteryState batteryState;   //< Current battery state
+    unsigned int batteryRate;       //< Battery rate in percents (0..100)
+    unsigned int powerConsumption;  //< Current power consumption (in mW)
+    unsigned int batteryTime;       //< Battery lifetime (in minutes)*/
+
+void JSONBatteryStatus::toJSON(QJsonObject &json)
+{
+    json["batteryRate"] = (int)batteryRate;
+    json["powerConsumption"] = (int)powerConsumption;
+    json["batteryTime"] = (int)batteryTime;
+
+    QString state=UNKNOWN;
+    switch(batteryState)
+    {
+        case BATT_CHARGING:
+            state = CHARGING;
+            break;
+        case BATT_DISCHARGING:
+            state = DISCHARGING;
+            break;
+        default:
+            state = UNKNOWN;
+    }
+    json["batteryState"] = state;
+}
+
+bool JSONBatteryStatus::fromJSON(const QJsonObject &json)
+{
+    FIELD("batteryRate", batteryRate).toInt();
+    FIELD("powerConsumption", powerConsumption).toInt();
+    FIELD("batteryTime", batteryTime).toInt();
+    batteryState = BATT_STATE_UNKNOWN;
+    if (json.contains("batteryState"))
+    {
+        if (json["batteryState"].toString() == CHARGING) batteryState = BATT_CHARGING;
+        else if (json["batteryState"].toString() == DISCHARGING) batteryState = BATT_DISCHARGING;
+    }
+    return true;
+}

@@ -279,6 +279,64 @@ void PWRCLI::cmdGetCurrentProfile()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+void PWRCLI::cmdGetStatus()
+{
+    if (!client->connect(pipeName))
+    {
+        qCritical()<<"Unable connect to pwrd";
+        return;
+    }
+
+    bool isACLine = true;
+    if (!client->getACLineState(isACLine))
+    {
+        qcout()<<"pwrd error: "<<client->lastPWRDError()<<"\n";
+        return;
+    }
+
+    qcout()<<"Power state: ";
+    if (isACLine)
+    {
+        qcout()<<"External power\n";
+    }
+    else
+    {
+        qcout()<<"Battery\n";
+    }
+
+    QVector<PWRBatteryStatus> batts;
+    if (!client->getBatteriesState(batts))
+    {
+        qcout()<<"pwrd error: "<<client->lastPWRDError()<<"\n";
+        return;
+    }
+
+    for(int i=0; i<batts.size(); i++)
+    {
+        qcout()<<"Battery #"<<i<<"\n";
+        qcout()<<"  Current state : ";
+        switch (batts[i].batteryState)
+        {
+            case BATT_CHARGING:
+                qcout()<<"Charhing";
+                break;
+            case BATT_DISCHARGING:
+                qcout()<<"Discharging";
+                break;
+            default:
+                qcout()<<"Unknown";
+        }
+        qcout()<<"\n";
+
+        qcout()<<"  Current rate  : "<<batts[i].batteryRate<<"%\n";
+        qcout()<<"  Remaining time: "<<batts[i].batteryTime/60<<":"<<batts[i].batteryTime%60<<"\n";
+        qcout()<<"  Power consumption:"<<batts[i].powerConsumption<<" (mW)\n";
+    }
+
+
+}
+
+///////////////////////////////////////////////////////////////////////////////
 void PWRCLI::run()
 {
     QStringList args = QCoreApplication::arguments();
@@ -342,6 +400,11 @@ void PWRCLI::run()
     else if((arg1 == "currprofile") || (arg1 == "cp"))
     {
         cmdGetCurrentProfile();
+        emit finished();
+    }
+    else if((arg1 == "status") || (arg1 == "s"))
+    {
+        cmdGetStatus();
         emit finished();
     }
     emit finished();

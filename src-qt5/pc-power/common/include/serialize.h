@@ -6,6 +6,10 @@
 #include <QJsonObject>
 #include <QJsonArray>
 
+static const char* const CHARGING = "charging";
+static const char* const DISCHARGING = "discharging";
+static const char* const UNKNOWN = "unknown";
+
 typedef struct JSONSerializer
 {
 public:
@@ -80,6 +84,12 @@ typedef struct JSONProfile:public PWRProfile, public JSONSerializer
     virtual bool fromJSON(const QJsonObject &json);
 }JSONProfile;
 
+typedef struct _JSONBatteryStatus: public PWRBatteryStatus, public JSONSerializer
+{
+    JSON_STRUCT("BatteryStatus")
+    virtual void toJSON(QJsonObject &json);
+    virtual bool fromJSON(const QJsonObject &json);
+}JSONBatteryStatus;
 
 #endif // SERIALIZE_H
 

@@ -61,11 +61,10 @@ _str_constant COMMAND_GET_PROFILE = "getprofile";
 //current profile
 _str_constant COMMAND_GET_CURRENT_PROFILE = "getcurrprofile";
 
-_str_constant COMMAND_GET_PWR_STATE = "getpwrstate";
+_str_constant COMMAND_AC_STATUS = "getacstatus";
 _str_constant AC_POWER = "acpower";
-_str_constant CHARGING = "charging";
-_str_constant DISCHARGING = "discharging";
-_str_constant UNKNOWN = "unknown";
+
+_str_constant COMMAND_GET_BATT_STATE = "getbattstate";
 
 QString QJsonObjectToMessage(QJsonObject obj);
 

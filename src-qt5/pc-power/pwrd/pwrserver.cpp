@@ -210,6 +210,12 @@ void PwrServer::setblGlobalLevel(int value)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+bool PwrServer::isOnACPower()
+{
+    return sysctlAsInt(ACLINE_SYSCTL) == 1;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 void PwrServer::onSuspend()
 {
     qDebug()<<"Preparing to suspend...";
@@ -423,7 +429,7 @@ void PwrServer::onRequest()
 ///////////////////////////////////////////////////////////////////////////////
 void PwrServer::checkState(bool force)
 {
-    bool currPower = sysctlAsInt(ACLINE_SYSCTL) == 1;
+    bool currPower = isOnACPower();
     if ((currPower == onACPower) && (!force))
         return;
     onACPower = currPower;
