@@ -18,7 +18,8 @@ SOURCES += main.cpp \
     ../common/src/protocol.cpp \
     hw/intel_backlight.cpp \
     hw/buttons.cpp \
-    comm_handlers.cpp
+    comm_handlers.cpp \
+    hw/sleep.cpp
 
 HEADERS += \
     pwrserver.h \
@@ -31,7 +32,8 @@ HEADERS += \
     ../common/include/protocol.h \
     ../common/include/serialize.h \
     hw/intel_backlight.h \
-    hw/buttons.h
+    hw/buttons.h \
+    hw/sleep.h
 
 INCLUDEPATH += ../common/include /usr/local/include/pwrd
 

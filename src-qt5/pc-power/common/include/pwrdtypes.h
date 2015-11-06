@@ -13,7 +13,7 @@ typedef enum
 {
     BATT_CHARGING = 0,
     BATT_DISCHARGING,
-    BATT_CRITICAL,
+    //BATT_CRITICAL,
     BATT_STATE_UNKNOWN,
     BATT_STATE_MAX
 }PWRBatteryState;

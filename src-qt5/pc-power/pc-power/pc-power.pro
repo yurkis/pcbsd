@@ -18,3 +18,6 @@ SOURCES += main.cpp\
 HEADERS  += mainwindow.h
 
 FORMS    += mainwindow.ui
+
+INCLUDEPATH += ../common/include ../libpwrd  /usr/local/include/pwrd
+LIBS += -L/usr/local/lib

@@ -121,7 +121,7 @@ bool getBatteryStatus(int batt, PWRBatteryStatus& info)
             info.batteryState = BATT_DISCHARGING;
             break;
         case ACPI_BATT_STAT_CRITICAL:
-            info.batteryState = BATT_CRITICAL;
+            info.batteryState = BATT_DISCHARGING;//BATT_CRITICAL;
             break;
     };
 
