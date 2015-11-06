@@ -66,6 +66,9 @@ _str_constant AC_POWER = "acpower";
 
 _str_constant COMMAND_GET_BATT_STATE = "getbattstate";
 
+_str_constant COMMAND_SET_ACPI_STATE = "setacpistate";
+_str_constant ACPI_STATE = "satte";
+
 QString QJsonObjectToMessage(QJsonObject obj);
 
 

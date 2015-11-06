@@ -6,6 +6,7 @@
 #include "hw/battery.h"
 #include "hw/buttons.h"
 #include "hw/intel_backlight.h"
+#include "hw/sleep.h"
 
 #include <QString>
 #include <QJsonObject>
@@ -74,6 +75,10 @@ QJsonObject PwrServer::parseCommand(QString line)
           else if (root[MSGTYPE_COMMAND] == COMMAND_GET_BATT_STATE)
           {
               resp = oncmdGetBattState();
+          }
+          else if (root[MSGTYPE_COMMAND] == COMMAND_SET_ACPI_STATE)
+          {
+              resp = oncmdSetACPIState(root);
           }
       }
     }catch(...){
@@ -301,5 +306,38 @@ QJsonObject PwrServer::oncmdGetBattState()
     resp[JSONBatteryStatus().myname()] = arr;
 
     return resp;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+QJsonObject PwrServer::oncmdSetACPIState(QJsonObject req)
+{
+    if (!req.contains(ACPI_STATE))
+    {
+        return RESULT_FAIL("Bad request");
+    }
+    QString state = req[ACPI_STATE].toString();
+
+    state=state.trimmed().toUpper();
+    if (state.length()!=2)
+    {
+        return RESULT_FAIL("Bad request aparameter");
+    }
+
+    if (state == "S5")
+    {
+        return RESULT_FAIL("Power off is forbidden");
+    }
+
+    if (!hwInfo.possibleACPIStates.contains(state))
+    {
+        return RESULT_FAIL("Sleep state is not supported");
+    }
+
+    if (!ACPISleep(state))
+    {
+        return RESULT_FAIL("Could not change state");
+    }
+
+    return RESULT_SUCCESS();
 }
 

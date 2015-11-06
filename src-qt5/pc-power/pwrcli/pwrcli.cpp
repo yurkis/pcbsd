@@ -337,6 +337,66 @@ void PWRCLI::cmdGetStatus()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+void PWRCLI::cmdSleep()
+{
+    if (!client->connect(pipeName))
+    {
+        qCritical()<<"Unable connect to pwrd";
+        return;
+    }
+
+    PWRDHardwareInfo info;
+
+    //Check if sleep state supported
+    if (!client->getHardwareInfo(info))
+    {
+        qcout()<<"pwrd error: "<<client->lastPWRDError()<<"\n";
+        return;
+    }
+
+    if (!info.basic.possibleACPIStates.contains("S3"))
+    {
+        qcout()<<"Sleep state (S3) is not supported\n";
+        return;
+    }
+    if (!client->setACPIState("S3"))
+    {
+        qcout()<<"pwrd error: "<<client->lastPWRDError()<<"\n";
+        return;
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void PWRCLI::cmdHibernate()
+{
+    if (!client->connect(pipeName))
+    {
+        qCritical()<<"Unable connect to pwrd";
+        return;
+    }
+
+    PWRDHardwareInfo info;
+
+    //Check if sleep state supported
+    if (!client->getHardwareInfo(info))
+    {
+        qcout()<<"pwrd error: "<<client->lastPWRDError()<<"\n";
+        return;
+    }
+
+    if (!info.basic.possibleACPIStates.contains("S4"))
+    {
+        qcout()<<"Hibernate state (S4) is not supported\n";
+        return;
+    }
+    if (!client->setACPIState("S4"))
+    {
+        qcout()<<"pwrd error: "<<client->lastPWRDError()<<"\n";
+        return;
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
 void PWRCLI::run()
 {
     QStringList args = QCoreApplication::arguments();
@@ -405,6 +465,16 @@ void PWRCLI::run()
     else if((arg1 == "status") || (arg1 == "s"))
     {
         cmdGetStatus();
+        emit finished();
+    }
+    else if((arg1 == "sleep") )
+    {
+        cmdSleep();
+        emit finished();
+    }
+    else if((arg1 == "hibernate") )
+    {
+        cmdHibernate();
         emit finished();
     }
     emit finished();

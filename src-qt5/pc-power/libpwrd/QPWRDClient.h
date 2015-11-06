@@ -44,6 +44,7 @@ public:
     virtual bool getCurrentProfileID(PWRProfileInfoBasic& out);
     virtual bool getACLineState(bool isOnACPower);
     virtual bool getBatteriesState(QVector<PWRBatteryStatus> batteries);
+    virtual bool setACPIState(QString state);
 
 signals:
     void backlightLevelChanged(unsigned int backlightNum, unsigned int level);

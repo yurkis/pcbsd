@@ -361,6 +361,23 @@ bool QPWRDClient::getBatteriesState(QVector<PWRBatteryStatus> batteries)
     return true;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+bool QPWRDClient::setACPIState(QString state)
+{
+    Q_D(QPWRDClient);
+
+    d->lastError = "";
+
+    QJsonObject req, resp;
+
+    req[MSGTYPE_COMMAND] = COMMAND_SET_ACPI_STATE;
+    req[ACPI_STATE] = state;
+
+    if (!d->sendCommandReadResponce(req, resp)) return false;
+
+    return true;
+}
+
 void QPWRDClient::pwrdRead()
 {
 

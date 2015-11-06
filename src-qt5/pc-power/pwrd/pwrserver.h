@@ -73,6 +73,7 @@ private:
     QJsonObject oncmdGetCurrentProfile();
     QJsonObject oncmdGetAcStatus();
     QJsonObject oncmdGetBattState();
+    QJsonObject oncmdSetACPIState(QJsonObject req);
 
 
     PWRProfileReader findProfile(QString id);

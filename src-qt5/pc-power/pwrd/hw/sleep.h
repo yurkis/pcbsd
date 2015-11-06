@@ -3,7 +3,7 @@
 
 #include <QString>
 
-bool acpi_sleep(QString state);
+bool ACPISleep(QString state);
 
 #endif // SLEEP_H
 

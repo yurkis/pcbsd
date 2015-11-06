@@ -25,6 +25,8 @@ private:
     void cmdGetBacklightLevels();
     void cmdGetCurrentProfile();
     void cmdGetStatus();
+    void cmdSleep();
+    void cmdHibernate();
 
 signals:
     void finished();

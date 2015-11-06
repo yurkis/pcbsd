@@ -8,7 +8,7 @@
 
 static const char* const ACPIDEV = "/dev/acpi";
 
-bool acpi_sleep(QString state)
+bool ACPISleep(QString state)
 {
     static int      acpifd;
 
