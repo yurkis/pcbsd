@@ -60,9 +60,12 @@ void PWRCLI::cmdHelp()
     qcout()<<"   -pipe PIPENAME - set full name of pwrd pipe\n";
     qcout()<<"   -help - display this message and exit\n";
     qcout()<<"Commands:\n";
+    qcout()<<"  status - show current status (brightness level, battery status, etc\n";
     qcout()<<"  sb or setbrightness [NO] LEVEL - set brightness to LEVEL percents\n";
     qcout()<<"                         for backlight # NO. Brightness may be relative\n";
     qcout()<<"                         for example 'sb +25' or 'sb -10'\n";
+    qcout()<<"  sleep - sleep system\n";
+    qcout()<<"  hibernate - hibernate system\n";
     qcout()<<"  hwinfo - display hardware info (related to beacklight, battery, etc)\n";
     qcout()<<"  ap or activeprofiles - show active profiles\n";
     qcout()<<"  lp or listprofiles - show all profiles\n";

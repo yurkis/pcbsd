@@ -1,0 +1,11 @@
+<RCC>
+    <qresource prefix="/">
+        <file>images/page-home.png</file>
+        <file>images/page-info.png</file>
+        <file>images/page-profiles.png</file>
+        <file>images/system-suspend-hibernate.png</file>
+        <file>images/system-suspend.png</file>
+        <file>images/page-settings.png</file>
+        <file>images/backlight.png</file>
+    </qresource>
+</RCC>
