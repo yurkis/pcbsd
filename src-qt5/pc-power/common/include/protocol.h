@@ -76,6 +76,9 @@ QString QJsonObjectToMessage(QJsonObject obj);
 _str_constant EVENT_EVENT_FIELD = "event";
 
 _str_constant EVENT_BACKLIGHT_CHANGED = "backlightchanged";
+_str_constant EVENT_BATT_RATE_CHANGED = "battratechanged";
+_str_constant EVENT_BATT_STATE_CHANGED = "battstatechanged";
+_str_constant BATTERY_NO = "batt";
 
 
 #endif // PROTOCOL_H

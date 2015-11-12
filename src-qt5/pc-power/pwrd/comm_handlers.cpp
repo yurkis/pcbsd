@@ -123,6 +123,14 @@ QJsonObject PwrServer::oncmdGetBacklight()
     QJsonObject resp = RESULT_SUCCESS();
     QJsonArray backlights;
 
+    checkBacklights();
+
+    for(int i=0; i<currBacklightLevels.size(); i++)
+    {
+        backlights.append((int)currBacklightLevels[i]);
+    }
+
+    /*
     if (settings.usingIntel_backlight)
     {
         backlights.append(IBLBacklightLevel());
@@ -133,7 +141,7 @@ QJsonObject PwrServer::oncmdGetBacklight()
         {
             backlights.append(backlightLevel(i));
         }
-    }
+    }*/
     resp[BACKLIGHT_LEVELS] = backlights;
     return resp;
 }
@@ -200,7 +208,7 @@ QJsonObject PwrServer::oncmdSetBacklight(QJsonObject req)
 
             if (!settings.usingIntel_backlight)
             {
-                setBacklightLevel(i, val);
+                setBacklightLevel(i, val);                
             }
             else
             {
@@ -216,6 +224,7 @@ QJsonObject PwrServer::oncmdSetBacklight(QJsonObject req)
             (!settings.usingIntel_backlight)?setBacklightLevel(i, val):setIBLBacklightLevel(val);
         }
     }
+    checkBacklights();
 
     return resp;
 

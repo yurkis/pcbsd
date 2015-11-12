@@ -266,6 +266,35 @@ void PwrServer::checkBacklights()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+void PwrServer::checkBatts()
+{
+    for(int i=0; i<battHW.size(); i++)
+    {
+        //QVector<PWRBatteryStatus> currBatteryStates;
+        JSONBatteryStatus curr;
+        if (getBatteryStatus(i, curr))
+        {
+            if (curr.batteryRate != currBatteryStates[i].batteryRate)
+            {
+                QJsonObject event;
+                event[BATTERY_NO] = i;
+                event[JSONBatteryStatus().myname()] = curr.toJSON();
+                emitEvent(EVENT_BATT_RATE_CHANGED, event);
+            }
+            if (curr.batteryState != currBatteryStates[i].batteryState)
+            {
+                QJsonObject event;
+                event[BATTERY_NO] = i;
+                event[JSONBatteryStatus().myname()] = curr.toJSON();
+                emitEvent(EVENT_BATT_STATE_CHANGED, event);
+            }
+            if (currBatteryStates.size() > i)
+                currBatteryStates[i] = curr;
+        }//if got battery status
+    }//for all batteries
+}
+
+///////////////////////////////////////////////////////////////////////////////
 int PwrServer::blGlobalLevel()
 {
     if (settings.usingIntel_backlight)
@@ -578,6 +607,7 @@ void PwrServer::onRequest()
 void PwrServer::checkState(bool force)
 {
     checkBacklights();
+    checkBatts();
 
     bool currPower = isOnACPower();
     if ((currPower == onACPower) && (!force))
