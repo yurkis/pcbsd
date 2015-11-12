@@ -6,6 +6,7 @@
 #include <QStringList>
 
 static const char* const DEF_PWRD_PIPE_NAME = "/var/run/pwrd.pipe";
+static const char* const DEF_PWRD_EVENTS_PIPE_NAME = "/var/run/pwrd.events.pipe";
 
 const int PWR_ALL = -1;
 

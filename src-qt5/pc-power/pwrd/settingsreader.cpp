@@ -70,6 +70,7 @@ bool _PWRServerSettings::load(QString file)
     Reader.setIniCodec("UTF-8");
 
     pipeName = Reader.value(CONF_FIELD_PIPE_NAME, DEF_PWRD_PIPE_NAME).toString();
+    eventsPipeName = Reader.value(CONF_FIELD_PIPE_NAME, DEF_PWRD_EVENTS_PIPE_NAME).toString();
     devdPipeName = Reader.value(CONF_FIELD_DEVD_PIPE, DEF_DEVD_PIPE).toString();
     profilesPath = Reader.value(CONF_FIELD_PROFILES_PATH, DEF_PROFILES_PATH).toString();
     battPollingTime =Reader.value(CONF_FIELD_BATTER_POLLING, DEF_POLLING_BATTERY_TIME).toInt();

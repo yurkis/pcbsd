@@ -11,6 +11,7 @@ static const char* const DEF_ON_LOW_POWER_PROFILE_ID = "low_batt";
 typedef struct _PWRServerSettings
 {
     QString pipeName;
+    QString eventsPipeName;
     QString devdPipeName;
     QString profilesPath;
     unsigned int battPollingTime;

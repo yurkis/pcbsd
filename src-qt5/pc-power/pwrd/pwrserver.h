@@ -7,6 +7,7 @@
 #include <QMap>
 #include <QTextStream>
 #include <QVector>
+#include <QTimer>
 
 #include "pwrdtypes.h"
 #include "settingsreader.h"
@@ -39,6 +40,11 @@ private:
     //! text stream associated with devdSocket
     QTextStream* devdStream;
 
+    QLocalServer* eventServer;
+    QMap<QLocalSocket*, SConnection> eventConnections;
+
+    QTimer* checkStateTimer;
+
     //! Device hardware info
     JSONHWInfo                     hwInfo;
     //! Hardware info for all installet batteries
@@ -48,6 +54,8 @@ private:
 
     //! True if system is on AC power
     bool onACPower;
+    QVector<int> currBacklightLevels;
+    QVector<PWRBatteryStatus> currBatteryStates;
 
     //! Power profiles (key is profile id)
     QMap<QString, PWRProfileReader>  profiles;
@@ -79,6 +87,9 @@ private:
     PWRProfileReader findProfile(QString id);
     void applyProfile(QString id);
 
+    void checkBacklights();
+    void checkBatts();
+
     //! Get backlight level (if more than one get lcd0 level)
     int blGlobalLevel();
     //! Set backlight level (for all backlights if more than one)
@@ -108,6 +119,10 @@ private slots:
     void onRequest();
     //! Client disconnect handler
     void onDisconnect();
+
+    void onEventNewConnection();
+    void onEventDisconnect();
+
     //! Check power state and apply new profile when state changed
     void checkState(bool force=false);
 

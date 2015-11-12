@@ -52,11 +52,19 @@ _str_constant LID_SYSCTL = "hw.acpi.lid_switch_state";
 _str_constant POSSIBLE_STATES_SYSCTL = "hw.acpi.supported_sleep_state";
 _str_constant ACLINE_SYSCTL = "hw.acpi.acline";
 
+const int CHECK_INTERVAL = 2000;
+
 ///////////////////////////////////////////////////////////////////////////////
 PwrServer::PwrServer(QObject *parent): QObject(parent)
 {
     server = new QLocalServer(this);
     connect(server, SIGNAL(newConnection()), this, SLOT(onNewConnection()));    
+
+    eventServer = new QLocalServer(this);
+    connect(eventServer, SIGNAL(newConnection()), this, SLOT(onEventNewConnection()));
+
+    checkStateTimer = new QTimer(this);
+    QObject::connect(checkStateTimer, SIGNAL(timeout()), this, SLOT(checkState()));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -80,16 +88,29 @@ void PwrServer::checkHardware()
     while(getBatteryHWInfo(i++, batthw))
     {
         battHW.push_back(batthw);
+        PWRBatteryStatus currState;
+        if (getBatteryStatus(i, currState))
+                currBatteryStates.push_back(currState);
+
     }
     hwInfo.numBatteries = battHW.size();
 
-    // Ugly code for getting number of backlights, yes I know
     i=0;
-    while(getBacklightHWInfo(i++, backlighthw))
+    if (!settings.usingIntel_backlight)
     {
-        backlightHW.push_back(backlighthw);
+        // Ugly code for getting number of backlights, yes I know
+        while(getBacklightHWInfo(i++, backlighthw))
+        {
+            backlightHW.push_back(backlighthw);
+            currBacklightLevels.push_back(backlightLevel(i));
+         }
     }
-    hwInfo.numBacklights = backlightHW.size();
+    else
+    {
+        //intel_backlight port
+        currBacklightLevels.push_back(IBLBacklightLevel());
+    }
+    hwInfo.numBacklights = (!settings.usingIntel_backlight)?backlightHW.size():1;
 
     // If using intel_backlight port and intel_backlight exist
     settings.usingIntel_backlight &= hasIntelBacklight();
@@ -190,6 +211,35 @@ void PwrServer::applyProfile(QString id)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+void PwrServer::checkBacklights()
+{
+    int level=0;
+    if (!settings.usingIntel_backlight)
+    {
+        for(int i=0; i<backlightHW.size(); i++)
+        {
+            level = backlightLevel(i);
+            if (level != currBacklightLevels[i])
+            {
+                //emit event
+                qDebug()<<"Backlight changed to "<<level;
+                currBacklightLevels[i] = level;
+            }
+        }//for all backlights
+    }
+    else
+    {
+        level = IBLBacklightLevel();
+        if (level != currBacklightLevels[0])
+        {
+            //emit event
+            qDebug()<<"Backlight changed to "<<level;
+            currBacklightLevels[0] = level;
+        }
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
 int PwrServer::blGlobalLevel()
 {
     if (settings.usingIntel_backlight)
@@ -273,6 +323,7 @@ bool PwrServer::start(QStringList args)
 
     checkState(true);
 
+    //setup control pipe
     if( !QLocalServer::removeServer(settings.pipeName) )
     {
         qDebug() << "A previous instance of the pc-pwrd server is still running! Exiting...";
@@ -292,6 +343,30 @@ bool PwrServer::start(QStringList args)
         qDebug() << "Error: pc-pwrd could not create pipe at "<<settings.pipeName;
         return false;
     }
+
+    //setup events pipe
+    if( !QLocalServer::removeServer(settings.eventsPipeName) )
+    {
+        qDebug() << "A previous instance of the pc-pwrd server is still running! Exiting...";
+        exit(1);
+    }
+    if( eventServer->listen(settings.eventsPipeName) )
+    {
+        QFile::setPermissions(settings.eventsPipeName,
+                              QFile::ReadUser | QFile::WriteUser
+                            | QFile::ReadGroup | QFile::WriteGroup
+                            | QFile::ReadOther | QFile::WriteOther);
+
+        qDebug() << "pc-pwrd notifies events at "<<settings.eventsPipeName;
+    }
+    else
+    {
+        qDebug() << "Error: pc-pwrd could not create pipe at "<<settings.eventsPipeName;
+        return false;
+    }
+
+    checkStateTimer->setInterval(CHECK_INTERVAL);
+    checkStateTimer->start();
 
     return true;
 }
@@ -397,6 +472,53 @@ void PwrServer::onDisconnect()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+void PwrServer::onEventNewConnection()
+{
+    qDebug()<<"---------- New event listener connection";
+
+    SConnection conn;
+    conn.sock = eventServer->nextPendingConnection();
+    if (conn.sock)
+    {
+        if (!conn.sock->isValid())
+            return;
+    }
+    else
+    {
+        return;
+    }
+
+    conn.stream = new QTextStream(conn.sock);
+    eventConnections[conn.sock]= conn;
+
+    connect(conn.sock, SIGNAL(disconnected()), this, SLOT(onEventDisconnect()) );
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void PwrServer::onEventDisconnect()
+{
+    qDebug()<<"---------- on event listener disconnect";
+
+    QLocalSocket* sender = (QLocalSocket*)QObject::sender();
+    if (!sender)
+    {
+        qDebug()<<"Unknown signal sender";
+        return;
+    }
+    if (!eventConnections.contains(sender))
+    {
+        qDebug()<<"Unknown connection";
+        return;
+    }
+
+    if (eventConnections.contains(sender))
+    {
+        delete eventConnections[sender].stream;
+        eventConnections.remove(sender);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
 void PwrServer::onRequest()
 {
     qDebug()<<"---------- onRequest";
@@ -429,6 +551,8 @@ void PwrServer::onRequest()
 ///////////////////////////////////////////////////////////////////////////////
 void PwrServer::checkState(bool force)
 {
+    checkBacklights();
+
     bool currPower = isOnACPower();
     if ((currPower == onACPower) && (!force))
         return;
