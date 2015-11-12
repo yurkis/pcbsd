@@ -84,6 +84,9 @@ private:
     QJsonObject oncmdSetACPIState(QJsonObject req);
 
 
+    void emitEvent(QString event_name, QJsonObject event);
+    void emitBacklightChanged(int backlight, int level);
+
     PWRProfileReader findProfile(QString id);
     void applyProfile(QString id);
 

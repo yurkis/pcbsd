@@ -190,6 +190,30 @@ void PwrServer::readSettings(QString confFile)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+void PwrServer::emitEvent(QString event_name, QJsonObject event)
+{
+    event[EVENT_EVENT_FIELD] = event_name;
+
+    QString json = QJsonObjectToMessage(event);
+
+    for(auto it = eventConnections.begin(); it!= eventConnections.end(); ++it)
+    {
+        QTextStream* stream = it.value().stream;
+        (*stream)<<json;
+        stream->flush();
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void PwrServer::emitBacklightChanged(int backlight, int level)
+{
+    QJsonObject event;
+    event[BACKLIGHT_NUMBER]= (int)backlight;
+    event[BACKLIGHT_VALUE]= level;
+    emitEvent(EVENT_BACKLIGHT_CHANGED, event);
+}
+
+///////////////////////////////////////////////////////////////////////////////
 PWRProfileReader PwrServer::findProfile(QString id)
 {
     PWRProfileReader ret = PWRProfileReader();
@@ -224,6 +248,7 @@ void PwrServer::checkBacklights()
                 //emit event
                 qDebug()<<"Backlight changed to "<<level;
                 currBacklightLevels[i] = level;
+                emitBacklightChanged(i, level);
             }
         }//for all backlights
     }
@@ -235,6 +260,7 @@ void PwrServer::checkBacklights()
             //emit event
             qDebug()<<"Backlight changed to "<<level;
             currBacklightLevels[0] = level;
+            emitBacklightChanged(0, level);
         }
     }
 }

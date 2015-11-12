@@ -72,5 +72,11 @@ _str_constant ACPI_STATE = "satte";
 QString QJsonObjectToMessage(QJsonObject obj);
 
 
+
+_str_constant EVENT_EVENT_FIELD = "event";
+
+_str_constant EVENT_BACKLIGHT_CHANGED = "backlightchanged";
+
+
 #endif // PROTOCOL_H
 
