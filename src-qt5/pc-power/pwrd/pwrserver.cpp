@@ -65,6 +65,8 @@ PwrServer::PwrServer(QObject *parent): QObject(parent)
 
     checkStateTimer = new QTimer(this);
     QObject::connect(checkStateTimer, SIGNAL(timeout()), this, SLOT(checkState()));
+
+    isLidClosed = false;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -236,6 +238,16 @@ void PwrServer::applyProfile(QString id)
     QJsonObject event;
     event[PROFILE_NAME] = id;
     emitEvent(EVENT_PROFILE_CHANGED, event);
+
+    //if profile changed and lid is closed try to set sleep state if present
+    //So if we close notebook after turning off external power notebook may sleep
+    if (isLidClosed)
+    {
+        if (p.lidSwitchSate.trimmed().toUpper() != "NONE")
+        {
+            ACPISleep(p.lidSwitchSate);
+        }
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -485,6 +497,9 @@ void PwrServer::onDEVDEvent()
     else if (ev[1].replace("subsystem=","") == "Resume")
     {
         onResume();
+    }else if (ev[1].replace("subsystem=","") == "Lid")
+    {
+        isLidClosed = (ev[3].trimmed() == "notify=0x00")?true:false;
     }
 }
 
