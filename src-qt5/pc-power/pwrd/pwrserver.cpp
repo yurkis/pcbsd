@@ -27,6 +27,7 @@
 #include "hw/backlight.h"
 #include "hw/buttons.h"
 #include "hw/intel_backlight.h"
+#include "hw/sleep.h"
 #include "sysctlutils.h"
 #include "serialize.h"
 
@@ -291,7 +292,7 @@ void PwrServer::checkBatts(bool* hasLowBattery)
         JSONBatteryStatus curr;
         if (getBatteryStatus(i, curr))
         {
-            if ((curr.batteryState == BATT_DISCHARGING) && (curr.batteryRate <= settings.lowBatteryRate))
+            if ((curr.batteryState == BATT_DISCHARGING) && ((int)curr.batteryRate <= settings.lowBatteryRate))
             {
                 if (hasLowBattery) (*hasLowBattery) = true;
             }

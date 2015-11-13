@@ -62,7 +62,7 @@ private:
 
     PWRProfileReader         currProfile;
 
-    //int savedBacklight;
+    int savedBacklight;
     bool isLidClosed;
 
     //! Get all hadware info
