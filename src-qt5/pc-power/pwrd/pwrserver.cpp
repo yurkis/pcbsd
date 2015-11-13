@@ -232,6 +232,10 @@ void PwrServer::applyProfile(QString id)
     setSleepBtnSleepState(p.btnSleepSate);
     setPowerBtnSleepState(p.btnPowerSate);
     setLidSleepState(p.lidSwitchSate);
+
+    QJsonObject event;
+    event[PROFILE_NAME] = id;
+    emitEvent(EVENT_PROFILE_CHANGED, event);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -266,14 +270,19 @@ void PwrServer::checkBacklights()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void PwrServer::checkBatts()
+void PwrServer::checkBatts(bool* hasLowBattery)
 {
+    if (hasLowBattery) (*hasLowBattery) = false;
     for(int i=0; i<battHW.size(); i++)
     {
         //QVector<PWRBatteryStatus> currBatteryStates;
         JSONBatteryStatus curr;
         if (getBatteryStatus(i, curr))
         {
+            if ((curr.batteryState == BATT_DISCHARGING) && (curr.batteryRate <= settings.lowBatteryRate))
+            {
+                if (hasLowBattery) (*hasLowBattery) = true;
+            }
             if (curr.batteryRate != currBatteryStates[i].batteryRate)
             {
                 QJsonObject event;
@@ -307,6 +316,7 @@ int PwrServer::blGlobalLevel()
 ///////////////////////////////////////////////////////////////////////////////
 void PwrServer::setblGlobalLevel(int value)
 {
+    //TODO: emit events here
     if (settings.usingIntel_backlight)
        setIBLBacklightLevel(value);
     else
@@ -605,17 +615,85 @@ void PwrServer::onRequest()
 
 ///////////////////////////////////////////////////////////////////////////////
 void PwrServer::checkState(bool force)
-{
+{    
+    bool currLowBatt;
+    static bool wasLowBatt = false;
+    bool isProfileChanges = false;
+    QString profileName;
+
     checkBacklights();
-    checkBatts();
+    checkBatts(&currLowBatt);
 
     bool currPower = isOnACPower();
+
+    if (force)
+    {
+        if (currPower)
+        {
+            isProfileChanges = true;
+            profileName = settings.onACProfile;
+        }
+        else
+        {
+            if (!currLowBatt)
+            {
+                isProfileChanges = true;
+                profileName = settings.onBatteryProfile;
+            }
+            else
+            {
+                wasLowBatt = currLowBatt;
+                isProfileChanges = true;
+                profileName = settings.onLowBatteryProfile;
+            }
+        }
+    }
+    else
+    if (currPower)
+    {
+        if (!onACPower)
+        {
+            isProfileChanges = true;
+            profileName = settings.onACProfile;
+        }
+        wasLowBatt = false;
+    }
+    else
+    {
+        //on battery
+        if ( (currLowBatt) && (!wasLowBatt) )
+        {
+            //low battery
+            wasLowBatt = currLowBatt;
+            isProfileChanges = true;
+            profileName = settings.onLowBatteryProfile;
+        }
+        else if (onACPower)
+        {
+            //battery
+            isProfileChanges = true;
+            profileName = settings.onBatteryProfile;
+        }
+    }
+
+    if (currPower != onACPower)
+    {
+        QJsonObject event;
+        event[AC_POWER]= currPower;
+        emitEvent(EVENT_AC_POWER_CHANGED, event);
+    }
+
+    if (isProfileChanges)
+    {
+        qDebug()<<"Profile changed to "<<profileName;
+        applyProfile(profileName);
+    }
+
+    /*bool currPower = isOnACPower();
     if ((currPower == onACPower) && (!force))
-        return;
+        return;    
     onACPower = currPower;
 
-    applyProfile(onACPower?settings.onACProfile:settings.onBatteryProfile);
-
-    qDebug()<<"state changed";
+    applyProfile(onACPower?settings.onACProfile:settings.onBatteryProfile);*/
 }
 

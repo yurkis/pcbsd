@@ -91,7 +91,8 @@ private:
     void applyProfile(QString id);
 
     void checkBacklights();
-    void checkBatts();
+    //! Check batteries state. Returnes true if we have battery with low power
+    void checkBatts(bool* hasLowBattery = NULL);
 
     //! Get backlight level (if more than one get lcd0 level)
     int blGlobalLevel();

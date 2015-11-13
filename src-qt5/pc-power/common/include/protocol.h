@@ -67,7 +67,7 @@ _str_constant AC_POWER = "acpower";
 _str_constant COMMAND_GET_BATT_STATE = "getbattstate";
 
 _str_constant COMMAND_SET_ACPI_STATE = "setacpistate";
-_str_constant ACPI_STATE = "satte";
+_str_constant ACPI_STATE = "state";
 
 QString QJsonObjectToMessage(QJsonObject obj);
 
@@ -79,6 +79,9 @@ _str_constant EVENT_BACKLIGHT_CHANGED = "backlightchanged";
 _str_constant EVENT_BATT_RATE_CHANGED = "battratechanged";
 _str_constant EVENT_BATT_STATE_CHANGED = "battstatechanged";
 _str_constant BATTERY_NO = "batt";
+
+_str_constant EVENT_PROFILE_CHANGED = "profilechanged";
+_str_constant EVENT_AC_POWER_CHANGED = "acpowerchanged";
 
 
 #endif // PROTOCOL_H

@@ -14,6 +14,7 @@ typedef struct _PWRServerSettings
     QString eventsPipeName;
     QString devdPipeName;
     QString profilesPath;
+    int     lowBatteryRate;
     unsigned int battPollingTime;
     QString onBatteryProfile;
     QString onACProfile;
