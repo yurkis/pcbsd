@@ -332,7 +332,11 @@ void PWRCLI::cmdGetStatus()
         qcout()<<"\n";
 
         qcout()<<"  Current rate  : "<<batts[i].batteryRate<<"%\n";
-        qcout()<<"  Remaining time: "<<batts[i].batteryTime/60<<":"<<batts[i].batteryTime%60<<"\n";
+        qcout()<<"  Remaining time: ";
+        if (batts[i].batteryTime)
+            qcout()<<batts[i].batteryTime/60<<":"<<batts[i].batteryTime%60<<"\n";
+         else
+            qcout()<<"Unknown\n";
         qcout()<<"  Power consumption:"<<batts[i].powerConsumption<<" (mW)\n";
     }
 

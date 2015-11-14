@@ -334,7 +334,7 @@ bool QPWRDClient::getACLineState(bool isOnACPower)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-bool QPWRDClient::getBatteriesState(QVector<PWRBatteryStatus> batteries)
+bool QPWRDClient::getBatteriesState(QVector<PWRBatteryStatus>& batteries)
 {
     Q_D(QPWRDClient);
 
@@ -346,10 +346,8 @@ bool QPWRDClient::getBatteriesState(QVector<PWRBatteryStatus> batteries)
     req[MSGTYPE_COMMAND] = COMMAND_GET_BATT_STATE;
 
     if (!d->sendCommandReadResponce(req, resp)) return false;
-
     if (!resp.contains(JSONBatteryStatus().myname())) return false;
     if (!resp[JSONBatteryStatus().myname()].isArray()) return false;
-
     QJsonArray arr = resp[JSONBatteryStatus().myname()].toArray();
     for(int i=0; i<arr.size(); i++)
     {
