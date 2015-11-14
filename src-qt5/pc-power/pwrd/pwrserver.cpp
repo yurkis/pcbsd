@@ -361,6 +361,7 @@ void PwrServer::onResume()
     {
         setIBLBacklightLevel(savedBacklight);
     }
+    isLidClosed = false;
     checkState();
 }
 
@@ -665,30 +666,33 @@ void PwrServer::checkState(bool force)
         }
     }
     else
-    if (currPower)
     {
-        if (!onACPower)
+        if (currPower)
         {
-            isProfileChanges = true;
-            profileName = settings.onACProfile;
+            if (!onACPower)
+            {
+                qDebug()<<"Power on";
+                isProfileChanges = true;
+                profileName = settings.onACProfile;
+            }
+            wasLowBatt = false;
         }
-        wasLowBatt = false;
-    }
-    else
-    {
-        //on battery
-        if ( (currLowBatt) && (!wasLowBatt) )
+        else
         {
-            //low battery
-            wasLowBatt = currLowBatt;
-            isProfileChanges = true;
-            profileName = settings.onLowBatteryProfile;
-        }
-        else if (onACPower)
-        {
-            //battery
-            isProfileChanges = true;
-            profileName = settings.onBatteryProfile;
+            //on battery
+            if ( (currLowBatt) && (!wasLowBatt) )
+            {
+                //low battery
+                wasLowBatt = currLowBatt;
+                isProfileChanges = true;
+                profileName = settings.onLowBatteryProfile;
+            }
+            else if (onACPower)
+            {
+                //battery
+                isProfileChanges = true;
+                profileName = settings.onBatteryProfile;
+            }
         }
     }
 
@@ -704,7 +708,7 @@ void PwrServer::checkState(bool force)
         qDebug()<<"Profile changed to "<<profileName;
         applyProfile(profileName);
     }
-
+    onACPower = currPower;
     /*bool currPower = isOnACPower();
     if ((currPower == onACPower) && (!force))
         return;    

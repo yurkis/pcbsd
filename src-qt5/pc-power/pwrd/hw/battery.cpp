@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <QDebug>
 
 ///////////////////////////////////////////////////////////////////////////////
 static const char* const ACPIDEV = "/dev/acpi";
@@ -103,16 +104,15 @@ bool getBatteryStatus(int batt, PWRBatteryStatus& info)
     if (acpifd == -1)
         return false;
 
-    //Make IOCTL call
     union acpi_battery_ioctl_arg battio;
     battio.unit = batt;
-    if (ioctl(acpifd, ACPIIO_BATT_GET_BIF, &battio) == -1)
+    if (ioctl(acpifd, ACPIIO_BATT_GET_BATTINFO, &battio) == -1)
         return false;
 
-    info.batteryRate = battio.bst.rate;
+    info.batteryRate = battio.battinfo.cap;
 
     info.batteryState = BATT_STATE_UNKNOWN;
-    switch (battio.bst.state)
+    switch (battio.battinfo.state & ACPI_BATT_STAT_BST_MASK)
     {
         case ACPI_BATT_STAT_CHARGING:
             info.batteryState = BATT_CHARGING;
