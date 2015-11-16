@@ -18,6 +18,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(events, SIGNAL(batteryStateChanged(int,PWRBatteryStatus)), this, SLOT(batteryStateChanged(int,PWRBatteryStatus)));
     connect(events, SIGNAL(acLineStateChanged(bool)), this, SLOT(acLineStateChanged(bool)));
     connect(events, SIGNAL(profileChanged(QString)), this, SLOT(profileChanged(QString)));
+
+    ui->testWidget->setup(0, client, events);
 }
 
 MainWindow::~MainWindow()

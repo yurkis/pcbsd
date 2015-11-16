@@ -41,7 +41,6 @@
 #include <QJsonDocument>
 
 #include "protocol.h"
-
 #include <signal.h>
 
 #define _str_constant static const char* const
@@ -481,29 +480,33 @@ void PwrServer::signalHandler(int sig)
 void PwrServer::onDEVDEvent()
 {
     QTextStream* devdStream = new QTextStream(&devdSocket);
-    QStringList ev = devdStream->readLine().split(" ");
-    QString sys,subsys;
-    //"!system=ACPI", "subsystem=ACAD", "type=\_SB_.PCI0.AC0_", "notify=0x01"
-    //qDebug()<<ev;
-    if (ev.size()<3)
-        return;
-    if (ev[0].replace("!system=", "") != "ACPI")
-        return;
-    if (ev[1].replace("subsystem=","") == "ACAD")
+
+    while(!devdStream->atEnd())
     {
-        QTimer::singleShot(0, this, SLOT(checkState()));
-        return;
-    }
-    else if (ev[1].replace("subsystem=","") == "Suspend")
-    {
-        onSuspend();
-    }
-    else if (ev[1].replace("subsystem=","") == "Resume")
-    {
-        onResume();
-    }else if (ev[1].replace("subsystem=","") == "Lid")
-    {
-        isLidClosed = (ev[3].trimmed() == "notify=0x00")?true:false;
+        QStringList ev = devdStream->readLine().split(" ");
+        QString sys,subsys;
+        //"!system=ACPI", "subsystem=ACAD", "type=\_SB_.PCI0.AC0_", "notify=0x01"
+
+        if (ev.size()<3)
+            return;
+        if (ev[0].replace("!system=", "") != "ACPI")
+            return;
+        if (ev[1].replace("subsystem=","") == "ACAD")
+        {
+            QTimer::singleShot(0, this, SLOT(checkState()));
+            return;
+        }
+        else if (ev[1].replace("subsystem=","") == "Suspend")
+        {
+            onSuspend();
+        }
+        else if (ev[1].replace("subsystem=","") == "Resume")
+        {
+            onResume();
+        }else if (ev[1].replace("subsystem=","") == "Lid")
+        {
+            isLidClosed = (ev[3].trimmed() == "notify=0x00")?true:false;
+        }
     }
 }
 

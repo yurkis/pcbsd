@@ -150,7 +150,7 @@ void JSONBatteryStatus::toJSON(QJsonObject &json)
 
 bool JSONBatteryStatus::fromJSON(const QJsonObject &json)
 {
-    FIELD("batteryRate", batteryCapacity).toInt();
+    FIELD("batteryCapacity", batteryCapacity).toInt();
     FIELD("powerConsumption", powerConsumption).toInt();
     FIELD("batteryTime", batteryTime).toInt();
     FIELD("batteryCritical", batteryCritical).toBool();

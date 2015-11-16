@@ -57,7 +57,7 @@
         <string>Home</string>
        </property>
        <property name="icon">
-        <iconset>
+        <iconset resource="pc-power.qrc">
          <normaloff>:/images/page-home.png</normaloff>:/images/page-home.png</iconset>
        </property>
       </item>
@@ -66,7 +66,7 @@
         <string>Info</string>
        </property>
        <property name="icon">
-        <iconset>
+        <iconset resource="pc-power.qrc">
          <normaloff>:/images/page-info.png</normaloff>:/images/page-info.png</iconset>
        </property>
       </item>
@@ -75,7 +75,7 @@
         <string>Profiles</string>
        </property>
        <property name="icon">
-        <iconset>
+        <iconset resource="pc-power.qrc">
          <normaloff>:/images/page-profiles.png</normaloff>:/images/page-profiles.png</iconset>
        </property>
       </item>
@@ -84,7 +84,7 @@
         <string>Settings</string>
        </property>
        <property name="icon">
-        <iconset>
+        <iconset resource="pc-power.qrc">
          <normaloff>:/images/page-settings.png</normaloff>:/images/page-settings.png</iconset>
        </property>
       </item>
@@ -105,9 +105,20 @@
        </size>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
-      <widget class="QWidget" name="page"/>
+      <widget class="QWidget" name="page">
+       <widget class="WidgetBattery" name="testWidget" native="true">
+        <property name="geometry">
+         <rect>
+          <x>20</x>
+          <y>20</y>
+          <width>191</width>
+          <height>71</height>
+         </rect>
+        </property>
+       </widget>
+      </widget>
       <widget class="QWidget" name="page_2">
        <layout class="QVBoxLayout" name="verticalLayout">
         <item>
@@ -135,6 +146,16 @@
   </widget>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
- <resources/>
+ <customwidgets>
+  <customwidget>
+   <class>WidgetBattery</class>
+   <extends>QWidget</extends>
+   <header location="global">widgets/widgetbattery.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources>
+  <include location="pc-power.qrc"/>
+ </resources>
  <connections/>
 </ui>
