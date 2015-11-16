@@ -1,7 +1,13 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
+#include "widgets/widgetbacklight.h"
+
+#include <QSystemTrayIcon>
+#include <QMenu>
+#include <QWidgetAction>
 #include <QDebug>
+
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -21,6 +27,35 @@ MainWindow::MainWindow(QWidget *parent) :
 
     ui->testWidget->setup(0, client, events);
     ui->test2->setup(0, client, events);
+
+    QSystemTrayIcon* trayIcon = new QSystemTrayIcon(this);
+    QMenu* trayIconMenu = new QMenu();
+    trayIcon->setContextMenu(trayIconMenu);
+    QAction *menuline = trayIconMenu->addSeparator();
+
+    WidgetBattery* batt_test2 = new WidgetBattery(this);
+    batt_test2->setup(0, client, events);
+    QWidgetAction *waction1= new QWidgetAction(trayIconMenu);
+    waction1->setDefaultWidget(batt_test2);
+    trayIconMenu->addAction(waction1);
+
+    trayIconMenu->addSeparator();
+
+    WidgetBacklight* test_bl = new WidgetBacklight(this);
+    test_bl->setup(0, client, events);
+
+    QWidgetAction *waction0= new QWidgetAction(trayIconMenu);
+    waction0->setDefaultWidget(test_bl);
+    //trayIconMenu->insertAction(menuline,waction0);
+    trayIconMenu->addAction(waction0);
+
+
+
+
+    trayIcon->setIcon(QIcon(":/images/backlight.png"));
+
+    trayIcon->show();
+
 }
 
 MainWindow::~MainWindow()
