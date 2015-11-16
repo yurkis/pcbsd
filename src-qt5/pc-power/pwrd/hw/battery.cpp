@@ -7,6 +7,8 @@
 #include <unistd.h>
 #include <QDebug>
 
+#ifndef FAKE_BATT
+
 ///////////////////////////////////////////////////////////////////////////////
 static const char* const ACPIDEV = "/dev/acpi";
 #define UNKNOWN_CAP 0xffffffff
@@ -149,3 +151,4 @@ bool getBatteryStatus(int batt, PWRBatteryStatus& info)
 
     return true;
 }
+#endif

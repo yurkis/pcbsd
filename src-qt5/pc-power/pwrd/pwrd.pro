@@ -19,7 +19,8 @@ SOURCES += main.cpp \
     hw/intel_backlight.cpp \
     hw/buttons.cpp \
     comm_handlers.cpp \
-    hw/sleep.cpp
+    hw/sleep.cpp \
+    hw/fakebatt.cpp
 
 HEADERS += \
     pwrserver.h \
