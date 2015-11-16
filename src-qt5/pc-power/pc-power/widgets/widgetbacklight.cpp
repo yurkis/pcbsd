@@ -63,7 +63,7 @@ void WidgetBacklight::on_level_valueChanged(int value)
 {
     if (!client) return;
 
-    client->setBacklightLevel(value, blNum);
+    //client->setBacklightLevel(value, blNum);
     //ignoreEvents= false;
 }
 

@@ -111,7 +111,7 @@ bool getBatteryStatus(int batt, PWRBatteryStatus& info)
     if (ioctl(acpifd, ACPIIO_BATT_GET_BATTINFO, &battio) == -1)
         return false;
 
-    info.batteryRate = battio.battinfo.cap;
+    info.batteryCapacity = battio.battinfo.cap;
 
     info.batteryState = BATT_STATE_UNKNOWN;
     switch (battio.battinfo.state & ACPI_BATT_STAT_BST_MASK)
