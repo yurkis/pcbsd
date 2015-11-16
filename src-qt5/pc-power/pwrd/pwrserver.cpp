@@ -197,7 +197,7 @@ void PwrServer::emitEvent(QString event_name, QJsonObject event)
 {
     event[EVENT_EVENT_FIELD] = event_name;
 
-    QString json = QJsonObjectToMessage(event);
+    QString json = QJsonObjectToMessage(event) + "\n";
 
     for(auto it = eventConnections.begin(); it!= eventConnections.end(); ++it)
     {
@@ -237,7 +237,7 @@ void PwrServer::applyProfile(QString id)
     setLidSleepState(p.lidSwitchSate);
 
     QJsonObject event;
-    event[PROFILE_NAME] = id;
+    event[PROFILE_ID] = id;
     emitEvent(EVENT_PROFILE_CHANGED, event);
 
     //if profile changed and lid is closed try to set sleep state if present
@@ -292,16 +292,17 @@ void PwrServer::checkBatts(bool* hasLowBattery)
         JSONBatteryStatus curr;
         if (getBatteryStatus(i, curr))
         {
-            if ((curr.batteryState == BATT_DISCHARGING) && ((int)curr.batteryRate <= settings.lowBatteryRate))
+            curr.batteryCritical = (int)curr.batteryCapacity<=settings.lowBatteryRate;
+            if ((curr.batteryState == BATT_DISCHARGING) && ((int)curr.batteryCapacity <= settings.lowBatteryRate))
             {
                 if (hasLowBattery) (*hasLowBattery) = true;
             }
-            if (curr.batteryRate != currBatteryStates[i].batteryRate)
+            if (curr.batteryCapacity != currBatteryStates[i].batteryCapacity)
             {
                 QJsonObject event;
                 event[BATTERY_NO] = i;
                 event[JSONBatteryStatus().myname()] = curr.toJSON();
-                emitEvent(EVENT_BATT_RATE_CHANGED, event);
+                emitEvent(EVENT_BATT_CAPACITY_CHANGED, event);
             }
             if (curr.batteryState != currBatteryStates[i].batteryState)
             {

@@ -32,9 +32,9 @@ bool getBatteryStatus(int batt, PWRBatteryStatus& info)
     QTextStream s(&file);
     QString str;
     str = s.readLine();
-    info.batteryRate = str.toInt();
+    info.batteryCapacity = str.toInt();
     if (batt % 2)
-        info.batteryRate = 100 - info.batteryRate;
+        info.batteryCapacity = 100 - info.batteryCapacity;
     str = s.readLine();
     if (str.toLower().trimmed() == QString("c"))
         info.batteryState = BATT_CHARGING;

@@ -331,7 +331,7 @@ void PWRCLI::cmdGetStatus()
         }
         qcout()<<"\n";
 
-        qcout()<<"  Current rate  : "<<batts[i].batteryRate<<"%\n";
+        qcout()<<"  Current rate  : "<<batts[i].batteryCapacity<<"%\n";
         qcout()<<"  Remaining time: ";
         if (batts[i].batteryTime)
             qcout()<<batts[i].batteryTime/60<<":"<<batts[i].batteryTime%60<<"\n";

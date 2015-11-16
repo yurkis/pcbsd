@@ -309,6 +309,7 @@ QJsonObject PwrServer::oncmdGetBattState()
         JSONBatteryStatus item;
         if (getBatteryStatus(i, item))
         {
+            item.batteryCritical = (int)item.batteryCapacity<=settings.lowBatteryRate;
             arr.append(item.toJSON());
         }
     }

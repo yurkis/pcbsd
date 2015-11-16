@@ -22,15 +22,17 @@ typedef enum
 typedef struct _PWRBatteryState
 {
     PWRBatteryState batteryState;   //< Current battery state
-    unsigned int batteryRate;       //< Battery rate in percents (0..100)
+    unsigned int batteryCapacity;   //< Battery capacity in percents (0..100)
     unsigned int powerConsumption;  //< Current power consumption (in mW)
     unsigned int batteryTime;       //< Battery lifetime (in minutes)
+    bool         batteryCritical;
     _PWRBatteryState()
     {
         batteryState = BATT_STATE_UNKNOWN;
-        batteryRate = 0;
+        batteryCapacity = 0;
         batteryTime = 0;
         powerConsumption = 0;
+        batteryCritical = false;
     }
 }PWRBatteryStatus;
 

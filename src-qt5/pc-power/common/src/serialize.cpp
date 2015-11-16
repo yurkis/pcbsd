@@ -128,9 +128,10 @@ bool JSONProfile::fromJSON(const QJsonObject &json)
 
 void JSONBatteryStatus::toJSON(QJsonObject &json)
 {
-    json["batteryRate"] = (int)batteryRate;
+    json["batteryCapacity"] = (int)batteryCapacity;
     json["powerConsumption"] = (int)powerConsumption;
     json["batteryTime"] = (int)batteryTime;
+    json["batteryCritical"]=batteryCritical;
 
     QString state=UNKNOWN;
     switch(batteryState)
@@ -149,9 +150,10 @@ void JSONBatteryStatus::toJSON(QJsonObject &json)
 
 bool JSONBatteryStatus::fromJSON(const QJsonObject &json)
 {
-    FIELD("batteryRate", batteryRate).toInt();
+    FIELD("batteryRate", batteryCapacity).toInt();
     FIELD("powerConsumption", powerConsumption).toInt();
     FIELD("batteryTime", batteryTime).toInt();
+    FIELD("batteryCritical", batteryCritical).toBool();
     batteryState = BATT_STATE_UNKNOWN;
     if (json.contains("batteryState"))
     {

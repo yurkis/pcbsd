@@ -19,14 +19,17 @@ SOURCES += main.cpp\
     widgets/widgetbattery.cpp \
     widgets/widgetbacklight.cpp \
     ../common/src/protocol.cpp \
-    ../common/src/serialize.cpp
+    ../common/src/serialize.cpp \
+    ../libpwrd/QPWRDEvents.cpp
 
 HEADERS  += mainwindow.h \
     ../libpwrd/QPWRDClient.h \
     ../common/include/pwrdtypes.h \
     widgets/widgetbatteryhw.h \
     widgets/widgetbattery.h \
-    widgets/widgetbacklight.h
+    widgets/widgetbacklight.h \
+    ../libpwrd/QPWRDEvents.h \
+    ../common/include/protocol.h
 
 FORMS    += mainwindow.ui \
     widgets/widgetbatteryhw.ui \
