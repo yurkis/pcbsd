@@ -4,7 +4,7 @@
 
 #include "pwrdtypes.h"
 
-#define FAKE_BATT
+//#define FAKE_BATT
 
 bool getBatteryHWInfo(int batt, PWRBatteryHardware& hwout);
 bool getBatteryStatus(int batt, PWRBatteryStatus& info);

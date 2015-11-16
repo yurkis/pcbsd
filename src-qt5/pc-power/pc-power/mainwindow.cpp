@@ -20,6 +20,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(events, SIGNAL(profileChanged(QString)), this, SLOT(profileChanged(QString)));
 
     ui->testWidget->setup(0, client, events);
+    ui->test2->setup(0, client, events);
 }
 
 MainWindow::~MainWindow()

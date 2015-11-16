@@ -23,12 +23,12 @@ public:
 private slots:
     void batteryChanged(int batt, PWRBatteryStatus stat);
 
-    void refreshUI(PWRBatteryStatus stat);
-
 private:
     int battNum;
     QPWRDClient* client;
     QPWRDEvents* events;
+
+    void refreshUI(PWRBatteryStatus stat);
 
     Ui::WidgetBattery *ui;
 };

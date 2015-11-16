@@ -113,8 +113,18 @@
          <rect>
           <x>20</x>
           <y>20</y>
-          <width>191</width>
+          <width>361</width>
           <height>71</height>
+         </rect>
+        </property>
+       </widget>
+       <widget class="WidgetBacklight" name="test2" native="true">
+        <property name="geometry">
+         <rect>
+          <x>20</x>
+          <y>100</y>
+          <width>361</width>
+          <height>80</height>
          </rect>
         </property>
        </widget>
@@ -151,6 +161,12 @@
    <class>WidgetBattery</class>
    <extends>QWidget</extends>
    <header location="global">widgets/widgetbattery.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>WidgetBacklight</class>
+   <extends>QWidget</extends>
+   <header location="global">widgets/widgetbacklight.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

@@ -40,7 +40,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QSlider" name="horizontalSlider">
+    <widget class="QSlider" name="level">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>

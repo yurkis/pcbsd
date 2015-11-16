@@ -162,7 +162,7 @@ QJsonObject PwrServer::oncmdSetBacklight(QJsonObject req)
     QString val_s = req[BACKLIGHT_VALUE].toString();
     val_s = val_s.trimmed();
     is_relative = (val_s.startsWith("-") || val_s.startsWith("+"));
-    val = val_s.toInt();
+    val = val_s.toInt();    
 
     if (req.find(BACKLIGHT_NUMBER)==req.end())
     {
