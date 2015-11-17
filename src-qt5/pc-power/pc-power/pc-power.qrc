@@ -7,5 +7,7 @@
         <file>images/system-suspend.png</file>
         <file>images/page-settings.png</file>
         <file>images/backlight.png</file>
+        <file>images/battery.png</file>
+        <file>images/battery_good.png</file>
     </qresource>
 </RCC>

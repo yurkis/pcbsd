@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>239</width>
-    <height>93</height>
+    <height>78</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -15,63 +15,47 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_2">
+    <layout class="QHBoxLayout" name="horizontalLayout_3">
      <item>
-      <widget class="QLabel" name="label">
-       <property name="text">
-        <string>Battery</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="battNoLabel">
-       <property name="text">
-        <string>TextLabel</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <spacer name="horizontalSpacer">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
+      <widget class="QLabel" name="battIcon">
+       <property name="minimumSize">
         <size>
-         <width>40</width>
-         <height>20</height>
+         <width>32</width>
+         <height>32</height>
         </size>
        </property>
-      </spacer>
+       <property name="maximumSize">
+        <size>
+         <width>32</width>
+         <height>32</height>
+        </size>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="pixmap">
+        <pixmap resource="../pc-power.qrc">:/images/battery.png</pixmap>
+       </property>
+       <property name="scaledContents">
+        <bool>true</bool>
+       </property>
+      </widget>
      </item>
      <item>
-      <widget class="QLabel" name="stateLabel">
-       <property name="text">
-        <string>(discharging)</string>
+      <widget class="QProgressBar" name="capacity">
+       <property name="value">
+        <number>24</number>
        </property>
       </widget>
      </item>
     </layout>
    </item>
    <item>
-    <widget class="QProgressBar" name="capacity">
-     <property name="value">
-      <number>24</number>
-     </property>
-    </widget>
-   </item>
-   <item>
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
-      <widget class="QLabel" name="timeTextLabel">
+      <widget class="QLabel" name="statusText">
        <property name="text">
         <string>Aprox. time:</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="timeLabel">
-       <property name="text">
-        <string>00:00</string>
        </property>
       </widget>
      </item>
@@ -92,6 +76,8 @@
    </item>
   </layout>
  </widget>
- <resources/>
+ <resources>
+  <include location="../pc-power.qrc"/>
+ </resources>
  <connections/>
 </ui>

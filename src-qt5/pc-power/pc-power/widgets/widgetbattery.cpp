@@ -2,6 +2,10 @@
 #include "ui_widgetbattery.h"
 
 #include <QDebug>
+#include <QPixmap>
+#include <QPainter>
+
+static const char* const BASE_BATTERY_ICON = ":/images/battery.png";
 
 WidgetBattery::WidgetBattery(QWidget *parent) :
     QWidget(parent),
@@ -23,7 +27,7 @@ void WidgetBattery::setup(int num, QPWRDClient *cl, QPWRDEvents *ev)
     battNum =num;
     client = cl;
     events = ev;
-    ui->battNoLabel->setText(QString::number(num));
+
     if (client)
     {
         QVector<PWRBatteryStatus> stats;
@@ -40,6 +44,21 @@ void WidgetBattery::setup(int num, QPWRDClient *cl, QPWRDEvents *ev)
         connect(events, SIGNAL(batteryCapacityChanged(int, PWRBatteryStatus)), this, SLOT(batteryChanged(int, PWRBatteryStatus)));
         connect(events, SIGNAL(batteryStateChanged(int, PWRBatteryStatus)), this, SLOT(batteryChanged(int, PWRBatteryStatus)));
     }
+
+    QPixmap batt_pixmap;
+    batt_pixmap.load(BASE_BATTERY_ICON);
+    QPainter painter(&batt_pixmap);
+    int h= batt_pixmap.height();
+    int w = batt_pixmap.width();
+
+    QFont font = painter.font();
+    font.setBold(true);
+    font.setPixelSize(w/2);
+    painter.setFont(font);
+
+    painter.setPen(QPen(QColor(Qt::white)));
+    painter.drawText(0,0,w,h,Qt::AlignCenter, QString::number(num));
+    ui->battIcon->setPixmap(batt_pixmap);
 }
 
 void WidgetBattery::batteryChanged(int batt, PWRBatteryStatus stat)
@@ -51,18 +70,20 @@ void WidgetBattery::batteryChanged(int batt, PWRBatteryStatus stat)
 void WidgetBattery::refreshUI(PWRBatteryStatus stat)
 {
     ui->capacity->setValue(stat.batteryCapacity);
-    switch(stat.batteryState)
+
+    if (stat.batteryState == BATT_CHARGING)
     {
-        case BATT_CHARGING:
-            ui->stateLabel->setText(tr("(Charging)"));
-            break;
-        case BATT_DISCHARGING:
-            ui->stateLabel->setText(tr("(Discharging)"));
-            break;
-        default:
-            ui->stateLabel->setText(tr("(State unknown)"));
-            break;
+        ui->statusText->setText(tr("Charging..."));
     }
-    ui->timeLabel->setVisible(stat.batteryTime>0);
-    ui->timeTextLabel->setVisible(stat.batteryTime>0);
+    else
+    {
+        QString text;
+        if (stat.batteryTime>0)
+        {
+            text = QString(tr("Estimated time: %1:%2 ")).arg(stat.batteryTime/60,2,10,QChar('0')).arg(stat.batteryTime%60,2,10,QChar('0'));
+        }
+        ui->statusText->setText(text);
+
+
+    }
 }

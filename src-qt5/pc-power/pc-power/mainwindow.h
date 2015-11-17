@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QSystemTrayIcon>
 
 #include "QPWRDClient.h"
 #include "QPWRDEvents.h"
@@ -21,6 +22,26 @@ public:
 protected:
     QPWRDClient* client;
     QPWRDEvents* events;
+
+    PWRDHardwareInfo hwInfo;
+    QVector<PWRBatteryStatus> battStates;
+    bool onACPower;
+    PWRProfileInfoBasic currentProfile;
+    QVector<PWRProfileInfoBasic> profiles;
+    PWRProfileInfoBasic acProffile;
+    PWRProfileInfoBasic battProfile;
+    PWRProfileInfoBasic lowbattProfile;
+
+    QSystemTrayIcon* trayIcon;
+    QIcon trayIconImage;
+    QMenu* trayMenu;
+
+    int trayBattNo;
+
+protected:
+    void getInfoAndState();
+    void setupTray();
+    void refreshTrayIcon(PWRBatteryStatus stat);
 
 public slots:
     void backlightChanged(int backlight, int value);
