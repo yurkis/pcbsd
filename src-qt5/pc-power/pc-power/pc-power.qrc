@@ -9,5 +9,6 @@
         <file>images/backlight.png</file>
         <file>images/battery.png</file>
         <file>images/battery_good.png</file>
+        <file>images/charging.png</file>
     </qresource>
 </RCC>

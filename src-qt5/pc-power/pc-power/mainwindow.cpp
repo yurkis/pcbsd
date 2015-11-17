@@ -16,6 +16,7 @@
 
 _str_constant BASE_BATTERY_ICON = ":/images/battery.png";
 _str_constant GOOD_BATTERY_ICON = ":/images/battery_good.png";
+_str_constant CHARGING_IMAGE = ":/images/charging.png";
 const int BATTERY_REDRAW_PERCENTAGE = 5;
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -152,6 +153,16 @@ void MainWindow::refreshTrayIcon(PWRBatteryStatus stat)
 
     painter.drawPixmap(draw_point, cap_pixmap, cut_rect);
 
+    if (onACPower)
+    {
+        QPixmap charging_pixmap;
+        charging_pixmap.load(CHARGING_IMAGE);
+        int h = charging_pixmap.height();
+        int w = charging_pixmap.width();
+
+        painter.drawPixmap(icon_w - w, icon_h - h, charging_pixmap);
+    }
+
     trayIconImage = QIcon(icon_pixmap);
 
     trayIcon->setIcon(trayIconImage);
@@ -172,11 +183,24 @@ void MainWindow::batteryCapacityChanged(int batt, PWRBatteryStatus stat)
 void MainWindow::batteryStateChanged(int bat, PWRBatteryStatus stat)
 {
     qDebug()<<"batt "<<bat<<" state changed to "<<stat.batteryState<<" "<<stat.batteryCritical;
+    if (bat == trayBattNo) refreshTrayIcon(stat);
 }
 
 void MainWindow::acLineStateChanged(bool onExternalPower)
 {
     qDebug()<<"AC power: "<<onExternalPower;
+    onACPower = onExternalPower;
+    QVector<PWRBatteryStatus> stats;
+    if (client)
+    {
+        if (client->getBatteriesState(stats))
+        {
+            if (trayBattNo < stats.size())
+            {
+                refreshTrayIcon(stats[trayBattNo]);
+            }
+        }
+    }
 }
 
 void MainWindow::profileChanged(QString profileID)
