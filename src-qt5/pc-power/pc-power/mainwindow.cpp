@@ -16,6 +16,7 @@
 
 _str_constant BASE_BATTERY_ICON = ":/images/battery.png";
 _str_constant GOOD_BATTERY_ICON = ":/images/battery_good.png";
+_str_constant LOW_BATTERY_ICON = ":/images/battery_low.png";
 _str_constant CHARGING_IMAGE = ":/images/charging.png";
 const int BATTERY_REDRAW_PERCENTAGE = 5;
 
@@ -114,19 +115,20 @@ void MainWindow::setupTray()
     }
 
      trayIcon->show();
-
 }
 
 void MainWindow::refreshTrayIcon(PWRBatteryStatus stat)
 {
     static bool last_power= false;
-    static int last_cap = -1;
+    static unsigned int last_cap = -1;
+    static bool was_low = false;
 
     int delta = (last_cap > stat.batteryCapacity)?last_cap - stat.batteryCapacity: stat.batteryCapacity - last_cap;
 
     bool need_update = trayIconImage.isNull();
     need_update = need_update || ( delta >=BATTERY_REDRAW_PERCENTAGE );
     need_update = need_update || (last_power != onACPower);
+    need_update = need_update || (was_low != stat.batteryCritical);
 
     if (!need_update) return;
 
@@ -139,7 +141,7 @@ void MainWindow::refreshTrayIcon(PWRBatteryStatus stat)
     int icon_h = icon_pixmap.height();
     QPainter painter(&icon_pixmap);
 
-    QString cap_pixmap_name = GOOD_BATTERY_ICON;
+    QString cap_pixmap_name = (stat.batteryCritical)?LOW_BATTERY_ICON:GOOD_BATTERY_ICON;
 
     QPixmap cap_pixmap;
     cap_pixmap.load(cap_pixmap_name);
