@@ -42,6 +42,8 @@ bool getBatteryStatus(int batt, PWRBatteryStatus& info)
         info.batteryState = BATT_DISCHARGING;
     str = s.readLine();
     info.batteryTime = str.toInt();
+    str = s.readLine();
+    info.powerConsumption = str.toInt();
 
     return true;
 

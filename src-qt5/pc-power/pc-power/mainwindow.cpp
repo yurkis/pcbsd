@@ -232,7 +232,24 @@ void MainWindow::refreshMainPageAcState()
 {
     QPixmap pixmap;
     pixmap.load((onACPower)?AC_ENABLED_IMAGE:AC_DISABLED_IMAGE);
-    ui->acStateLabel->setPixmap(pixmap);// (QPicture((onACPower)?AC_ENABLED_IMAGE:AC_DISABLED_IMAGE));
+    ui->acStateLabel->setPixmap(pixmap);
+}
+
+void MainWindow::refreshPowerCosumption()
+{
+    int pc = powerConsumption();
+    ui->powerConsumptionPB->setVisible(pc);
+    if (pc)
+    {
+        ui->powerConsumptionLabel->setText(tr("%1 (mW)").arg(pc));
+        if (ui->powerConsumptionPB->maximum() < pc)
+            ui->powerConsumptionPB->setMaximum(pc);
+        ui->powerConsumptionPB->setValue(pc);
+    }
+    else
+    {
+        ui->powerConsumptionLabel->setText(tr("Unknown"));
+    }
 }
 
 void MainWindow::setupMainGeneral()
@@ -267,6 +284,20 @@ void MainWindow::setupMainGeneral()
         delete sbw;
     }
 
+    refreshPowerCosumption();
+
+}
+
+int MainWindow::powerConsumption()
+{
+    for(int i=0; i<battStates.size(); i++)
+    {
+        if ((battStates[i].batteryState == BATT_DISCHARGING) && (battStates[i].powerConsumption))
+        {
+            return battStates[i].powerConsumption;
+        }
+    }
+    return 0;
 }
 
 void MainWindow::backlightChanged(int backlight, int value)
@@ -276,14 +307,20 @@ void MainWindow::backlightChanged(int backlight, int value)
 
 void MainWindow::batteryCapacityChanged(int batt, PWRBatteryStatus stat)
 {;
-    qDebug()<<"batt cap "<<batt<<" cap:"<<stat.batteryCapacity<<" "<<stat.batteryCritical;
+    if (battStates.size())
+        battStates[batt] = stat;
     if (batt == trayBattNo) refreshTrayIcon(stat);
+
+    refreshPowerCosumption();
 }
 
 void MainWindow::batteryStateChanged(int bat, PWRBatteryStatus stat)
 {
-    qDebug()<<"batt "<<bat<<" state changed to "<<stat.batteryState<<" "<<stat.batteryCritical;
+    if (battStates.size())
+        battStates[bat] = stat;
     if (bat == trayBattNo) refreshTrayIcon(stat);
+
+    refreshPowerCosumption();
 }
 
 void MainWindow::acLineStateChanged(bool onExternalPower)
@@ -295,17 +332,18 @@ void MainWindow::acLineStateChanged(bool onExternalPower)
 
     refreshMainPageAcState();
 
-    QVector<PWRBatteryStatus> stats;
     if (client)
     {
-        if (client->getBatteriesState(stats))
+        if (client->getBatteriesState(battStates))
         {
-            if (trayBattNo < stats.size())
+            if (trayBattNo < battStates.size())
             {
-                refreshTrayIcon(stats[trayBattNo]);
+                refreshTrayIcon(battStates[trayBattNo]);
             }
-        }
-    }
+        }//if got states
+    }//if valid client
+
+    refreshPowerCosumption();
 }
 
 void MainWindow::profileChanged(QString profileID)

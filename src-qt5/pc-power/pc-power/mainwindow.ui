@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>549</width>
+    <width>646</width>
     <height>320</height>
    </rect>
   </property>
@@ -118,7 +118,7 @@
            <attribute name="title">
             <string>General</string>
            </attribute>
-           <layout class="QVBoxLayout" name="mainGeneralLAyout">
+           <layout class="QVBoxLayout" name="verticalLayout_3">
             <item>
              <layout class="QGridLayout" name="gridLayout">
               <item row="0" column="0" rowspan="2">
@@ -177,10 +177,34 @@
               <item row="1" column="3">
                <widget class="QToolButton" name="changeProfileButton">
                 <property name="text">
-                 <string>Change</string>
+                 <string>Change...</string>
                 </property>
                 <property name="popupMode">
                  <enum>QToolButton::InstantPopup</enum>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0" colspan="2">
+               <widget class="QLabel" name="label_3">
+                <property name="text">
+                 <string>Power consumption:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="2">
+               <widget class="QLabel" name="powerConsumptionLabel">
+                <property name="text">
+                 <string>TextLabel</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="3">
+               <widget class="QProgressBar" name="powerConsumptionPB">
+                <property name="maximum">
+                 <number>1</number>
+                </property>
+                <property name="value">
+                 <number>-1</number>
                 </property>
                </widget>
               </item>

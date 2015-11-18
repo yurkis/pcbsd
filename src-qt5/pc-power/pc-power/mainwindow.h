@@ -45,7 +45,9 @@ protected:
     void setupTray();
     void refreshTrayIcon(PWRBatteryStatus stat);
     void refreshMainPageAcState();
+    void refreshPowerCosumption();
     void setupMainGeneral();
+    int powerConsumption();
 
 public slots:
     void backlightChanged(int backlight, int value);
