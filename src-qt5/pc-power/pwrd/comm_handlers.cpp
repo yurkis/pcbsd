@@ -80,6 +80,10 @@ QJsonObject PwrServer::parseCommand(QString line)
           {
               resp = oncmdSetACPIState(root);
           }
+          else if (root[MSGTYPE_COMMAND] == COMMAND_APPLY_PROFILE)
+          {
+              resp = oncmdApplyProfile(root);
+          }
       }
     }catch(...){
         resp = RESULT_FAIL("Internal error");
@@ -347,6 +351,23 @@ QJsonObject PwrServer::oncmdSetACPIState(QJsonObject req)
     {
         return RESULT_FAIL("Could not change state");
     }
+
+    return RESULT_SUCCESS();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+QJsonObject PwrServer::oncmdApplyProfile(QJsonObject req)
+{
+    if (!req.contains(PROFILE_ID))
+    {
+        return RESULT_FAIL("Bad request");
+    }
+
+    if (!profiles.contains(req[PROFILE_ID].toString()))
+    {
+        return RESULT_FAIL("Profile not found");
+    }
+    applyProfile(req[PROFILE_ID].toString());
 
     return RESULT_SUCCESS();
 }

@@ -314,6 +314,20 @@ bool QPWRDClient::getCurrentProfileID(PWRProfileInfoBasic &out)
     return true;
 }
 
+bool QPWRDClient::setCurrentProfile(QString profile_id)
+{
+    Q_D(QPWRDClient);
+
+    d->lastError = "";
+
+    QJsonObject req, resp;
+
+    req[MSGTYPE_COMMAND] = COMMAND_APPLY_PROFILE;
+    req[PROFILE_ID] = profile_id;
+
+    return d->sendCommandReadResponce(req, resp);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 bool QPWRDClient::getACLineState(bool isOnACPower)
 {

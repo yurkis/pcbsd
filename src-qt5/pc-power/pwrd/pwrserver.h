@@ -83,6 +83,7 @@ private:
     QJsonObject oncmdGetAcStatus();
     QJsonObject oncmdGetBattState();
     QJsonObject oncmdSetACPIState(QJsonObject req);
+    QJsonObject oncmdApplyProfile(QJsonObject req);
 
 
     void emitEvent(QString event_name, QJsonObject event);

@@ -2,6 +2,8 @@
 #include "ui_mainwindow.h"
 
 #include "widgets/widgetbacklight.h"
+#include "widgets/widgetbattery.h"
+#include "widgets/widgetsleepbuttons.h"
 
 #include <QSystemTrayIcon>
 #include <QMenu>
@@ -9,6 +11,7 @@
 #include <QIcon>
 #include <QPixmap>
 #include <QPainter>
+#include <QPicture>
 #include <QDebug>
 
 
@@ -18,7 +21,9 @@ _str_constant BASE_BATTERY_ICON = ":/images/battery.png";
 _str_constant GOOD_BATTERY_ICON = ":/images/battery_good.png";
 _str_constant LOW_BATTERY_ICON = ":/images/battery_low.png";
 _str_constant CHARGING_IMAGE = ":/images/charging.png";
-const int BATTERY_REDRAW_PERCENTAGE = 5;
+_str_constant AC_ENABLED_IMAGE = ":/images/ac_power.png";
+_str_constant AC_DISABLED_IMAGE = ":/images/batt_power.png";
+_str_constant NO_BATTERY_IMAGE = ":/images/no_battery.png";
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -40,12 +45,23 @@ MainWindow::MainWindow(QWidget *parent) :
 
     getInfoAndState();
 
+    //Make profiles popup
+    profilesMenu = new QMenu(this);
+    for (int i=0;i<profiles.size();i++)
+    {
+        QAction* action = new QAction(profilesMenu);
+        action->setText(profiles[i].name);
+        action->setData(QVariant(profiles[i].id));
+        connect(action, SIGNAL(triggered(bool)), this, SLOT(changeProfileTriggered()));
+        profilesMenu->addAction(action);
+    }
+    profilesMenu->setTitle(tr("Change profile"));
+
     setupTray();
 
-    ui->testWidget->setup(0, client, events);
-    ui->test2->setup(0, client, events);    
+    refreshMainPageAcState();
 
-
+    setupMainGeneral();
 
 }
 
@@ -86,11 +102,28 @@ void MainWindow::setupTray()
 {
     trayIcon = new QSystemTrayIcon(this);
 
-    refreshTrayIcon(battStates[trayBattNo]);
+    if (!hwInfo.basic.numBatteries)
+    {
+        trayIcon->setIcon(QIcon(NO_BATTERY_IMAGE));
+    }
+    else
+    {
+        if (trayBattNo>=battStates.size())
+            trayBattNo = 0;
+        refreshTrayIcon(battStates[trayBattNo]);
+    }
 
     trayMenu = new QMenu(this);
 
     trayIcon->setContextMenu(trayMenu);
+
+    QAction* show_act = new  QAction(trayMenu);
+    show_act->setText(tr("Show main window"));
+    connect(show_act, SIGNAL(triggered(bool)), this, SLOT(showMainUI()));
+    trayMenu->addAction(show_act);
+
+    trayMenu->addMenu(profilesMenu);
+
     trayMenu->addSeparator();
 
     for(int i=hwInfo.basic.numBatteries - 1; i>=0; i--)
@@ -103,7 +136,21 @@ void MainWindow::setupTray()
         trayMenu->addSeparator();
     }
 
-    //if (hwInfo.basic.numBatteries) trayMenu->addSeparator();
+
+    trayMenu->addSeparator();
+    WidgetSleepButtons* sbw = new WidgetSleepButtons(trayMenu);
+    if (sbw->setup(client, hwInfo.basic.possibleACPIStates))
+    {
+        QWidgetAction *sbw_action= new QWidgetAction(trayMenu);
+        sbw_action->setDefaultWidget(sbw);
+        trayMenu->addAction(sbw_action);
+    }
+    else
+    {
+        delete sbw;
+    }
+
+    trayMenu->addSeparator();
 
     for(int i=hwInfo.basic.numBacklights - 1; i>=0; i--)
     {
@@ -115,6 +162,9 @@ void MainWindow::setupTray()
     }
 
      trayIcon->show();
+
+
+     connect(trayIcon, SIGNAL(activated(QSystemTrayIcon::ActivationReason)), this, SLOT(trayActivated()));
 }
 
 void MainWindow::refreshTrayIcon(PWRBatteryStatus stat)
@@ -122,27 +172,32 @@ void MainWindow::refreshTrayIcon(PWRBatteryStatus stat)
     static bool last_power= false;
     static unsigned int last_cap = -1;
     static bool was_low = false;
+    static int batt_redraw_prcentage = 5; // Not always repaint battery image. Reduce CPU cycles (power consumption)
 
     int delta = (last_cap > stat.batteryCapacity)?last_cap - stat.batteryCapacity: stat.batteryCapacity - last_cap;
 
     bool need_update = trayIconImage.isNull();
-    need_update = need_update || ( delta >=BATTERY_REDRAW_PERCENTAGE );
+    need_update = need_update || ( delta >=batt_redraw_prcentage );
     need_update = need_update || (last_power != onACPower);
     need_update = need_update || (was_low != stat.batteryCritical);
 
     if (!need_update) return;
-
+    //if we need to repaint battery image
     last_cap = stat.batteryCapacity;
     last_power = onACPower;
 
+    //Get clean battery pixmap...
     QPixmap icon_pixmap;
     icon_pixmap.load(BASE_BATTERY_ICON);
     int icon_w = icon_pixmap.width();
     int icon_h = icon_pixmap.height();
     QPainter painter(&icon_pixmap);
 
+    //Get capacity pixmap (different pixmaps for normal battery state and low battery state)
     QString cap_pixmap_name = (stat.batteryCritical)?LOW_BATTERY_ICON:GOOD_BATTERY_ICON;
 
+    //...and then cut capacity pixmap due to capacity percentage, center it
+    // and draw on the clean battery pixmap
     QPixmap cap_pixmap;
     cap_pixmap.load(cap_pixmap_name);
     int cap_w = cap_pixmap.width();
@@ -155,8 +210,11 @@ void MainWindow::refreshTrayIcon(PWRBatteryStatus stat)
 
     painter.drawPixmap(draw_point, cap_pixmap, cut_rect);
 
+    batt_redraw_prcentage =  (int)(.1 * cap_h); // calculate how much percents in one capacity line
+
     if (onACPower)
     {
+        //... paint 'external power' image on the left bottom corner if needs
         QPixmap charging_pixmap;
         charging_pixmap.load(CHARGING_IMAGE);
         int h = charging_pixmap.height();
@@ -168,6 +226,46 @@ void MainWindow::refreshTrayIcon(PWRBatteryStatus stat)
     trayIconImage = QIcon(icon_pixmap);
 
     trayIcon->setIcon(trayIconImage);
+}
+
+void MainWindow::refreshMainPageAcState()
+{
+    QPixmap pixmap;
+    pixmap.load((onACPower)?AC_ENABLED_IMAGE:AC_DISABLED_IMAGE);
+    ui->acStateLabel->setPixmap(pixmap);// (QPicture((onACPower)?AC_ENABLED_IMAGE:AC_DISABLED_IMAGE));
+}
+
+void MainWindow::setupMainGeneral()
+{
+    ui->sysStateLabel->setText( (onACPower)?tr("On external power"):tr("On battery"));
+    ui->currProfileLabel->setText(currentProfile.name);
+    ui->changeProfileButton->setMenu(profilesMenu);
+
+    QLayout* layout = ui->homePAgeMainLayout->layout();
+
+    for(int i=hwInfo.basic.numBatteries - 1; i>=0; i--)
+    {
+        WidgetBattery* batt_widget = new WidgetBattery (this);
+        batt_widget->setup(i, client, events);
+        layout->addWidget(batt_widget);
+    }
+
+    for(int i=hwInfo.basic.numBacklights - 1; i>=0; i--)
+    {
+        WidgetBacklight* bl_widget = new WidgetBacklight (this);
+        bl_widget->setup(i, client, events);
+        layout->addWidget(bl_widget);
+    }
+
+    WidgetSleepButtons* sbw = new WidgetSleepButtons(this);
+    if (sbw->setup(client, hwInfo.basic.possibleACPIStates))
+    {
+        layout->addWidget(sbw);
+    }
+    else
+    {
+        delete sbw;
+    }
 
 }
 
@@ -192,6 +290,11 @@ void MainWindow::acLineStateChanged(bool onExternalPower)
 {
     qDebug()<<"AC power: "<<onExternalPower;
     onACPower = onExternalPower;
+
+    ui->sysStateLabel->setText( (onACPower)?tr("On external power"):tr("On battery"));
+
+    refreshMainPageAcState();
+
     QVector<PWRBatteryStatus> stats;
     if (client)
     {
@@ -208,4 +311,40 @@ void MainWindow::acLineStateChanged(bool onExternalPower)
 void MainWindow::profileChanged(QString profileID)
 {
     qDebug()<<"profile changed to "<<profileID;
+    for (int i=0; i<profiles.size(); i++)
+    {
+        if (profiles[i].id == profileID)
+        {
+            ui->currProfileLabel->setText(profiles[i].name);
+        }
+    }
+    //ui->currProfileLabel->setText(currentProfile.name);
+}
+
+void MainWindow::trayActivated()
+{
+    trayMenu->popup(QCursor::pos());
+}
+
+void MainWindow::showMainUI()
+{
+    showNormal();
+}
+
+void MainWindow::changeProfileTriggered()
+{
+    if (!client) return;
+    QObject* obj = sender();
+    if (!obj) return;
+    QAction* src;
+    try
+    {
+        src = dynamic_cast<QAction*>(obj);
+    }
+    catch(...)
+    {
+        return;
+    }
+
+    client->setCurrentProfile(src->data().toString());
 }

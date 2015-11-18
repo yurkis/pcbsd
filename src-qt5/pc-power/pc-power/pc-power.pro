@@ -20,7 +20,8 @@ SOURCES += main.cpp\
     widgets/widgetbacklight.cpp \
     ../common/src/protocol.cpp \
     ../common/src/serialize.cpp \
-    ../libpwrd/QPWRDEvents.cpp
+    ../libpwrd/QPWRDEvents.cpp \
+    widgets/widgetsleepbuttons.cpp
 
 HEADERS  += mainwindow.h \
     ../libpwrd/QPWRDClient.h \
@@ -29,15 +30,19 @@ HEADERS  += mainwindow.h \
     widgets/widgetbattery.h \
     widgets/widgetbacklight.h \
     ../libpwrd/QPWRDEvents.h \
-    ../common/include/protocol.h
+    ../common/include/protocol.h \
+    widgets/widgetsleepbuttons.h
 
 FORMS    += mainwindow.ui \
     widgets/widgetbatteryhw.ui \
     widgets/widgetbattery.ui \
-    widgets/widgetbacklight.ui
+    widgets/widgetbacklight.ui \
+    widgets/widgetsleepbuttons.ui
 
 INCLUDEPATH += ../common/include ../libpwrd  /usr/local/include/pwrd
 LIBS += -L/usr/local/lib
 
 RESOURCES += \
     pc-power.qrc
+
+DISTFILES +=

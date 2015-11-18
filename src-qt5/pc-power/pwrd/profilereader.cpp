@@ -35,7 +35,7 @@ const unsigned int DEF_BACKLIGHT_LEVEL = 90;
 _str_constant DEF_POWER_BTN_STATE = "S5";
 _str_constant DEF_SLEEP_BTN_STATE = "S3";
 _str_constant DEF_LID_STATE = "S3";
-_str_constant DEF_NAME = DEF_PROFILE_ID;
+_str_constant DEF_NAME = "Unnamed or default profile";
 
 _str_constant GENERAL_GROUP = "";//"general";
 _str_constant NAME_FIELD = "id";
@@ -53,7 +53,8 @@ _str_constant BACKLIGHT_FIELD = "backlight";
 ///////////////////////////////////////////////////////////////////////////////
 _PWRProfileReader::_PWRProfileReader()
 {
-    id = DEF_NAME;
+    id = DEF_PROFILE_ID;
+    description = DEF_NAME;
     btnPowerSate = DEF_POWER_BTN_STATE;
     btnSleepSate = DEF_SLEEP_BTN_STATE;
     lidSwitchSate = DEF_LID_STATE;
@@ -72,8 +73,8 @@ bool _PWRProfileReader::read(QString file)
     Reader.setIniCodec("UTF-8");
 
     Reader.beginGroup(GENERAL_GROUP);
-    id = Reader.value(NAME_FIELD, QString(DEF_NAME)).toString();
-    description = Reader.value(DESCRIPTION_FIELD).toString();
+    id = Reader.value(NAME_FIELD, QString(DEF_PROFILE_ID)).toString();
+    description = Reader.value(DESCRIPTION_FIELD, QString(DEF_NAME)).toString();
     Reader.endGroup();
 
     Reader.beginGroup(BUTTONS_GROUP);

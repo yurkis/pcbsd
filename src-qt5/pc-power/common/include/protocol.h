@@ -69,6 +69,8 @@ _str_constant COMMAND_GET_BATT_STATE = "getbattstate";
 _str_constant COMMAND_SET_ACPI_STATE = "setacpistate";
 _str_constant ACPI_STATE = "state";
 
+_str_constant COMMAND_APPLY_PROFILE = "applyprofile";
+
 QString QJsonObjectToMessage(QJsonObject obj);
 
 

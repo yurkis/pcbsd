@@ -36,12 +36,16 @@ protected:
     QIcon trayIconImage;
     QMenu* trayMenu;
 
+    QMenu* profilesMenu;
+
     int trayBattNo;
 
 protected:
     void getInfoAndState();
     void setupTray();
     void refreshTrayIcon(PWRBatteryStatus stat);
+    void refreshMainPageAcState();
+    void setupMainGeneral();
 
 public slots:
     void backlightChanged(int backlight, int value);
@@ -49,6 +53,9 @@ public slots:
     void batteryStateChanged(int bat, PWRBatteryStatus stat);
     void acLineStateChanged(bool onExternalPower);
     void profileChanged(QString profileID);
+    void trayActivated();
+    void showMainUI();
+    void changeProfileTriggered();
 
 private:
     Ui::MainWindow *ui;

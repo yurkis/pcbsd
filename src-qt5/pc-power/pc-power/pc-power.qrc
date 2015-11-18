@@ -11,5 +11,8 @@
         <file>images/battery_good.png</file>
         <file>images/charging.png</file>
         <file>images/battery_low.png</file>
+        <file>images/ac_power.png</file>
+        <file>images/batt_power.png</file>
+        <file>images/no_battery.png</file>
     </qresource>
 </RCC>

@@ -42,6 +42,7 @@ public:
     virtual bool getProfiles(QVector<PWRProfileInfoBasic>& profiles);
     virtual bool getProfile(QString profile_id, PWRProfile& out);
     virtual bool getCurrentProfileID(PWRProfileInfoBasic& out);
+    virtual bool setCurrentProfile(QString profile_id);
     virtual bool getACLineState(bool isOnACPower);
     virtual bool getBatteriesState(QVector<PWRBatteryStatus> &batteries);
     virtual bool setACPIState(QString state);
