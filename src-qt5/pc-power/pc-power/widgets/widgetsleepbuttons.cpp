@@ -1,6 +1,8 @@
 #include "widgetsleepbuttons.h"
 #include "ui_widgetsleepbuttons.h"
 
+#include <QDebug>
+
 WidgetSleepButtons::WidgetSleepButtons(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::WidgetSleepButtons)
@@ -16,18 +18,22 @@ WidgetSleepButtons::~WidgetSleepButtons()
 bool WidgetSleepButtons::setup(QPWRDClient *cl, QStringList possibleACPIStates)
 {
     client = cl;
-    if (client) return false;
+    if (!client) return false;
 
-    ui->sleepButton->setVisible(false);
-    ui->hibernateButton->setVisible(false);
+    bool isSleep = false;
+    bool isHibernate = false;
 
     for(int i=0; i<possibleACPIStates.size(); i++)
     {
-        if (possibleACPIStates[i].trimmed().toUpper() == "S3") ui->sleepButton->setVisible(true);
-        else if (possibleACPIStates[i].trimmed().toUpper() == "S4") ui->hibernateButton->setVisible(true);
+        qDebug()<<possibleACPIStates[i].trimmed().toUpper();
+        if (possibleACPIStates[i].trimmed().toUpper() == "S3") isSleep= true;
+        else if (possibleACPIStates[i].trimmed().toUpper() == "S4") isHibernate=true;
     }
 
-    return ui->sleepButton->isVisible() || ui->hibernateButton->isVisible();
+    ui->sleepButton->setVisible(isSleep);
+    ui->hibernateButton->setVisible(isHibernate);
+
+    return isSleep || isHibernate;
 }
 
 void WidgetSleepButtons::on_sleepButton_clicked()
