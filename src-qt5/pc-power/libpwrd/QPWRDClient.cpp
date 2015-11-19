@@ -390,6 +390,49 @@ bool QPWRDClient::setACPIState(QString state)
     return true;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+bool QPWRDClient::getButtonsState(QString &powerBtnSate, QString &sleepBtnState, QString &lidState)
+{
+    Q_D(QPWRDClient);
+
+    d->lastError = "";
+
+    QJsonObject req, resp;
+
+    powerBtnSate = "NONE";
+    sleepBtnState = "NONE";
+    lidState = "NONE";
+
+    req[MSGTYPE_COMMAND] = COMMAND_GET_BUTTONS_STATE;
+
+    if (!d->sendCommandReadResponce(req, resp)) return false;
+
+    if (resp.contains(BTN_POWER_STATE)) powerBtnSate = resp[BTN_POWER_STATE].toString();
+    if (resp.contains(BTN_SLEEP_STATE)) sleepBtnState = resp[BTN_SLEEP_STATE].toString();
+    if (resp.contains(LID_SWITCH_SATE)) lidState = resp[LID_SWITCH_SATE].toString();
+
+    return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+bool QPWRDClient::setButtonsState(QString *powerBtnSate, QString *sleepBtnState, QString *lidState)
+{
+    Q_D(QPWRDClient);
+
+    d->lastError = "";
+
+    QJsonObject req, resp;
+
+    if ((!powerBtnSate) && (!sleepBtnState) && (!lidState)) return true;
+
+    req[MSGTYPE_COMMAND] = COMMAND_SET_BUTTONS_STATE;
+    if (powerBtnSate) req[BTN_POWER_STATE] = *powerBtnSate;
+    if (sleepBtnState) req[BTN_SLEEP_STATE] = *sleepBtnState;
+    if (lidState) req[LID_SWITCH_SATE] = *lidState;
+
+    return d->sendCommandReadResponce(req, resp);
+}
+
 void QPWRDClient::pwrdRead()
 {
 

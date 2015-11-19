@@ -61,6 +61,7 @@ void WidgetBacklight::on_level_sliderMoved(int position)
 
 void WidgetBacklight::on_level_valueChanged(int value)
 {
+    Q_UNUSED(value)
     if (!client) return;
 
     //client->setBacklightLevel(value, blNum);

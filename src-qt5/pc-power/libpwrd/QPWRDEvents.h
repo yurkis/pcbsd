@@ -25,6 +25,7 @@ signals:
     void batteryStateChanged(int bat, PWRBatteryStatus stat);
     void acLineStateChanged(bool onExternalPower);
     void profileChanged(QString profileID);
+    void buttonsStateChanged(QString powerBtnState, QString sleepBtnState, QString lidSwitchState);
 
 protected:
      QPWRDEventsPrivate * const d_ptr;

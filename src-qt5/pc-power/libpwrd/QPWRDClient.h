@@ -46,6 +46,8 @@ public:
     virtual bool getACLineState(bool isOnACPower);
     virtual bool getBatteriesState(QVector<PWRBatteryStatus> &batteries);
     virtual bool setACPIState(QString state);
+    virtual bool getButtonsState(QString& powerBtnSate, QString& sleepBtnState, QString& lidState);
+    virtual bool setButtonsState(QString* powerBtnSate, QString* sleepBtnState, QString* lidState);
 
 signals:
     void backlightLevelChanged(unsigned int backlightNum, unsigned int level);

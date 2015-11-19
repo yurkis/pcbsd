@@ -230,10 +230,12 @@ void PwrServer::applyProfile(QString id)
     PWRProfileReader p = findProfile(id);
     qDebug()<<"Changing profile to "<<id;
     setblGlobalLevel( p.lcdBrightness);
+    checkBacklights();
 
     setSleepBtnSleepState(p.btnSleepSate);
     setPowerBtnSleepState(p.btnPowerSate);
     setLidSleepState(p.lidSwitchSate);
+    checkButtons();
 
     QJsonObject event;
     event[PROFILE_ID] = id;
@@ -314,6 +316,33 @@ void PwrServer::checkBatts(bool* hasLowBattery)
                 currBatteryStates[i] = curr;
         }//if got battery status
     }//for all batteries
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void PwrServer::checkButtons()
+{
+    QString state;
+    bool shouldEmitEvent=false;
+    state  = sleepBtnSleepState();
+    shouldEmitEvent = currSleepBtnState != state;
+    currSleepBtnState = state;
+
+    state  = powerBtnSleepState();
+    shouldEmitEvent = shouldEmitEvent | (currPowerBtnState != state);
+    currPowerBtnState = state;
+
+    state = lidSleepState();
+    shouldEmitEvent = shouldEmitEvent | (currLidSwitchState != state);
+    currLidSwitchState = state;
+
+    if (shouldEmitEvent)
+    {
+        QJsonObject event;
+        event[BTN_POWER_STATE]= currPowerBtnState;
+        event[BTN_SLEEP_STATE]= currSleepBtnState;
+        event[LID_SWITCH_SATE]= currLidSwitchState;
+        emitEvent(EVENT_BUTTONS_STATE_CHANGED, event);
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////

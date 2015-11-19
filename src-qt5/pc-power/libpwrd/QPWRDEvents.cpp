@@ -132,6 +132,14 @@ void QPWRDEventsPrivate::onEvent()
             GET_VAL(profileID, PROFILE_ID).toString();
             emit(q->profileChanged(profileID));
         }
+        else if (event[EVENT_EVENT_FIELD] == EVENT_BUTTONS_STATE_CHANGED)
+        {
+            QString sleep,power,lid;
+            GET_VAL(sleep, BTN_SLEEP_STATE).toString();
+            GET_VAL(power, BTN_POWER_STATE).toString();
+            GET_VAL(lid, LID_SWITCH_SATE).toString();
+            emit(q->buttonsStateChanged(power,sleep,lid));
+        }
 
     }
 }

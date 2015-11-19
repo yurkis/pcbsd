@@ -64,6 +64,9 @@ private:
 
     int savedBacklight;
     bool isLidClosed;
+    QString currPowerBtnState;
+    QString currSleepBtnState;
+    QString currLidSwitchState;
 
     //! Get all hadware info
     void checkHardware();
@@ -84,6 +87,8 @@ private:
     QJsonObject oncmdGetBattState();
     QJsonObject oncmdSetACPIState(QJsonObject req);
     QJsonObject oncmdApplyProfile(QJsonObject req);
+    QJsonObject oncmdGetButtonsState();
+    QJsonObject oncmdSetButtonsState(QJsonObject req);
 
 
     void emitEvent(QString event_name, QJsonObject event);
@@ -95,6 +100,8 @@ private:
     void checkBacklights();
     //! Check batteries state. Returnes true if we have battery with low power
     void checkBatts(bool* hasLowBattery = NULL);
+
+    void checkButtons();
 
     //! Get backlight level (if more than one get lcd0 level)
     int blGlobalLevel();

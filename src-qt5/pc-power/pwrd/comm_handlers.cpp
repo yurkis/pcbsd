@@ -84,6 +84,14 @@ QJsonObject PwrServer::parseCommand(QString line)
           {
               resp = oncmdApplyProfile(root);
           }
+          else if (root[MSGTYPE_COMMAND] == COMMAND_GET_BUTTONS_STATE)
+          {
+              resp = oncmdGetButtonsState();
+          }
+          else if (root[MSGTYPE_COMMAND] == COMMAND_SET_BUTTONS_STATE)
+          {
+              resp = oncmdSetButtonsState(root);
+          }
       }
     }catch(...){
         resp = RESULT_FAIL("Internal error");
@@ -368,6 +376,54 @@ QJsonObject PwrServer::oncmdApplyProfile(QJsonObject req)
         return RESULT_FAIL("Profile not found");
     }
     applyProfile(req[PROFILE_ID].toString());
+
+    return RESULT_SUCCESS();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+QJsonObject PwrServer::oncmdGetButtonsState()
+{
+    QJsonObject resp = RESULT_SUCCESS();
+
+    checkButtons();
+
+    resp[BTN_POWER_STATE]= currPowerBtnState;
+    resp[BTN_SLEEP_STATE]= currSleepBtnState;
+    resp[LID_SWITCH_SATE]= currLidSwitchState;
+
+    return resp;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+QJsonObject PwrServer::oncmdSetButtonsState(QJsonObject req)
+{
+    QString state;
+    if ((hwInfo.hasSleepButton) && (req.contains(BTN_SLEEP_STATE)))
+    {
+        state = req[BTN_SLEEP_STATE].toString().trimmed().toUpper();
+        if ((hwInfo.possibleACPIStates.contains(state)) || (state=="NONE"))
+        {
+            setSleepBtnSleepState(state);
+        }
+    }
+    if ((hwInfo.hasLid) && (req.contains(LID_SWITCH_SATE)))
+    {
+        state = req[LID_SWITCH_SATE].toString().trimmed().toUpper();
+        if ((hwInfo.possibleACPIStates.contains(state)) || (state=="NONE"))
+        {
+            setLidSleepState(state);
+        }
+    }
+    if (req.contains(BTN_POWER_STATE))
+    {
+        state = req[BTN_POWER_STATE].toString().trimmed().toUpper();
+        if ((hwInfo.possibleACPIStates.contains(state)) || (state=="NONE"))
+        {
+            setPowerBtnSleepState(state);
+        }
+    }
+
+    checkButtons();
 
     return RESULT_SUCCESS();
 }

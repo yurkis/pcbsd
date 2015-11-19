@@ -71,6 +71,13 @@ _str_constant ACPI_STATE = "state";
 
 _str_constant COMMAND_APPLY_PROFILE = "applyprofile";
 
+_str_constant COMMAND_GET_BUTTONS_STATE = "getbuttonsstate";
+_str_constant BTN_POWER_STATE = "btnPowerSate";
+_str_constant BTN_SLEEP_STATE = "btnSleepState";
+_str_constant LID_SWITCH_SATE = "lidSwitchSate";
+
+_str_constant COMMAND_SET_BUTTONS_STATE = "setbuttonsstate";
+
 QString QJsonObjectToMessage(QJsonObject obj);
 
 
@@ -84,6 +91,7 @@ _str_constant BATTERY_NO = "batt";
 
 _str_constant EVENT_PROFILE_CHANGED = "profilechanged";
 _str_constant EVENT_AC_POWER_CHANGED = "acpowerchanged";
+_str_constant EVENT_BUTTONS_STATE_CHANGED = "buttonsstatechanged";
 
 
 #endif // PROTOCOL_H
