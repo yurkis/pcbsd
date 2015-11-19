@@ -15,7 +15,6 @@ WidgetSleepButtons::~WidgetSleepButtons()
 
 bool WidgetSleepButtons::setup(QPWRDClient *cl, QStringList possibleACPIStates)
 {
-    return true;
     client = cl;
     if (client) return false;
 

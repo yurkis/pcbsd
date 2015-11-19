@@ -45,7 +45,8 @@ bool JSONHWInfo::fromJSON(const QJsonObject &json)
 {
     FIELD("numBatteries", numBatteries).toInt();
     FIELD("numBacklights", numBacklights).toInt();
-    FIELD("hasSleepButton", hasSleepButton).toInt();
+    FIELD("hasSleepButton", hasSleepButton).toBool();
+    FIELD("hasLid", hasLid).toBool();
     QJsonArray arr;
     possibleACPIStates.clear();
     if (json.find("possibleACPIStates") != json.end())

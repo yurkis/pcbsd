@@ -3,6 +3,9 @@
 
 #include <QMainWindow>
 #include <QSystemTrayIcon>
+#include <QVector>
+#include <QCloseEvent>
+#include <QTreeWidgetItem>
 
 #include "QPWRDClient.h"
 #include "QPWRDEvents.h"
@@ -10,6 +13,12 @@
 namespace Ui {
 class MainWindow;
 }
+
+typedef struct _SSleepStateDescription
+{
+    QString description;
+    QString state;
+}SSleepStateDescription;
 
 class MainWindow : public QMainWindow
 {
@@ -40,6 +49,10 @@ protected:
 
     int trayBattNo;
 
+    QVector<SSleepStateDescription> ssDescriptions;
+
+    virtual void closeEvent(QCloseEvent *event);
+
 protected:
     void getInfoAndState();
     void setupTray();
@@ -48,6 +61,8 @@ protected:
     void refreshPowerCosumption();
     void setupMainGeneral();
     int powerConsumption();
+    void setupMainButtonsAndLid();
+    void refreshButtonsAndLid(QString power, QString sleep, QString lid);
 
 public slots:
     void backlightChanged(int backlight, int value);
@@ -58,6 +73,17 @@ public slots:
     void trayActivated();
     void showMainUI();
     void changeProfileTriggered();
+    void btnIndexChanged();
+    void buttonsStateChanged(QString powerBtnState, QString sleepBtnState, QString lidSwitchState);
+
+private slots:
+    void on_actionCloseWindow_triggered();
+
+    void on_actionExit_triggered();
+
+    void on_applyBtnSettings_clicked();
+
+    void on_mainTW_currentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem *previous);
 
 private:
     Ui::MainWindow *ui;

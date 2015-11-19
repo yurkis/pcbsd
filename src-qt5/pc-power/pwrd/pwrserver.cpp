@@ -121,6 +121,15 @@ void PwrServer::checkHardware()
     hwInfo.hasLid = sysctlPresent(LID_SYSCTL);
     hwInfo.possibleACPIStates = sysctl(POSSIBLE_STATES_SYSCTL).split(" ");
 
+    //DEBUG
+    /*
+    hwInfo.possibleACPIStates.clear();
+    hwInfo.possibleACPIStates<<"S3";
+    hwInfo.possibleACPIStates<<"S4";
+    hwInfo.possibleACPIStates<<"S5";
+    hwInfo.hasSleepButton=true;
+    hwInfo.hasLid=true;
+    */
 }
 
 ///////////////////////////////////////////////////////////////////////////////

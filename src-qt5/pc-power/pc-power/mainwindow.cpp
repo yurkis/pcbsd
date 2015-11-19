@@ -12,6 +12,7 @@
 #include <QPixmap>
 #include <QPainter>
 #include <QPicture>
+#include <QMessageBox>
 #include <QDebug>
 
 
@@ -25,13 +26,22 @@ _str_constant AC_ENABLED_IMAGE = ":/images/ac_power.png";
 _str_constant AC_DISABLED_IMAGE = ":/images/batt_power.png";
 _str_constant NO_BATTERY_IMAGE = ":/images/no_battery.png";
 
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
     client = new QPWRDClient(this);
-    client->connect();
+    if (!client->connect())
+    {
+        QMessageBox msgbox;
+        msgbox.setText(tr("pwrd connection error. Please check if pwrd running"));
+        msgbox.setWindowTitle(tr("error"));
+        msgbox.setIcon(QMessageBox::Critical);
+        msgbox.exec();
+        exit(1);
+    }
     events = new QPWRDEvents(this);
     events->connect();    
 
@@ -40,7 +50,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(events, SIGNAL(batteryStateChanged(int,PWRBatteryStatus)), this, SLOT(batteryStateChanged(int,PWRBatteryStatus)));
     connect(events, SIGNAL(acLineStateChanged(bool)), this, SLOT(acLineStateChanged(bool)));
     connect(events, SIGNAL(profileChanged(QString)), this, SLOT(profileChanged(QString)));
-
+    connect(events, SIGNAL(buttonsStateChanged(QString,QString,QString)), this, SLOT(buttonsStateChanged(QString,QString,QString)));
     trayBattNo = 0;
 
     getInfoAndState();
@@ -57,17 +67,50 @@ MainWindow::MainWindow(QWidget *parent) :
     }
     profilesMenu->setTitle(tr("Change profile"));
 
+    //fill available sleep states descriptions
+    SSleepStateDescription desc;
+    desc.description = tr("None");
+    desc.state = "NONE";
+    ssDescriptions.push_back(desc);
+    if (hwInfo.basic.possibleACPIStates.contains("S3"))
+    {
+        desc.description = tr("Sleep");
+        desc.state="S3";
+        ssDescriptions.push_back(desc);
+    }
+    if (hwInfo.basic.possibleACPIStates.contains("S4"))
+    {
+        desc.description = tr("Hibernate");
+        desc.state="S4";
+        ssDescriptions.push_back(desc);
+    }
+    if (hwInfo.basic.possibleACPIStates.contains("S5"))
+    {
+        desc.description = tr("Power off");
+        desc.state="S5";
+        ssDescriptions.push_back(desc);
+    }
+
     setupTray();
 
     refreshMainPageAcState();
 
     setupMainGeneral();
+    setupMainButtonsAndLid();
 
+    ui->mainStack->setCurrentIndex(0);
+    ui->mainTW->setCurrentItem(ui->mainTW->topLevelItem(0));
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+void MainWindow::closeEvent(QCloseEvent *event)
+{
+    hide();
+    event->ignore();
 }
 
 void MainWindow::getInfoAndState()
@@ -300,6 +343,76 @@ int MainWindow::powerConsumption()
     return 0;
 }
 
+void MainWindow::setupMainButtonsAndLid()
+{
+    for (int i=0;i<ssDescriptions.size();i++)
+    {
+        ui->powerBtnCB->addItem(ssDescriptions[i].description);
+        ui->sleepBtnCB->addItem(ssDescriptions[i].description);
+        ui->lidCB->addItem(ssDescriptions[i].description);
+    }
+    bool isshow = hwInfo.basic.hasSleepButton;
+    ui->sleepBtnCB->setVisible(isshow);
+    ui->sleepBtnDesc->setVisible(isshow);
+    ui->sleepBtnImg->setVisible(isshow);
+
+
+    isshow = hwInfo.basic.hasLid;
+    ui->lidCB->setVisible(isshow);
+    ui->lidDesc->setVisible(isshow);
+    ui->lidImg->setVisible(isshow);
+
+    QString power,sleep,lid;
+
+    if (!client) return;
+    if (!client->getButtonsState(power,sleep,lid)) return;
+
+    refreshButtonsAndLid(power,sleep,lid);
+
+    connect(ui->lidCB, SIGNAL(currentIndexChanged(int)), this, SLOT(btnIndexChanged()));
+    connect(ui->sleepBtnCB, SIGNAL(currentIndexChanged(int)), this, SLOT(btnIndexChanged()));
+    connect(ui->powerBtnCB, SIGNAL(currentIndexChanged(int)), this, SLOT(btnIndexChanged()));
+}
+
+void MainWindow::refreshButtonsAndLid(QString power, QString sleep, QString lid)
+{
+    if (!client) return;
+    if (!client->getButtonsState(power,sleep,lid)) return;
+
+
+    for(int i=0; i<ssDescriptions.size(); i++)
+    {
+        if (power == ssDescriptions[i].state)
+        {
+            ui->powerBtnCB->setCurrentIndex(i);
+            break;
+        }
+    }//for sleep mode descriptions
+
+    if (hwInfo.basic.hasSleepButton)
+    {
+        for(int i=0; i<ssDescriptions.size(); i++)
+        {
+            if (sleep == ssDescriptions[i].state)
+            {
+                ui->sleepBtnCB->setCurrentIndex(i);
+                break;
+            }
+        }//for sleep mode descriptions
+    }//if sleep button present
+    if (hwInfo.basic.hasLid)
+    {
+        for(int i=0; i<ssDescriptions.size(); i++)
+        {
+            if (lid == ssDescriptions[i].state)
+            {
+                ui->lidCB->setCurrentIndex(i);
+                break;
+            }
+        }//for sleep mode descriptions
+    }//if sleep button present
+}
+
 void MainWindow::backlightChanged(int backlight, int value)
 {
     qDebug()<<"blc: "<<backlight<<" "<<value<<"%";
@@ -385,4 +498,58 @@ void MainWindow::changeProfileTriggered()
     }
 
     client->setCurrentProfile(src->data().toString());
+}
+
+void MainWindow::btnIndexChanged()
+{
+    ui->applyBtnSettings->setEnabled(true);
+}
+
+void MainWindow::buttonsStateChanged(QString powerBtnState, QString sleepBtnState, QString lidSwitchState)
+{
+    refreshButtonsAndLid(powerBtnState, sleepBtnState, lidSwitchState);
+    qDebug()<<"gottt";
+}
+
+void MainWindow::on_actionCloseWindow_triggered()
+{
+    hide();
+}
+
+void MainWindow::on_actionExit_triggered()
+{
+    QApplication::exit();
+}
+
+void MainWindow::on_applyBtnSettings_clicked()
+{
+    if (!client) return;
+
+    QString power="NONE";
+    QString sleep="NONE";
+    QString lid="NONE";
+    if (ui->powerBtnCB->currentIndex() < ssDescriptions.size())
+        power = ssDescriptions[ui->powerBtnCB->currentIndex()].state;
+    if (ui->sleepBtnCB->currentIndex() < ssDescriptions.size())
+        sleep = ssDescriptions[ui->sleepBtnCB->currentIndex()].state;
+    if (ui->lidCB->currentIndex() < ssDescriptions.size())
+        sleep = ssDescriptions[ui->lidCB->currentIndex()].state;
+
+    if (!client->setButtonsState(&power, (hwInfo.basic.hasSleepButton)?&sleep:NULL, (hwInfo.basic.hasLid)?&lid:NULL))
+    {
+        //TODO: error message
+    }
+    ui->applyBtnSettings->setEnabled(false);
+}
+
+void MainWindow::on_mainTW_currentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem *previous)
+{
+    for (int i=0; i<ui->mainTW->topLevelItemCount(); i++)
+    {
+        if (ui->mainTW->topLevelItem(i) == current)
+        {
+            ui->mainStack->setCurrentIndex(i);
+            break;
+        }
+    }
 }
