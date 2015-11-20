@@ -60,6 +60,7 @@ protected:
     void refreshMainPageAcState();
     void refreshPowerCosumption();
     void setupMainGeneral();
+    void setupInfo();
     int powerConsumption();
     void setupMainButtonsAndLid();
     void refreshButtonsAndLid(QString power, QString sleep, QString lid);

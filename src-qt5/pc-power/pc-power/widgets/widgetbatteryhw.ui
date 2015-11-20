@@ -13,90 +13,107 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QFormLayout" name="formLayout">
-   <item row="0" column="0">
-    <widget class="QLabel" name="label">
-     <property name="text">
-      <string>Manufacturer:</string>
-     </property>
-    </widget>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <layout class="QFormLayout" name="formLayout">
+     <item row="0" column="0">
+      <widget class="QLabel" name="label">
+       <property name="text">
+        <string>Manufacturer:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QLabel" name="OEMInfoLabel">
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="label_2">
+       <property name="text">
+        <string>Model:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="QLabel" name="modelLabel">
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="QLabel" name="label_3">
+       <property name="text">
+        <string>Serial:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="1">
+      <widget class="QLabel" name="serialLabel">
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="0">
+      <widget class="QLabel" name="label_4">
+       <property name="text">
+        <string>Capacity:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="1">
+      <widget class="QLabel" name="capacityLabel">
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="0">
+      <widget class="QLabel" name="label_5">
+       <property name="text">
+        <string>Voltage:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="1">
+      <widget class="QLabel" name="designVoltageLabel">
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="0">
+      <widget class="QLabel" name="label_6">
+       <property name="text">
+        <string>Health:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="1">
+      <widget class="QProgressBar" name="healthPB">
+       <property name="value">
+        <number>78</number>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
-   <item row="0" column="1">
-    <widget class="QLabel" name="label_7">
-     <property name="text">
-      <string>Asus tek</string>
+   <item>
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
      </property>
-    </widget>
-   </item>
-   <item row="1" column="0">
-    <widget class="QLabel" name="label_2">
-     <property name="text">
-      <string>Model:</string>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>23</height>
+      </size>
      </property>
-    </widget>
-   </item>
-   <item row="1" column="1">
-    <widget class="QLabel" name="label_8">
-     <property name="text">
-      <string>XXDDD</string>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="0">
-    <widget class="QLabel" name="label_3">
-     <property name="text">
-      <string>Serial:</string>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="1">
-    <widget class="QLabel" name="label_9">
-     <property name="text">
-      <string>111-222-333</string>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="0">
-    <widget class="QLabel" name="label_4">
-     <property name="text">
-      <string>Capacity:</string>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="1">
-    <widget class="QLabel" name="label_10">
-     <property name="text">
-      <string>5400 (mAh)</string>
-     </property>
-    </widget>
-   </item>
-   <item row="4" column="0">
-    <widget class="QLabel" name="label_5">
-     <property name="text">
-      <string>Voltage:</string>
-     </property>
-    </widget>
-   </item>
-   <item row="4" column="1">
-    <widget class="QLabel" name="label_11">
-     <property name="text">
-      <string>12000 (mV)</string>
-     </property>
-    </widget>
-   </item>
-   <item row="5" column="0">
-    <widget class="QLabel" name="label_6">
-     <property name="text">
-      <string>Health:</string>
-     </property>
-    </widget>
-   </item>
-   <item row="5" column="1">
-    <widget class="QProgressBar" name="progressBar">
-     <property name="value">
-      <number>78</number>
-     </property>
-    </widget>
+    </spacer>
    </item>
   </layout>
  </widget>

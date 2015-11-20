@@ -14,13 +14,13 @@ bool getBatteryHWInfo(int batt, PWRBatteryHardware& hwout)
 {
     if (batt >= batts) return false;
 
-    hwout.type="Li";
+    hwout.type="LiIon";
     hwout.OEMInfo="pcbsd";
-    hwout.model=QString("fake battery ") + QString::number(batt);
+    hwout.model=QString("Fake battery ") + QString::number(batt);
     hwout.designVoltage = 12000;
-    hwout.serial="xxxx-yyyy-zzzz";
-    hwout.designCapacity=6500;
-    hwout.lastFullCapacity=6100;
+    hwout.serial="0000-0000-0000";
+    hwout.designCapacity=19500;
+    hwout.lastFullCapacity=17800;
 
     return true;
 }

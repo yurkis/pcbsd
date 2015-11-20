@@ -109,9 +109,9 @@ void PWRCLI::cmdHWInfo()
         int capAh=0,  capLastAh=0, health=0;
         if(info.batteries[i].designVoltage)
         {
-            capAh = info.batteries[i].designCapacity / info.batteries[i].designVoltage * 1000;
-            capLastAh = info.batteries[i].lastFullCapacity / info.batteries[i].designVoltage * 1000;
-            health = capLastAh * 100 / capAh;
+            capAh = (info.batteries[i].designVoltage)?(int)((float)info.batteries[i].designCapacity) / ((float)info.batteries[i].designVoltage) * 1000. : 0;
+            capLastAh = (info.batteries[i].designVoltage)?(int)((float)info.batteries[i].lastFullCapacity) / ((float)info.batteries[i].designVoltage) * 1000. : 0;
+            health = (capAh)?(int)((float)capLastAh) * 100. / capAh:100;
         }
 
         qcout()<<QString("Battery %1:").arg(i)<<"\n";

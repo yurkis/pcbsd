@@ -117,7 +117,7 @@
        </size>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="page">
        <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -400,7 +400,7 @@
       <widget class="QWidget" name="page_2">
        <layout class="QVBoxLayout" name="verticalLayout">
         <item>
-         <widget class="QTabWidget" name="tabWidget">
+         <widget class="QTabWidget" name="infoTab">
           <property name="currentIndex">
            <number>0</number>
           </property>
@@ -408,6 +408,106 @@
            <attribute name="title">
             <string>Common</string>
            </attribute>
+           <layout class="QGridLayout" name="gridLayout_5">
+            <item row="0" column="1">
+             <spacer name="verticalSpacer_8">
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>52</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item row="1" column="0">
+             <spacer name="horizontalSpacer_7">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>102</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item row="1" column="1">
+             <layout class="QFormLayout" name="formLayout">
+              <item row="0" column="0">
+               <widget class="QLabel" name="label_7">
+                <property name="text">
+                 <string>Supported backlights:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QLabel" name="numBacklightsLabel">
+                <property name="text">
+                 <string>TextLabel</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QLabel" name="label_8">
+                <property name="text">
+                 <string>Supported batteries:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QLabel" name="numBatteriesLabel">
+                <property name="text">
+                 <string>TextLabel</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0">
+               <widget class="QLabel" name="label_9">
+                <property name="text">
+                 <string>Supported sleep states:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1">
+               <widget class="QLabel" name="sleepStatesLabel">
+                <property name="text">
+                 <string>TextLabel</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item row="1" column="2">
+             <spacer name="horizontalSpacer_6">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>102</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item row="2" column="1">
+             <spacer name="verticalSpacer_7">
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>78</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
           </widget>
          </widget>
         </item>
@@ -477,7 +577,7 @@
        </layout>
       </widget>
       <widget class="QWidget" name="page_4">
-       <widget class="QWidget" name="">
+       <widget class="QWidget" name="layoutWidget">
         <property name="geometry">
          <rect>
           <x>-6</x>

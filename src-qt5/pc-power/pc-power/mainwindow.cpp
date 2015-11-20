@@ -4,6 +4,7 @@
 #include "widgets/widgetbacklight.h"
 #include "widgets/widgetbattery.h"
 #include "widgets/widgetsleepbuttons.h"
+#include "widgets/widgetbatteryhw.h"
 
 #include <QSystemTrayIcon>
 #include <QMenu>
@@ -97,6 +98,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
     setupMainGeneral();
     setupMainButtonsAndLid();
+
+    setupInfo();
 
     ui->mainStack->setCurrentIndex(0);
     ui->mainTW->setCurrentItem(ui->mainTW->topLevelItem(0));
@@ -329,6 +332,41 @@ void MainWindow::setupMainGeneral()
 
     refreshPowerCosumption();
 
+}
+
+void MainWindow::setupInfo()
+{
+    ui->numBacklightsLabel->setText(QString::number(hwInfo.basic.numBacklights));
+    ui->numBatteriesLabel->setText(QString::number(hwInfo.basic.numBatteries));
+    QString states;
+    for (int i=0; i<hwInfo.basic.possibleACPIStates.size(); i++)
+    {
+        if (hwInfo.basic.possibleACPIStates[i] == "S3")
+        {
+            states+=tr("Sleep");
+        }
+        else if (hwInfo.basic.possibleACPIStates[i] == "S4")
+        {
+            states+=tr("Hibernate");
+        }
+        else if (hwInfo.basic.possibleACPIStates[i] == "S5")
+        {
+            states+=tr("Power off");
+        }
+        else
+        {
+            states+=hwInfo.basic.possibleACPIStates[i];
+        }
+        if (i) states+=", ";
+    }
+    ui->sleepStatesLabel->setText(states);
+
+    for(int i=0; i<hwInfo.batteries.size(); i++)
+    {
+        WidgetBatteryHW* widget = new WidgetBatteryHW(this);
+        widget->setup(i, client);
+        ui->infoTab->addTab(widget, tr("Battery %1").arg(QString::number(i)));
+    }
 }
 
 int MainWindow::powerConsumption()
