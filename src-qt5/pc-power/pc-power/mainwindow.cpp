@@ -353,6 +353,7 @@ void MainWindow::setupInfo()
     QString states;
     for (int i=0; i<hwInfo.basic.possibleACPIStates.size(); i++)
     {
+        if (i) states+=", ";
         if (hwInfo.basic.possibleACPIStates[i] == "S3")
         {
             states+=tr("Sleep");
@@ -369,7 +370,7 @@ void MainWindow::setupInfo()
         {
             states+=hwInfo.basic.possibleACPIStates[i];
         }
-        if (i) states+=", ";
+
     }
     ui->sleepStatesLabel->setText(states);
 

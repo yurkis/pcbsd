@@ -6,7 +6,7 @@
 
 #ifdef FAKE_BATT
 
-const int batts = 2;
+const int batts = 1;
 
 const char* const BATT_FILE="/usr/home/yurkis/batt.txt";
 
@@ -14,13 +14,13 @@ bool getBatteryHWInfo(int batt, PWRBatteryHardware& hwout)
 {
     if (batt >= batts) return false;
 
-    hwout.type="LiIon";
-    hwout.OEMInfo="pcbsd";
-    hwout.model=QString("Fake battery ") + QString::number(batt);
-    hwout.designVoltage = 7000;
+    hwout.type="LIon";
+    hwout.OEMInfo="ASUSTek";
+    hwout.model=QString("X202-51") /*+ QString::number(batt)*/;
+    hwout.designVoltage = 7400;
     hwout.serial="0000-0000-0000";
-    hwout.designCapacity=49500;
-    hwout.lastFullCapacity=44800;
+    hwout.designCapacity=38006;
+    hwout.lastFullCapacity=29289;
 
     return true;
 }
