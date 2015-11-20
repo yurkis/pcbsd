@@ -18,5 +18,7 @@
         <file>images/btn_sleep.png</file>
         <file>images/lid.png</file>
         <file>images/on_low_battery.png</file>
+        <file>images/window-close.png</file>
+        <file>images/application-exit.png</file>
     </qresource>
 </RCC>

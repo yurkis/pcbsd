@@ -26,7 +26,9 @@ _str_constant CHARGING_IMAGE = ":/images/charging.png";
 _str_constant AC_ENABLED_IMAGE = ":/images/ac_power.png";
 _str_constant AC_DISABLED_IMAGE = ":/images/batt_power.png";
 _str_constant NO_BATTERY_IMAGE = ":/images/no_battery.png";
-
+_str_constant SETTINGS_WINDOW_ICON = ":/images/page-settings.png";
+_str_constant EXIT_TRAY_ICON = ":/images/application-exit.png";
+_str_constant PROFILES_ICON = ":/images/page-profiles.png";
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -170,6 +172,7 @@ void MainWindow::setupTray()
 
     QAction* show_act = new  QAction(trayMenu);
     show_act->setText(tr("Show main window"));
+    show_act->setIcon(QIcon(SETTINGS_WINDOW_ICON));
     connect(show_act, SIGNAL(triggered(bool)), this, SLOT(showMainUI()));
     trayMenu->addAction(show_act);
 
@@ -179,6 +182,7 @@ void MainWindow::setupTray()
 
     QAction* exit_action = new QAction(trayMenu);
     exit_action->setText(tr("Close tray"));
+    exit_action->setIcon(QIcon(EXIT_TRAY_ICON));
     connect(exit_action, SIGNAL(triggered(bool)), this, SLOT(on_actionExit_triggered()));
     trayMenu->addAction(exit_action);
 

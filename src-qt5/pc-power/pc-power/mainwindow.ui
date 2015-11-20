@@ -91,15 +91,6 @@
          <normaloff>:/images/page-profiles.png</normaloff>:/images/page-profiles.png</iconset>
        </property>
       </item>
-      <item>
-       <property name="text">
-        <string>Settings</string>
-       </property>
-       <property name="icon">
-        <iconset resource="pc-power.qrc">
-         <normaloff>:/images/page-settings.png</normaloff>:/images/page-settings.png</iconset>
-       </property>
-      </item>
      </widget>
     </item>
     <item>
@@ -117,7 +108,7 @@
        </size>
       </property>
       <property name="currentIndex">
-       <number>2</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="page">
        <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -791,16 +782,36 @@
     <addaction name="actionCloseWindow"/>
     <addaction name="actionExit"/>
    </widget>
+   <widget class="QMenu" name="menuSettings">
+    <property name="title">
+     <string>Settings</string>
+    </property>
+    <addaction name="actionPwrd_settings"/>
+   </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuSettings"/>
   </widget>
   <action name="actionCloseWindow">
+   <property name="icon">
+    <iconset resource="pc-power.qrc">
+     <normaloff>:/images/window-close.png</normaloff>:/images/window-close.png</iconset>
+   </property>
    <property name="text">
     <string>CloseWindow</string>
    </property>
   </action>
   <action name="actionExit">
+   <property name="icon">
+    <iconset resource="pc-power.qrc">
+     <normaloff>:/images/application-exit.png</normaloff>:/images/application-exit.png</iconset>
+   </property>
    <property name="text">
     <string>Exit</string>
+   </property>
+  </action>
+  <action name="actionPwrd_settings">
+   <property name="text">
+    <string>pwrd settings</string>
    </property>
   </action>
  </widget>
