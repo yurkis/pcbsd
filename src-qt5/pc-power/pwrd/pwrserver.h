@@ -89,6 +89,8 @@ private:
     QJsonObject oncmdApplyProfile(QJsonObject req);
     QJsonObject oncmdGetButtonsState();
     QJsonObject oncmdSetButtonsState(QJsonObject req);
+    QJsonObject oncmdGetSettings();
+    QJsonObject oncmdSetSettings(QJsonObject req);
 
 
     void emitEvent(QString event_name, QJsonObject event);

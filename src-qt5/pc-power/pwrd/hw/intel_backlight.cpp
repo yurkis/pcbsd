@@ -80,6 +80,5 @@ bool hasIntelBacklight()
     }
     QStringList out = intel_backlight();
     if (out.size()<1) return false;
-    return (out[0].startsWith("current backlight value:"));
-    //TODO: check output (shows is hardware supported)
+    return (out[0].startsWith("current backlight value:"));    
 }

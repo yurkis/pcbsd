@@ -6,6 +6,10 @@
 #define FIELD(json_field, structure_field)\
     if (json.find(json_field) != json.end()) structure_field = json[json_field]
 
+#define FIELD_REQUIRED(json_field, structure_field)\
+    if (!json.contains(json_field)) return false;\
+        else structure_field = json[json_field];
+
 QString QJsonObject2String(QJsonObject obj)
 {
     QJsonDocument doc (obj);
@@ -161,5 +165,29 @@ bool JSONBatteryStatus::fromJSON(const QJsonObject &json)
         if (json["batteryState"].toString() == CHARGING) batteryState = BATT_CHARGING;
         else if (json["batteryState"].toString() == DISCHARGING) batteryState = BATT_DISCHARGING;
     }
+    return true;
+}
+
+void _JSONDaemonSettings::toJSON(QJsonObject &json)
+{
+    json["lowBatteryCapacity"] = lowBatteryCapacity;
+    json["onACProfile"] = onACProfile;
+    json["onBatteryProfile"] = onBatteryProfile;
+    json["onLowBatteryProfile"] = onLowBatteryProfile;
+    json["usingIntel_backlight"] = usingIntel_backlight;
+    json["allowSettingsChange"] = allowSettingsChange;
+    json["allowProfileChange"] = allowProfileChange;
+}
+
+bool _JSONDaemonSettings::fromJSON(const QJsonObject &json)
+{
+    FIELD("lowBatteryCapacity", lowBatteryCapacity).toInt();
+    FIELD("onACProfile", onACProfile).toString();
+    FIELD("onBatteryProfile", onBatteryProfile).toString();
+    FIELD("onLowBatteryProfile", onLowBatteryProfile).toString();
+    FIELD("usingIntel_backlight", usingIntel_backlight).toBool();
+    FIELD("allowSettingsChange", allowSettingsChange).toBool();
+    FIELD("allowProfileChange", allowProfileChange).toBool();
+
     return true;
 }

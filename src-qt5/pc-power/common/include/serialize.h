@@ -91,5 +91,12 @@ typedef struct _JSONBatteryStatus: public PWRBatteryStatus, public JSONSerialize
     virtual bool fromJSON(const QJsonObject &json);
 }JSONBatteryStatus;
 
+typedef struct _JSONDaemonSettings: public PWRDaemonSettings, JSONSerializer
+{
+    JSON_STRUCT("DaemonSettings")
+    virtual void toJSON(QJsonObject &json);
+    virtual bool fromJSON(const QJsonObject &json);
+}JSONDaemonSettings;
+
 #endif // SERIALIZE_H
 

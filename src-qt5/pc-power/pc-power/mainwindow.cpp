@@ -100,6 +100,7 @@ MainWindow::MainWindow(QWidget *parent) :
     setupMainButtonsAndLid();
 
     setupInfo();
+    setupProfiles();
 
     ui->mainStack->setCurrentIndex(0);
     ui->mainTW->setCurrentItem(ui->mainTW->topLevelItem(0));
@@ -142,6 +143,10 @@ void MainWindow::getInfoAndState()
     {
         //TODO: error message
     }
+    if (!client->getDaemonSettings(daemonSettings))
+    {
+        //TODO: error message
+    }
 }
 
 void MainWindow::setupTray()
@@ -169,6 +174,13 @@ void MainWindow::setupTray()
     trayMenu->addAction(show_act);
 
     trayMenu->addMenu(profilesMenu);
+
+    trayMenu->addSeparator();
+
+    QAction* exit_action = new QAction(trayMenu);
+    exit_action->setText(tr("Close tray"));
+    connect(exit_action, SIGNAL(triggered(bool)), this, SLOT(on_actionExit_triggered()));
+    trayMenu->addAction(exit_action);
 
     trayMenu->addSeparator();
 
@@ -451,6 +463,19 @@ void MainWindow::refreshButtonsAndLid(QString power, QString sleep, QString lid)
     }//if sleep button present
 }
 
+void MainWindow::setupProfiles()
+{
+    for(int i=0; i<profiles.size(); i++)
+    {
+        ui->onACPowerProfile->addItem(profiles[i].name);
+        if (acProffile.id == profiles[i].id) ui->onACPowerProfile->setCurrentIndex(i);
+        ui->onBatteryProfile->addItem(profiles[i].name);
+        if(battProfile.id == profiles[i].id) ui->onBatteryProfile->setCurrentIndex(i);
+        ui->onLowBatteryProfile->addItem(profiles[i].name);
+        if(lowbattProfile.id == profiles[i].id) ui->onLowBatteryProfile->setCurrentIndex(i);
+    }
+}
+
 void MainWindow::backlightChanged(int backlight, int value)
 {
     qDebug()<<"blc: "<<backlight<<" "<<value<<"%";
@@ -582,6 +607,7 @@ void MainWindow::on_applyBtnSettings_clicked()
 
 void MainWindow::on_mainTW_currentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem *previous)
 {
+    Q_UNUSED(previous);
     for (int i=0; i<ui->mainTW->topLevelItemCount(); i++)
     {
         if (ui->mainTW->topLevelItem(i) == current)

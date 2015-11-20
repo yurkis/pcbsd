@@ -31,6 +31,8 @@
 #include "sysctlutils.h"
 #include "serialize.h"
 
+#include "pwrddebug.h"
+
 #include <QCoreApplication>
 #include <QFile>
 #include <QDebug>
@@ -78,6 +80,8 @@ PwrServer::~PwrServer()
 ///////////////////////////////////////////////////////////////////////////////
 void PwrServer::checkHardware()
 {
+    TRACED_FN
+
     int i=0;
 
     JSONBatteryHardware    batthw;
@@ -115,7 +119,7 @@ void PwrServer::checkHardware()
     hwInfo.numBacklights = (!settings.usingIntel_backlight)?backlightHW.size():1;
 
     // If using intel_backlight port and intel_backlight exist
-    settings.usingIntel_backlight &= hasIntelBacklight();
+    if (settings.usingIntel_backlight) settings.usingIntel_backlight = hasIntelBacklight();
 
     hwInfo.hasSleepButton = sysctlPresent(SLEEP_BUTTON_SYSCTL);
     hwInfo.hasLid = sysctlPresent(LID_SYSCTL);
@@ -135,7 +139,9 @@ void PwrServer::checkHardware()
 ///////////////////////////////////////////////////////////////////////////////
 void PwrServer::readSettings(QString confFile)
 {
-    checkHardware();
+    TRACED_FN
+
+    //checkHardware();
     qDebug()<<"Load settings from "<<confFile<<" ...";
     settings.load(confFile);
     if (settings.usingIntel_backlight) qDebug()<<"Using intel_backlight for LCD brightness";
@@ -203,6 +209,8 @@ void PwrServer::readSettings(QString confFile)
 ///////////////////////////////////////////////////////////////////////////////
 void PwrServer::emitEvent(QString event_name, QJsonObject event)
 {
+    TRACED_FN
+
     event[EVENT_EVENT_FIELD] = event_name;
 
     QString json = QJsonObjectToMessage(event) + "\n";
@@ -218,6 +226,8 @@ void PwrServer::emitEvent(QString event_name, QJsonObject event)
 ///////////////////////////////////////////////////////////////////////////////
 void PwrServer::emitBacklightChanged(int backlight, int level)
 {
+    TRACED_FN
+
     QJsonObject event;
     event[BACKLIGHT_NUMBER]= (int)backlight;
     event[BACKLIGHT_VALUE]= level;
@@ -227,6 +237,8 @@ void PwrServer::emitBacklightChanged(int backlight, int level)
 ///////////////////////////////////////////////////////////////////////////////
 PWRProfileReader PwrServer::findProfile(QString id)
 {
+    TRACED_FN
+
     PWRProfileReader ret = PWRProfileReader();
     if (profiles.contains(id))
         ret = profiles[id];
@@ -236,6 +248,8 @@ PWRProfileReader PwrServer::findProfile(QString id)
 ///////////////////////////////////////////////////////////////////////////////
 void PwrServer::applyProfile(QString id)
 {
+    TRACED_FN
+
     PWRProfileReader p = findProfile(id);
     qDebug()<<"Changing profile to "<<id;
     setblGlobalLevel( p.lcdBrightness);
@@ -264,28 +278,30 @@ void PwrServer::applyProfile(QString id)
 ///////////////////////////////////////////////////////////////////////////////
 void PwrServer::checkBacklights()
 {
+    TRACED_FN
+
     int level=0;
     if (!settings.usingIntel_backlight)
     {
         for(int i=0; i<backlightHW.size(); i++)
         {
+            qDebug()<<"2"<<currBacklightLevels.size();
             level = backlightLevel(i);
             if (level != currBacklightLevels[i])
             {
                 //emit event
-                qDebug()<<"Backlight changed to "<<level;
+                //qDebug()<<"Backlight changed to "<<level;
                 currBacklightLevels[i] = level;
                 emitBacklightChanged(i, level);
             }
         }//for all backlights
     }
     else
-    {
+    {        
         level = IBLBacklightLevel();
         if (level != currBacklightLevels[0])
         {
-            //emit event
-            qDebug()<<"Backlight changed to "<<level;
+            //emit event            
             currBacklightLevels[0] = level;
             emitBacklightChanged(0, level);
         }
@@ -295,6 +311,8 @@ void PwrServer::checkBacklights()
 ///////////////////////////////////////////////////////////////////////////////
 void PwrServer::checkBatts(bool* hasLowBattery)
 {
+    TRACED_FN
+
     if (hasLowBattery) (*hasLowBattery) = false;
     for(int i=0; i<battHW.size(); i++)
     {
@@ -302,8 +320,8 @@ void PwrServer::checkBatts(bool* hasLowBattery)
         JSONBatteryStatus curr;
         if (getBatteryStatus(i, curr))
         {
-            curr.batteryCritical = (int)curr.batteryCapacity<=settings.lowBatteryRate;
-            if ((curr.batteryState == BATT_DISCHARGING) && ((int)curr.batteryCapacity <= settings.lowBatteryRate))
+            curr.batteryCritical = (int)curr.batteryCapacity<=settings.lowBatteryCapacity;
+            if ((curr.batteryState == BATT_DISCHARGING) && ((int)curr.batteryCapacity <= settings.lowBatteryCapacity))
             {
                 if (hasLowBattery) (*hasLowBattery) = true;
             }
@@ -330,6 +348,8 @@ void PwrServer::checkBatts(bool* hasLowBattery)
 ///////////////////////////////////////////////////////////////////////////////
 void PwrServer::checkButtons()
 {
+    TRACED_FN
+
     QString state;
     bool shouldEmitEvent=false;
     state  = sleepBtnSleepState();
@@ -357,6 +377,8 @@ void PwrServer::checkButtons()
 ///////////////////////////////////////////////////////////////////////////////
 int PwrServer::blGlobalLevel()
 {
+    TRACED_FN
+
     if (settings.usingIntel_backlight)
         return IBLBacklightLevel();
     if (backlightHW.size())
@@ -367,6 +389,8 @@ int PwrServer::blGlobalLevel()
 ///////////////////////////////////////////////////////////////////////////////
 void PwrServer::setblGlobalLevel(int value)
 {
+    TRACED_FN
+
     //TODO: emit events here
     if (settings.usingIntel_backlight)
        setIBLBacklightLevel(value);
@@ -385,6 +409,8 @@ bool PwrServer::isOnACPower()
 ///////////////////////////////////////////////////////////////////////////////
 void PwrServer::onSuspend()
 {
+    TRACED_FN
+
     qDebug()<<"Preparing to suspend...";
     if (settings.usingIntel_backlight)
     {
@@ -395,6 +421,8 @@ void PwrServer::onSuspend()
 ///////////////////////////////////////////////////////////////////////////////
 void PwrServer::onResume()
 {
+    TRACED_FN
+
     qDebug()<<"Performing resume...";
     if (settings.usingIntel_backlight)
     {
@@ -407,6 +435,8 @@ void PwrServer::onResume()
 ///////////////////////////////////////////////////////////////////////////////
 bool PwrServer::start(QStringList args)
 {
+    TRACED_FN
+
     Q_UNUSED(args)
 
     QString confFile = DEF_CONFIG_FILE;
@@ -420,6 +450,7 @@ bool PwrServer::start(QStringList args)
     }
 
     readSettings(confFile);    
+    checkHardware();
 
     //devd socket setup
     if (devdSocket.state() == QLocalSocket::ConnectedState)
@@ -437,9 +468,7 @@ bool PwrServer::start(QStringList args)
     //connect(server, SIGNAL(newConnection()), this, SLOT(onNewConnection()));
     connect(&devdSocket, SIGNAL(readyRead()), this, SLOT(onDEVDEvent()));
 
-    onACPower = sysctlAsInt(ACLINE_SYSCTL) == 1;
-
-    checkState(true);
+    onACPower = sysctlAsInt(ACLINE_SYSCTL) == 1;    
 
     //setup control pipe
     if( !QLocalServer::removeServer(settings.pipeName) )
@@ -483,6 +512,8 @@ bool PwrServer::start(QStringList args)
         return false;
     }
 
+    checkState(true);
+
     checkStateTimer->setInterval(CHECK_INTERVAL);
     checkStateTimer->start();
 
@@ -492,6 +523,8 @@ bool PwrServer::start(QStringList args)
 ///////////////////////////////////////////////////////////////////////////////
 void PwrServer::stop()
 {
+    TRACED_FN
+
     if(server->isListening())
     {
         server->close();
@@ -504,6 +537,8 @@ void PwrServer::stop()
 ///////////////////////////////////////////////////////////////////////////////
 void PwrServer::signalHandler(int sig)
 {
+    TRACED_FN
+
     switch(sig) {
         case SIGHUP:
 
@@ -517,6 +552,8 @@ void PwrServer::signalHandler(int sig)
 ///////////////////////////////////////////////////////////////////////////////
 void PwrServer::onDEVDEvent()
 {
+    TRACED_FN
+
     QTextStream* devdStream = new QTextStream(&devdSocket);
 
     while(!devdStream->atEnd())
@@ -551,7 +588,9 @@ void PwrServer::onDEVDEvent()
 ///////////////////////////////////////////////////////////////////////////////
 void PwrServer::onNewConnection()
 {
-    qDebug()<<"---------- New connection";
+    TRACED_FN
+
+    qDebug()<<"New control pipe connection";
 
     SConnection conn;
     conn.sock = server->nextPendingConnection();
@@ -575,7 +614,9 @@ void PwrServer::onNewConnection()
 ///////////////////////////////////////////////////////////////////////////////
 void PwrServer::onDisconnect()
 {
-    qDebug()<<"---------- onDisconnect";
+    TRACED_FN
+
+    qDebug()<<"Disconnect from control pipe";
 
     QLocalSocket* sender = (QLocalSocket*)QObject::sender();
     if (!sender)
@@ -599,7 +640,9 @@ void PwrServer::onDisconnect()
 ///////////////////////////////////////////////////////////////////////////////
 void PwrServer::onEventNewConnection()
 {
-    qDebug()<<"---------- New event listener connection";
+    TRACED_FN
+
+    qDebug()<<"New event listener connection";
 
     SConnection conn;
     conn.sock = eventServer->nextPendingConnection();
@@ -622,7 +665,9 @@ void PwrServer::onEventNewConnection()
 ///////////////////////////////////////////////////////////////////////////////
 void PwrServer::onEventDisconnect()
 {
-    qDebug()<<"---------- on event listener disconnect";
+    TRACED_FN
+
+    qDebug()<<"Event listener disconnect";
 
     QLocalSocket* sender = (QLocalSocket*)QObject::sender();
     if (!sender)
@@ -646,7 +691,9 @@ void PwrServer::onEventDisconnect()
 ///////////////////////////////////////////////////////////////////////////////
 void PwrServer::onRequest()
 {
-    qDebug()<<"---------- onRequest";
+    TRACED_FN
+
+    //qDebug()<<"---------- onRequest";
 
     QLocalSocket* sender = (QLocalSocket*)QObject::sender();
     if (!sender)
@@ -676,6 +723,8 @@ void PwrServer::onRequest()
 ///////////////////////////////////////////////////////////////////////////////
 void PwrServer::checkState(bool force)
 {    
+    TRACED_FN
+
     bool currLowBatt;
     static bool wasLowBatt = false;
     bool isProfileChanges = false;
@@ -714,7 +763,6 @@ void PwrServer::checkState(bool force)
         {
             if (!onACPower)
             {
-                qDebug()<<"Power on";
                 isProfileChanges = true;
                 profileName = settings.onACProfile;
             }

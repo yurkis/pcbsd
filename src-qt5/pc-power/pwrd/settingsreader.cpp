@@ -44,6 +44,11 @@ _str_constant CONF_FIELD_BATTER_POLLING = "battery_polling";
 _str_constant CONF_FIELD_INTEL_BACKLIGHT = "use_intel_backlight";
 _str_constant CONF_FIELD_LOW_BATTERY_RATE = "low_battery_rate";
 
+_str_constant CONF_FIELD_ALLOW_CONFIG_CHANGE = "allow_config_change";
+const int DEF_ALLOW_CONFIG_CHANGE = 1;
+_str_constant CONF_FIELD_ALLOW_PROFILES_CHANGE = "allow_profiles_change";
+const int DEF_ALLOW_PROFILES_CHANGE = 1;
+
 _str_constant CONF_PROFILES_GROUP = "profiles";
 _str_constant CONF_ON_AC_POWER = "on_ac_power";
 _str_constant CONF_ON_BATTERY = "on_battery";
@@ -77,8 +82,10 @@ bool _PWRServerSettings::load(QString file)
     devdPipeName = Reader.value(CONF_FIELD_DEVD_PIPE, DEF_DEVD_PIPE).toString();
     profilesPath = Reader.value(CONF_FIELD_PROFILES_PATH, DEF_PROFILES_PATH).toString();
     battPollingTime =Reader.value(CONF_FIELD_BATTER_POLLING, DEF_POLLING_BATTERY_TIME).toInt();
-    lowBatteryRate = Reader.value(CONF_FIELD_LOW_BATTERY_RATE, DEF_FIELD_LOW_BATTERY_RATE).toInt();
-    usingIntel_backlight =  Reader.value(CONF_FIELD_INTEL_BACKLIGHT, 0).toInt() == 1;
+    lowBatteryCapacity = Reader.value(CONF_FIELD_LOW_BATTERY_RATE, DEF_FIELD_LOW_BATTERY_RATE).toInt();
+    usingIntel_backlight =  Reader.value(CONF_FIELD_INTEL_BACKLIGHT, 0).toInt() != 0;
+    allowSettingsChange = Reader.value(CONF_FIELD_ALLOW_CONFIG_CHANGE, DEF_ALLOW_CONFIG_CHANGE).toInt() != 0;
+    allowProfileChange = Reader.value(CONF_FIELD_ALLOW_PROFILES_CHANGE, DEF_ALLOW_PROFILES_CHANGE).toInt() != 0;
 
     Reader.beginGroup(CONF_PROFILES_GROUP);
     onBatteryProfile = Reader.value(CONF_ON_BATTERY, DEF_PROFILE).toString();

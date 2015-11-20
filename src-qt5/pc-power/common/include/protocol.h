@@ -78,6 +78,11 @@ _str_constant LID_SWITCH_SATE = "lidSwitchSate";
 
 _str_constant COMMAND_SET_BUTTONS_STATE = "setbuttonsstate";
 
+_str_constant COMMAND_GET_SETTINGS = "getsettings";
+_str_constant SETTINGS_CHANGE_ALLOWED = "allowChangeSettings";
+_str_constant PROFILES_CHANGE_ALLOWED = "allowProfilesChange";
+_str_constant COMMAND_SET_SETTINGS = "setsettings";
+
 QString QJsonObjectToMessage(QJsonObject obj);
 
 

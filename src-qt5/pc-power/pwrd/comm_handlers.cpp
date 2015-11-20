@@ -38,7 +38,7 @@ QJsonObject PwrServer::parseCommand(QString line)
     try{
       if (root.find(MSGTYPE_COMMAND) != root.end())
       {
-          qDebug()<<"COMMAND";
+          qDebug()<<"COMMAND:"<<root[MSGTYPE_COMMAND];
 
           if (root[MSGTYPE_COMMAND] == COMMAND_HWINFO)
           {
@@ -91,6 +91,14 @@ QJsonObject PwrServer::parseCommand(QString line)
           else if (root[MSGTYPE_COMMAND] == COMMAND_SET_BUTTONS_STATE)
           {
               resp = oncmdSetButtonsState(root);
+          }
+          else if (root[MSGTYPE_COMMAND] == COMMAND_GET_SETTINGS)
+          {
+              resp = oncmdGetSettings();
+          }
+          else if (root[MSGTYPE_COMMAND] == COMMAND_SET_SETTINGS)
+          {
+              resp = oncmdSetSettings(root);
           }
       }
     }catch(...){
@@ -321,7 +329,7 @@ QJsonObject PwrServer::oncmdGetBattState()
         JSONBatteryStatus item;
         if (getBatteryStatus(i, item))
         {
-            item.batteryCritical = (int)item.batteryCapacity<=settings.lowBatteryRate;
+            item.batteryCritical = (int)item.batteryCapacity<=settings.lowBatteryCapacity;
             arr.append(item.toJSON());
         }
     }
@@ -424,6 +432,23 @@ QJsonObject PwrServer::oncmdSetButtonsState(QJsonObject req)
     }
 
     checkButtons();
+
+    return RESULT_SUCCESS();
+}
+
+QJsonObject PwrServer::oncmdGetSettings()
+{
+    QJsonObject resp = RESULT_SUCCESS();
+
+    settings.toJSON(resp);
+
+    return resp;
+}
+
+QJsonObject PwrServer::oncmdSetSettings(QJsonObject req)
+{
+    if (!settings.allowSettingsChange)
+        return RESULT_FAIL("Not allowed");
 
     return RESULT_SUCCESS();
 }

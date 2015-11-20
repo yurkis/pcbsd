@@ -17,10 +17,10 @@ bool getBatteryHWInfo(int batt, PWRBatteryHardware& hwout)
     hwout.type="LiIon";
     hwout.OEMInfo="pcbsd";
     hwout.model=QString("Fake battery ") + QString::number(batt);
-    hwout.designVoltage = 12000;
+    hwout.designVoltage = 7000;
     hwout.serial="0000-0000-0000";
-    hwout.designCapacity=19500;
-    hwout.lastFullCapacity=17800;
+    hwout.designCapacity=49500;
+    hwout.lastFullCapacity=44800;
 
     return true;
 }

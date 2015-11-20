@@ -48,6 +48,8 @@ public:
     virtual bool setACPIState(QString state);
     virtual bool getButtonsState(QString& powerBtnSate, QString& sleepBtnState, QString& lidState);
     virtual bool setButtonsState(QString* powerBtnSate, QString* sleepBtnState, QString* lidState);
+    virtual bool getDaemonSettings(PWRDaemonSettings& settings);
+    virtual bool setDaemonSettings(PWRDaemonSettings settings);
 
 signals:
     void backlightLevelChanged(unsigned int backlightNum, unsigned int level);

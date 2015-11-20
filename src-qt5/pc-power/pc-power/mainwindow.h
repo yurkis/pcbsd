@@ -41,6 +41,8 @@ protected:
     PWRProfileInfoBasic battProfile;
     PWRProfileInfoBasic lowbattProfile;
 
+    PWRDaemonSettings daemonSettings;
+
     QSystemTrayIcon* trayIcon;
     QIcon trayIconImage;
     QMenu* trayMenu;
@@ -64,6 +66,7 @@ protected:
     int powerConsumption();
     void setupMainButtonsAndLid();
     void refreshButtonsAndLid(QString power, QString sleep, QString lid);
+    void setupProfiles();
 
 public slots:
     void backlightChanged(int backlight, int value);

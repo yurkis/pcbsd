@@ -433,6 +433,31 @@ bool QPWRDClient::setButtonsState(QString *powerBtnSate, QString *sleepBtnState,
     return d->sendCommandReadResponce(req, resp);
 }
 
+bool QPWRDClient::getDaemonSettings(PWRDaemonSettings &settings)
+{
+    Q_D(QPWRDClient);
+
+    d->lastError = "";
+
+    QJsonObject req, resp;
+
+    req[MSGTYPE_COMMAND] = COMMAND_GET_SETTINGS;
+
+    if (!d->sendCommandReadResponce(req, resp)) return false;
+
+    JSONDaemonSettings jsonsettings;
+    if (!jsonsettings.fromJSON(resp)) return false;
+
+    settings = jsonsettings;
+
+    return true;
+}
+
+bool QPWRDClient::setDaemonSettings(PWRDaemonSettings settings)
+{
+
+}
+
 void QPWRDClient::pwrdRead()
 {
 

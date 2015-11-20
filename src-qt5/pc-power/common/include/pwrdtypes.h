@@ -79,7 +79,6 @@ typedef struct _PWRHWInfo
     }
 }PWRHWInfo;
 
-
 typedef struct _PWRProfile
 {
     QString id;
@@ -93,6 +92,24 @@ typedef struct _PWRProfile
         lcdBrightness = 75;
     }
 }PWRProfile;
+
+typedef struct _PWRDaemonSettings
+{
+    int     lowBatteryCapacity;
+    QString onBatteryProfile;
+    QString onACProfile;
+    QString onLowBatteryProfile;
+    bool usingIntel_backlight;
+    bool allowSettingsChange;
+    bool allowProfileChange;
+    _PWRDaemonSettings()
+    {
+        lowBatteryCapacity=0;
+        usingIntel_backlight = false;
+        allowSettingsChange = false;
+        allowProfileChange = false;
+    }
+}PWRDaemonSettings;
 
 #endif // PWRD_H
 

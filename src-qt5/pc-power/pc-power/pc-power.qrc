@@ -17,5 +17,6 @@
         <file>images/btn_power.png</file>
         <file>images/btn_sleep.png</file>
         <file>images/lid.png</file>
+        <file>images/on_low_battery.png</file>
     </qresource>
 </RCC>

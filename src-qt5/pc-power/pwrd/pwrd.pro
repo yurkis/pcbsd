@@ -34,7 +34,8 @@ HEADERS += \
     ../common/include/serialize.h \
     hw/intel_backlight.h \
     hw/buttons.h \
-    hw/sleep.h
+    hw/sleep.h \
+    pwrddebug.h
 
 INCLUDEPATH += ../common/include /usr/local/include/pwrd
 
