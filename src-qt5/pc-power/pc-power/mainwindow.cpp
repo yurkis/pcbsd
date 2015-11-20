@@ -533,7 +533,7 @@ void MainWindow::on_applyBtnSettings_clicked()
     if (ui->sleepBtnCB->currentIndex() < ssDescriptions.size())
         sleep = ssDescriptions[ui->sleepBtnCB->currentIndex()].state;
     if (ui->lidCB->currentIndex() < ssDescriptions.size())
-        sleep = ssDescriptions[ui->lidCB->currentIndex()].state;
+        lid = ssDescriptions[ui->lidCB->currentIndex()].state;
 
     if (!client->setButtonsState(&power, (hwInfo.basic.hasSleepButton)?&sleep:NULL, (hwInfo.basic.hasLid)?&lid:NULL))
     {
