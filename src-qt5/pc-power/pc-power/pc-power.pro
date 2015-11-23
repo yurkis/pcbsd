@@ -21,7 +21,8 @@ SOURCES += main.cpp\
     ../common/src/protocol.cpp \
     ../common/src/serialize.cpp \
     ../libpwrd/QPWRDEvents.cpp \
-    widgets/widgetsleepbuttons.cpp
+    widgets/widgetsleepbuttons.cpp \
+    dialogs/connecterrordialog.cpp
 
 HEADERS  += mainwindow.h \
     ../libpwrd/QPWRDClient.h \
@@ -31,18 +32,32 @@ HEADERS  += mainwindow.h \
     widgets/widgetbacklight.h \
     ../libpwrd/QPWRDEvents.h \
     ../common/include/protocol.h \
-    widgets/widgetsleepbuttons.h
+    widgets/widgetsleepbuttons.h \
+    dialogs/connecterrordialog.h
 
 FORMS    += mainwindow.ui \
     widgets/widgetbatteryhw.ui \
     widgets/widgetbattery.ui \
     widgets/widgetbacklight.ui \
-    widgets/widgetsleepbuttons.ui
+    widgets/widgetsleepbuttons.ui \
+    dialogs/connecterrordialog.ui
 
 INCLUDEPATH += ../common/include ../libpwrd  /usr/local/include/pwrd
 LIBS += -L/usr/local/lib
 
 RESOURCES += \
     pc-power.qrc
+
+target.path=/usr/local/bin/
+
+desktop.path=/usr/local/share/applications/
+desktop.files=pc-power.desktop
+
+appicon.path=/usr/local/share/pcbsd/icons/
+appicon.files=pc-power.png
+
+INSTALLS += target appicon desktop
+
+
 
 DISTFILES +=

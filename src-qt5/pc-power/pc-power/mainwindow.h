@@ -57,7 +57,9 @@ protected:
 
 protected:
     void getInfoAndState();
+    void initUI();
     void setupTray();
+    void refreshProfilesMenu();
     void refreshTrayIcon(PWRBatteryStatus stat);
     void refreshMainPageAcState();
     void refreshPowerCosumption();
@@ -88,6 +90,10 @@ private slots:
     void on_applyBtnSettings_clicked();
 
     void on_mainTW_currentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem *previous);
+
+    void on_pwrd_connectionError();
+
+    void on_pwrdError(QString message);
 
 private:
     Ui::MainWindow *ui;

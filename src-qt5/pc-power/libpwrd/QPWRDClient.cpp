@@ -26,10 +26,13 @@ Q_DECLARE_PUBLIC(QPWRDClient);
 ///////////////////////////////////////////////////////////////////////////////
 bool QPWRDClientPrivate::sendCommandReadResponce(QJsonObject request, QJsonObject &responce)
 {
+    Q_Q(QPWRDClient);
+
     lastError = "";
     if (sock.state() != QLocalSocket::ConnectedState)
     {
         lastError = "Not conected to pwrd";
+        emit(q->connectionError());
         return false;
     }
     QTextStream stream(&sock);
@@ -44,6 +47,7 @@ bool QPWRDClientPrivate::sendCommandReadResponce(QJsonObject request, QJsonObjec
     if (responce[MSG_RESULT].toString() != QString(MSG_RESULT_SUCCESS))
     {
         if (responce.contains(MSG_RESULT_FAIL_REASON)) lastError = responce[MSG_RESULT_FAIL_REASON].toString();
+        emit(q->pwrdError(lastError));
         return false;
     }
     return true;
@@ -90,6 +94,7 @@ void QPWRDClient::disconnect()
     }
 }
 
+///////////////////////////////////////////////////////////////////////////////
 QString QPWRDClient::lastPWRDError()
 {
     Q_D(QPWRDClient);
@@ -455,13 +460,13 @@ bool QPWRDClient::getDaemonSettings(PWRDaemonSettings &settings)
 
 bool QPWRDClient::setDaemonSettings(PWRDaemonSettings settings)
 {
-
+    return true;
 }
 
-void QPWRDClient::pwrdRead()
+/*void QPWRDClient::pwrdRead()
 {
 
-}
+}*/
 
 
 

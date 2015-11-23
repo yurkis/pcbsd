@@ -52,12 +52,15 @@ public:
     virtual bool setDaemonSettings(PWRDaemonSettings settings);
 
 signals:
-    void backlightLevelChanged(unsigned int backlightNum, unsigned int level);
+    /*void backlightLevelChanged(unsigned int backlightNum, unsigned int level);
     void profileChanged(QString profileID);
-    void powerStateChanged(bool onACPower);
+    void powerStateChanged(bool onACPower);*/
+
+    void connectionError();
+    void pwrdError(QString message);
 
 private slots:
-    void pwrdRead();
+    //void pwrdRead();
 
 protected:
      QPWRDClientPrivate * const d_ptr;

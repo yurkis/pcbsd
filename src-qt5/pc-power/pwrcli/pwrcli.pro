@@ -23,3 +23,8 @@ HEADERS += \
 INCLUDEPATH += ../common/include ../libpwrd  /usr/local/include/pwrd
 LIBS += -L/usr/local/lib
 
+target.path=/usr/local/bin/
+
+INSTALLS += target
+
+

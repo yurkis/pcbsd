@@ -24,8 +24,7 @@ bool WidgetSleepButtons::setup(QPWRDClient *cl, QStringList possibleACPIStates)
     bool isHibernate = false;
 
     for(int i=0; i<possibleACPIStates.size(); i++)
-    {
-        qDebug()<<possibleACPIStates[i].trimmed().toUpper();
+    {        
         if (possibleACPIStates[i].trimmed().toUpper() == "S3") isSleep= true;
         else if (possibleACPIStates[i].trimmed().toUpper() == "S4") isHibernate=true;
     }

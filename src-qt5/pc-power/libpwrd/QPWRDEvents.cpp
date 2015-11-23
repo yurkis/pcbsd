@@ -55,7 +55,7 @@ bool QPWRDEventsPrivate::pwrd_connect(QString pipe)
     if (sock.state() == QLocalSocket::ConnectedState)
     {
         sock.disconnect();
-        sock.waitForDisconnected();
+//        sock.waitForDisconnected();
         //if (stream)
         //    delete stream;
     }

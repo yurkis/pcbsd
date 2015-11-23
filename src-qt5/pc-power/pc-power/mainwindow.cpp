@@ -6,6 +6,8 @@
 #include "widgets/widgetsleepbuttons.h"
 #include "widgets/widgetbatteryhw.h"
 
+#include "dialogs/connecterrordialog.h"
+
 #include <QSystemTrayIcon>
 #include <QMenu>
 #include <QWidgetAction>
@@ -35,18 +37,29 @@ MainWindow::MainWindow(QWidget *parent) :
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+
     client = new QPWRDClient(this);
+    events = new QPWRDEvents(this);
+
     if (!client->connect())
     {
-        QMessageBox msgbox;
+        ConnectErrorDialog* dlg = new ConnectErrorDialog(this);
+        dlg->execute(client, events);
+        /*QMessageBox msgbox;
         msgbox.setText(tr("pwrd connection error. Please check if pwrd running"));
         msgbox.setWindowTitle(tr("error"));
         msgbox.setIcon(QMessageBox::Critical);
         msgbox.exec();
-        exit(1);
+        exit(1);*/
     }
-    events = new QPWRDEvents(this);
-    events->connect();    
+
+    if (!events->connect())
+    {
+        ConnectErrorDialog* dlg = new ConnectErrorDialog(this);
+        dlg->execute(client, events);
+    }
+
+    connect(client, SIGNAL(connectionError()), this, SLOT(on_pwrd_connectionError()));
 
     connect(events, SIGNAL(backlightChanged(int,int)), this, SLOT(backlightChanged(int,int)));
     connect(events, SIGNAL(batteryCapacityChanged(int,PWRBatteryStatus)), this, SLOT(batteryCapacityChanged(int,PWRBatteryStatus)));
@@ -56,56 +69,10 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(events, SIGNAL(buttonsStateChanged(QString,QString,QString)), this, SLOT(buttonsStateChanged(QString,QString,QString)));
     trayBattNo = 0;
 
+    profilesMenu = NULL;
+
     getInfoAndState();
-
-    //Make profiles popup
-    profilesMenu = new QMenu(this);
-    for (int i=0;i<profiles.size();i++)
-    {
-        QAction* action = new QAction(profilesMenu);
-        action->setText(profiles[i].name);
-        action->setData(QVariant(profiles[i].id));
-        connect(action, SIGNAL(triggered(bool)), this, SLOT(changeProfileTriggered()));
-        profilesMenu->addAction(action);
-    }
-    profilesMenu->setTitle(tr("Change profile"));
-
-    //fill available sleep states descriptions
-    SSleepStateDescription desc;
-    desc.description = tr("None");
-    desc.state = "NONE";
-    ssDescriptions.push_back(desc);
-    if (hwInfo.basic.possibleACPIStates.contains("S3"))
-    {
-        desc.description = tr("Sleep");
-        desc.state="S3";
-        ssDescriptions.push_back(desc);
-    }
-    if (hwInfo.basic.possibleACPIStates.contains("S4"))
-    {
-        desc.description = tr("Hibernate");
-        desc.state="S4";
-        ssDescriptions.push_back(desc);
-    }
-    if (hwInfo.basic.possibleACPIStates.contains("S5"))
-    {
-        desc.description = tr("Power off");
-        desc.state="S5";
-        ssDescriptions.push_back(desc);
-    }
-
-    setupTray();
-
-    refreshMainPageAcState();
-
-    setupMainGeneral();
-    setupMainButtonsAndLid();
-
-    setupInfo();
-    setupProfiles();
-
-    ui->mainStack->setCurrentIndex(0);
-    ui->mainTW->setCurrentItem(ui->mainTW->topLevelItem(0));
+    initUI();
 }
 
 MainWindow::~MainWindow()
@@ -149,6 +116,48 @@ void MainWindow::getInfoAndState()
     {
         //TODO: error message
     }
+}
+
+void MainWindow::initUI()
+{
+    refreshProfilesMenu();
+
+    //fill available sleep states descriptions
+    SSleepStateDescription desc;
+    desc.description = tr("None");
+    desc.state = "NONE";
+    ssDescriptions.push_back(desc);
+    if (hwInfo.basic.possibleACPIStates.contains("S3"))
+    {
+        desc.description = tr("Sleep");
+        desc.state="S3";
+        ssDescriptions.push_back(desc);
+    }
+    if (hwInfo.basic.possibleACPIStates.contains("S4"))
+    {
+        desc.description = tr("Hibernate");
+        desc.state="S4";
+        ssDescriptions.push_back(desc);
+    }
+    if (hwInfo.basic.possibleACPIStates.contains("S5"))
+    {
+        desc.description = tr("Power off");
+        desc.state="S5";
+        ssDescriptions.push_back(desc);
+    }
+
+    setupTray();
+
+    refreshMainPageAcState();
+
+    setupMainGeneral();
+    setupMainButtonsAndLid();
+
+    setupInfo();
+    setupProfiles();
+
+    ui->mainStack->setCurrentIndex(0);
+    ui->mainTW->setCurrentItem(ui->mainTW->topLevelItem(0));
 }
 
 void MainWindow::setupTray()
@@ -227,6 +236,24 @@ void MainWindow::setupTray()
 
 
      connect(trayIcon, SIGNAL(activated(QSystemTrayIcon::ActivationReason)), this, SLOT(trayActivated()));
+}
+
+void MainWindow::refreshProfilesMenu()
+{
+    //Make profiles popup
+    if (profilesMenu)
+        profilesMenu->clear();
+    else
+        profilesMenu = new QMenu(this);
+    for (int i=0;i<profiles.size();i++)
+    {
+        QAction* action = new QAction(profilesMenu);
+        action->setText(profiles[i].name);
+        action->setData(QVariant(profiles[i].id));
+        connect(action, SIGNAL(triggered(bool)), this, SLOT(changeProfileTriggered()));
+        profilesMenu->addAction(action);
+    }
+    profilesMenu->setTitle(tr("Change profile"));
 }
 
 void MainWindow::refreshTrayIcon(PWRBatteryStatus stat)
@@ -400,6 +427,10 @@ int MainWindow::powerConsumption()
 
 void MainWindow::setupMainButtonsAndLid()
 {
+    ui->powerBtnCB->clear();
+    ui->sleepBtnCB->clear();
+    ui->lidCB->clear();
+
     for (int i=0;i<ssDescriptions.size();i++)
     {
         ui->powerBtnCB->addItem(ssDescriptions[i].description);
@@ -432,8 +463,7 @@ void MainWindow::setupMainButtonsAndLid()
 void MainWindow::refreshButtonsAndLid(QString power, QString sleep, QString lid)
 {
     if (!client) return;
-    if (!client->getButtonsState(power,sleep,lid)) return;
-
+    if (!client->getButtonsState(power,sleep,lid)) return;    
 
     for(int i=0; i<ssDescriptions.size(); i++)
     {
@@ -470,6 +500,10 @@ void MainWindow::refreshButtonsAndLid(QString power, QString sleep, QString lid)
 
 void MainWindow::setupProfiles()
 {
+    ui->onACPowerProfile->clear();
+    ui->onBatteryProfile->clear();
+    ui->onLowBatteryProfile->clear();
+
     for(int i=0; i<profiles.size(); i++)
     {
         ui->onACPowerProfile->addItem(profiles[i].name);
@@ -505,8 +539,7 @@ void MainWindow::batteryStateChanged(int bat, PWRBatteryStatus stat)
 }
 
 void MainWindow::acLineStateChanged(bool onExternalPower)
-{
-    qDebug()<<"AC power: "<<onExternalPower;
+{    
     onACPower = onExternalPower;
 
     ui->sysStateLabel->setText( (onACPower)?tr("On external power"):tr("On battery"));
@@ -528,8 +561,7 @@ void MainWindow::acLineStateChanged(bool onExternalPower)
 }
 
 void MainWindow::profileChanged(QString profileID)
-{
-    qDebug()<<"profile changed to "<<profileID;
+{    
     for (int i=0; i<profiles.size(); i++)
     {
         if (profiles[i].id == profileID)
@@ -575,8 +607,7 @@ void MainWindow::btnIndexChanged()
 
 void MainWindow::buttonsStateChanged(QString powerBtnState, QString sleepBtnState, QString lidSwitchState)
 {
-    refreshButtonsAndLid(powerBtnState, sleepBtnState, lidSwitchState);
-    qDebug()<<"gottt";
+    refreshButtonsAndLid(powerBtnState, sleepBtnState, lidSwitchState);    
 }
 
 void MainWindow::on_actionCloseWindow_triggered()
@@ -621,4 +652,34 @@ void MainWindow::on_mainTW_currentItemChanged(QTreeWidgetItem *current, QTreeWid
             break;
         }
     }
+}
+
+void MainWindow::on_pwrd_connectionError()
+{
+    ConnectErrorDialog* dlg = new ConnectErrorDialog(this);
+    dlg->execute(client, events);
+
+    getInfoAndState();
+
+    QString power, sleep, lid;
+
+    if (client->getButtonsState(power,sleep,lid))
+        refreshButtonsAndLid(power,sleep,lid);
+
+    setupMainGeneral();
+    refreshMainPageAcState();
+
+    refreshProfilesMenu();
+    if (client->getBatteriesState(battStates))
+    {
+        if (trayBattNo < battStates.size())
+        {
+            refreshTrayIcon(battStates[trayBattNo]);
+        }
+    }//if got states
+}
+
+void MainWindow::on_pwrdError(QString message)
+{
+
 }
