@@ -20,6 +20,7 @@ typedef struct _PWRServerSettings:public JSONDaemonSettings
 
     _PWRServerSettings();
     bool load(QString file = DEF_CONFIG_FILE);
+    bool save(QString file = DEF_CONFIG_FILE);
 
 }PWRServerSettings;
 

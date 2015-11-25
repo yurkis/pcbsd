@@ -95,6 +95,8 @@ private slots:
 
     void on_pwrdError(QString message);
 
+    void on_cuurProfilesSaveBtn_clicked();
+
 private:
     Ui::MainWindow *ui;
 };

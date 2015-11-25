@@ -683,3 +683,21 @@ void MainWindow::on_pwrdError(QString message)
 {
 
 }
+
+void MainWindow::on_cuurProfilesSaveBtn_clicked()
+{
+    if (!client) return;
+    if (!client->getDaemonSettings(daemonSettings))
+        return;
+
+    if (profiles.size()>ui->onACPowerProfile->currentIndex())
+        daemonSettings.onACProfile = profiles[ui->onACPowerProfile->currentIndex()].id;
+    if (profiles.size()>ui->onBatteryProfile->currentIndex())
+        daemonSettings.onBatteryProfile = profiles[ui->onBatteryProfile->currentIndex()].id;
+    if (profiles.size()>ui->onLowBatteryProfile->currentIndex())
+        daemonSettings.onLowBatteryProfile = profiles[ui->onLowBatteryProfile->currentIndex()].id;
+
+    client->setDaemonSettings(daemonSettings);
+
+    setupProfiles();
+}

@@ -460,7 +460,21 @@ bool QPWRDClient::getDaemonSettings(PWRDaemonSettings &settings)
 
 bool QPWRDClient::setDaemonSettings(PWRDaemonSettings settings)
 {
-    return true;
+    Q_D(QPWRDClient);
+
+    d->lastError = "";
+
+    QJsonObject req, resp;
+
+    req[MSGTYPE_COMMAND] = COMMAND_SET_SETTINGS;
+    JSONDaemonSettings s;
+    s.onACProfile = settings.onACProfile;
+    s.onBatteryProfile = settings.onBatteryProfile;
+    s.onLowBatteryProfile = settings.onLowBatteryProfile;
+    s.lowBatteryCapacity = settings.lowBatteryCapacity;
+    s.toJSON(req);
+
+    return d->sendCommandReadResponce(req, resp);
 }
 
 /*void QPWRDClient::pwrdRead()

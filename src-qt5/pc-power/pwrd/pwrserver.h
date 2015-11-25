@@ -45,6 +45,8 @@ private:
 
     QTimer* checkStateTimer;
 
+    QString confFile;
+
     //! Device hardware info
     JSONHWInfo                     hwInfo;
     //! Hardware info for all installet batteries

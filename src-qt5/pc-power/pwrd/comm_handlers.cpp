@@ -450,6 +450,20 @@ QJsonObject PwrServer::oncmdSetSettings(QJsonObject req)
     if (!settings.allowSettingsChange)
         return RESULT_FAIL("Not allowed");
 
+    JSONDaemonSettings s;
+    if (!s.fromJSON(req))
+    {
+        RESULT_FAIL("Bad request");
+    }
+
+    settings.lowBatteryCapacity = s.lowBatteryCapacity;
+    settings.onACProfile = s.onACProfile;
+    settings.onBatteryProfile = s.onBatteryProfile;
+    settings.onLowBatteryProfile = s.onLowBatteryProfile;
+    settings.save(confFile);
+
+    checkState(true);
+
     return RESULT_SUCCESS();
 }
 

@@ -251,6 +251,7 @@ void PwrServer::applyProfile(QString id)
     TRACED_FN
 
     PWRProfileReader p = findProfile(id);
+    currProfile = p;
     qDebug()<<"Changing profile to "<<id;
     setblGlobalLevel( p.lcdBrightness);
     checkBacklights();
@@ -439,7 +440,7 @@ bool PwrServer::start(QStringList args)
 
     Q_UNUSED(args)
 
-    QString confFile = DEF_CONFIG_FILE;
+    confFile = DEF_CONFIG_FILE;
     for(int i=0; i<args.size(); i++)
     {
         if ((args[i] == "-c")&&(i<args.size()-1))

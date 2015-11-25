@@ -94,3 +94,30 @@ bool _PWRServerSettings::load(QString file)
 
     return true;
 }
+
+bool _PWRServerSettings::save(QString file)
+{
+    QSettings Writer(file, QSettings::IniFormat);
+        if (Writer.status() != QSettings::NoError)
+            return false;
+    Writer.setIniCodec("UTF-8");
+
+    Writer.beginGroup("general");
+
+    Writer.setValue(CONF_FIELD_PIPE_NAME, pipeName);
+    Writer.setValue(CONF_FIELD_PIPE_NAME, eventsPipeName);
+    Writer.setValue(CONF_FIELD_DEVD_PIPE, devdPipeName);
+    Writer.setValue(CONF_FIELD_PROFILES_PATH, profilesPath);
+    Writer.setValue(CONF_FIELD_BATTER_POLLING, battPollingTime);
+    Writer.setValue(CONF_FIELD_LOW_BATTERY_RATE, lowBatteryCapacity);
+    Writer.setValue(CONF_FIELD_INTEL_BACKLIGHT, (usingIntel_backlight)?1:0);
+    Writer.setValue(CONF_FIELD_ALLOW_CONFIG_CHANGE, allowSettingsChange);
+    Writer.setValue(CONF_FIELD_ALLOW_PROFILES_CHANGE, allowProfileChange);
+
+    Writer.beginGroup(CONF_PROFILES_GROUP);
+    Writer.setValue(CONF_ON_AC_POWER, onACProfile);
+    Writer.setValue(CONF_ON_BATTERY, onBatteryProfile);
+    Writer.setValue(CONF_ON_LOW_BATTERY, onLowBatteryProfile);
+
+    return true;
+}
