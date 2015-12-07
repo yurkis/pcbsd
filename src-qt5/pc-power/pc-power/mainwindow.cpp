@@ -17,7 +17,7 @@
 #include <QPicture>
 #include <QMessageBox>
 #include <QDebug>
-
+#include <QListWidgetItem>
 
 #define _str_constant static const char* const
 
@@ -513,6 +513,23 @@ void MainWindow::setupProfiles()
         ui->onLowBatteryProfile->addItem(profiles[i].name);
         if(lowbattProfile.id == profiles[i].id) ui->onLowBatteryProfile->setCurrentIndex(i);
     }
+
+    refreshProfilesList();
+}
+
+void MainWindow::refreshProfilesList()
+{
+    ui->profilesLW->clear();
+    for (int i=0; i<profiles.size(); i++)
+    {
+        QListWidgetItem* item = new QListWidgetItem(ui->profilesLW);
+        item->setText(profiles[i].name);
+        item->setData(Qt::UserRole, profiles[i].id);
+        ui->profilesLW->addItem(item);
+
+        if (!i) ui->profilesLW->setCurrentItem(item);
+    }
+
 }
 
 void MainWindow::backlightChanged(int backlight, int value)

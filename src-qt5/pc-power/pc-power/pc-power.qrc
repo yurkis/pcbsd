@@ -20,5 +20,8 @@
         <file>images/on_low_battery.png</file>
         <file>images/window-close.png</file>
         <file>images/application-exit.png</file>
+        <file>images/add.png</file>
+        <file>images/remove.png</file>
+        <file>images/edit.png</file>
     </qresource>
 </RCC>
