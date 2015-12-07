@@ -83,6 +83,9 @@ _str_constant SETTINGS_CHANGE_ALLOWED = "allowChangeSettings";
 _str_constant PROFILES_CHANGE_ALLOWED = "allowProfilesChange";
 _str_constant COMMAND_SET_SETTINGS = "setsettings";
 
+_str_constant COMMAND_UPDATE_PROFILE = "updateprofile";
+_str_constant COMMAND_REMOVE_PROFILE = "removeprofile";
+
 QString QJsonObjectToMessage(QJsonObject obj);
 
 
@@ -97,6 +100,9 @@ _str_constant BATTERY_NO = "batt";
 _str_constant EVENT_PROFILE_CHANGED = "profilechanged";
 _str_constant EVENT_AC_POWER_CHANGED = "acpowerchanged";
 _str_constant EVENT_BUTTONS_STATE_CHANGED = "buttonsstatechanged";
+
+_str_constant EVENT_PROFILES_UPDATED = "profilesupdated";
+
 
 
 #endif // PROTOCOL_H

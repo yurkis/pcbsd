@@ -103,7 +103,18 @@ bool JSONBacklightHardware::fromJSON(const QJsonObject &json)
     return true;
 }
 
+#define CC_FIELD(field)\
+    field = in.field;
 
+JSONProfile::JSONProfile(const PWRProfile &in)
+{
+    CC_FIELD(id);
+    CC_FIELD(description);
+    CC_FIELD(btnPowerSate);
+    CC_FIELD(btnSleepSate);
+    CC_FIELD(lidSwitchSate);
+    CC_FIELD(lcdBrightness);
+}
 
 void JSONProfile::toJSON(QJsonObject &json)
 {

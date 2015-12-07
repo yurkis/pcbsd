@@ -30,7 +30,7 @@ _str_constant AC_DISABLED_IMAGE = ":/images/batt_power.png";
 _str_constant NO_BATTERY_IMAGE = ":/images/no_battery.png";
 _str_constant SETTINGS_WINDOW_ICON = ":/images/page-settings.png";
 _str_constant EXIT_TRAY_ICON = ":/images/application-exit.png";
-_str_constant PROFILES_ICON = ":/images/page-profiles.png";
+//_str_constant PROFILES_ICON = ":/images/page-profiles.png";
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),

@@ -89,3 +89,33 @@ bool _PWRProfileReader::read(QString file)
 
     return true;
 }
+
+///////////////////////////////////////////////////////////////////////////////
+bool _PWRProfileReader::write(QString file)
+{
+    qDebug()<<"Writing profile "<<file;
+
+    QSettings Writer(file, QSettings::IniFormat);
+        if (Writer.status() != QSettings::NoError)
+            return false;
+    Writer.setIniCodec("UTF-8");
+
+    Writer.beginGroup(GENERAL_GROUP);
+    Writer.setValue(NAME_FIELD, id);
+    Writer.setValue(DESCRIPTION_FIELD, description);
+    Writer.endGroup();
+
+    Writer.beginGroup(BUTTONS_GROUP);
+    Writer.setValue(LID_FIELD, lidSwitchSate);
+    Writer.setValue(SLEEP_FIELD, btnSleepSate);
+    Writer.setValue(POWER_FIELD, btnPowerSate);
+    Writer.endGroup();
+
+    Writer.beginGroup(LCD_GROUP);
+    Writer.setValue(BACKLIGHT_FIELD, lcdBrightness);
+    Writer.endGroup();
+
+    Writer.sync();
+
+    return true;
+}

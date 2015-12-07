@@ -95,6 +95,7 @@ bool _PWRServerSettings::load(QString file)
     return true;
 }
 
+///////////////////////////////////////////////////////////////////////////////
 bool _PWRServerSettings::save(QString file)
 {
     QSettings Writer(file, QSettings::IniFormat);
@@ -118,6 +119,8 @@ bool _PWRServerSettings::save(QString file)
     Writer.setValue(CONF_ON_AC_POWER, onACProfile);
     Writer.setValue(CONF_ON_BATTERY, onBatteryProfile);
     Writer.setValue(CONF_ON_LOW_BATTERY, onLowBatteryProfile);
+
+    Writer.sync();
 
     return true;
 }

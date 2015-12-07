@@ -33,7 +33,8 @@ HEADERS  += mainwindow.h \
     ../libpwrd/QPWRDEvents.h \
     ../common/include/protocol.h \
     widgets/widgetsleepbuttons.h \
-    dialogs/connecterrordialog.h
+    dialogs/connecterrordialog.h \
+    ../common/include/serialize.h
 
 FORMS    += mainwindow.ui \
     widgets/widgetbatteryhw.ui \

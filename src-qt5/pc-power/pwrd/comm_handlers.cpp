@@ -100,6 +100,14 @@ QJsonObject PwrServer::parseCommand(QString line)
           {
               resp = oncmdSetSettings(root);
           }
+          else if (root[MSGTYPE_COMMAND] == COMMAND_UPDATE_PROFILE)
+          {
+              resp = oncmdUpdateProfile(root);
+          }
+          else if (root[MSGTYPE_COMMAND] == COMMAND_REMOVE_PROFILE)
+          {
+              resp = oncmdRemoveProfile(root);
+          }
       }
     }catch(...){
         resp = RESULT_FAIL("Internal error");
@@ -431,11 +439,12 @@ QJsonObject PwrServer::oncmdSetButtonsState(QJsonObject req)
         }
     }
 
-    checkButtons();
+    checkButtons();    
 
     return RESULT_SUCCESS();
 }
 
+///////////////////////////////////////////////////////////////////////////////
 QJsonObject PwrServer::oncmdGetSettings()
 {
     QJsonObject resp = RESULT_SUCCESS();
@@ -445,6 +454,7 @@ QJsonObject PwrServer::oncmdGetSettings()
     return resp;
 }
 
+///////////////////////////////////////////////////////////////////////////////
 QJsonObject PwrServer::oncmdSetSettings(QJsonObject req)
 {
     if (!settings.allowSettingsChange)
@@ -464,6 +474,39 @@ QJsonObject PwrServer::oncmdSetSettings(QJsonObject req)
 
     checkState(true);
 
+    return RESULT_SUCCESS();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+QJsonObject PwrServer::oncmdUpdateProfile(QJsonObject req)
+{
+    if (!settings.allowProfileChange)
+        return RESULT_FAIL("Not allowed");
+
+    if (!req.contains(JSONProfile().myname()))
+        return RESULT_FAIL("Bad request");
+
+    PWRProfileReader profile;
+
+    if (!profile.fromJSON(req))
+    {
+        return RESULT_FAIL("Bad request");
+    }
+
+    profile.write(settings.profilesPath+QString("/")+profile.id+QString(".profile"));
+
+    profiles[profile.id]=profile;
+
+    emitEvent(EVENT_PROFILES_UPDATED, QJsonObject());
+
+    checkState(true);
+
+    return RESULT_SUCCESS();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+QJsonObject PwrServer::oncmdRemoveProfile(QJsonObject req)
+{
     return RESULT_SUCCESS();
 }
 

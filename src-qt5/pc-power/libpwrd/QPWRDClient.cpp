@@ -334,7 +334,7 @@ bool QPWRDClient::setCurrentProfile(QString profile_id)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-bool QPWRDClient::getACLineState(bool isOnACPower)
+bool QPWRDClient::getACLineState(bool& isOnACPower)
 {
     Q_D(QPWRDClient);
 
@@ -438,6 +438,7 @@ bool QPWRDClient::setButtonsState(QString *powerBtnSate, QString *sleepBtnState,
     return d->sendCommandReadResponce(req, resp);
 }
 
+///////////////////////////////////////////////////////////////////////////////
 bool QPWRDClient::getDaemonSettings(PWRDaemonSettings &settings)
 {
     Q_D(QPWRDClient);
@@ -458,6 +459,7 @@ bool QPWRDClient::getDaemonSettings(PWRDaemonSettings &settings)
     return true;
 }
 
+///////////////////////////////////////////////////////////////////////////////
 bool QPWRDClient::setDaemonSettings(PWRDaemonSettings settings)
 {
     Q_D(QPWRDClient);
@@ -477,10 +479,38 @@ bool QPWRDClient::setDaemonSettings(PWRDaemonSettings settings)
     return d->sendCommandReadResponce(req, resp);
 }
 
-/*void QPWRDClient::pwrdRead()
+///////////////////////////////////////////////////////////////////////////////
+bool QPWRDClient::updateProfile(PWRProfile profile)
 {
+    Q_D(QPWRDClient);
 
-}*/
+    d->lastError = "";
+
+    QJsonObject req, resp;
+
+    req[MSGTYPE_COMMAND] = COMMAND_UPDATE_PROFILE;
+
+    JSONProfile jsonprofile = profile;
+    jsonprofile.toJSON(req);
+
+    return d->sendCommandReadResponce(req, resp);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+bool QPWRDClient::removeProfile(QString profile_id)
+{
+    Q_D(QPWRDClient);
+
+    d->lastError = "";
+
+    QJsonObject req, resp;
+
+    req[MSGTYPE_COMMAND] = COMMAND_REMOVE_PROFILE;
+    req[PROFILE_ID] = profile_id;
+
+    return d->sendCommandReadResponce(req, resp);
+}
+
 
 
 
