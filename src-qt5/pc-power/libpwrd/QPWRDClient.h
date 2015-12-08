@@ -35,7 +35,7 @@ public:
 
     //! Connect to pwrd server
     /*!
-     * \param pipe- full path to pwrd pipe
+     * \param pipe- full path to pwrd control pipe
      *
      * \return true if success
      */
@@ -121,8 +121,8 @@ public:
      */
     virtual bool getProfiles(QVector<PWRProfileInfoBasic>& profiles);
 
-    /** Get profile
-     *
+    //! Get profile
+    /*!
      * \param[in] profile_id - profile id
      * \param[out] out - profile
      *
@@ -130,48 +130,48 @@ public:
      */
     virtual bool getProfile(QString profile_id, PWRProfile& out);
 
-    /** Get id of current profile
-     *
+    //!  Get id of current profile
+    /*!
      * \param[out] out - current profile id
      *
      * \return true if success. If false check lastPWRDError()
      */
     virtual bool getCurrentProfileID(PWRProfileInfoBasic& out);
 
-    /** Change current profile
-     *
+    //!  Change current profile
+    /*!
      * \param profile_id - profile id
      *
      * \return true if success. If false check lastPWRDError()
      */
     virtual bool setCurrentProfile(QString profile_id);
 
-    /** Get current AC line state
-     *
+    //! Get current AC line state
+    /*!
      * \param[out] isOnACPower - true if device is on external power
      *
      * \return true if success. If false check lastPWRDError()
      */
     virtual bool getACLineState(bool &isOnACPower);
 
-    /** Get state of all supported batteries
-     *
+    //! Get state of all supported batteries
+    /*!
      * \param[out] batteries - vector with batteries status. Index in vector is battery number
      *
      * \return true if success. If false check lastPWRDError()
      */
     virtual bool getBatteriesState(QVector<PWRBatteryStatus> &batteries);
 
-    /** Set system ACPI state (sleep, hibernate)
-     *
+    //! Set system ACPI state (sleep, hibernate)
+    /*!
      * \param state - state to set ("S3" for sleep, "S4" for hibernate)
      *
      * \return true if success. If false check lastPWRDError()
      */
     virtual bool setACPIState(QString state);
 
-    /** Get current ACPI buttons setings
-     *
+    //! Get current ACPI buttons setings
+    /*!
      * \param[out] powerBtnSate - power button ACPI state
      * \param[out] sleepBtnState - sleep button ACPI state
      * \param[out] lidState - lid switch state
@@ -180,8 +180,8 @@ public:
      */
     virtual bool getButtonsState(QString& powerBtnSate, QString& sleepBtnState, QString& lidState);
 
-    /** Set current ACPI buttons setings
-     *
+    //! Set current ACPI buttons setings
+    /*!
      * \param powerBtnSate - power button ACPI state
      * \param sleepBtnState - sleep button ACPI state
      * \param lidState - lid switch state
@@ -190,16 +190,16 @@ public:
      */
     virtual bool setButtonsState(QString* powerBtnSate, QString* sleepBtnState, QString* lidState);
 
-    /** Get daemon settings
-     *
+    //! Get daemon settings
+    /*!
      * \param[out] settings - current daemon settings
      *
      * \return true if success. If false check lastPWRDError()
      */
     virtual bool getDaemonSettings(PWRDaemonSettings& settings);
 
-    /** Set daemon settings
-     *
+    //!  Set daemon settings
+    /*!
      * Set daemon settings. Not all settings will be applied and saved. Operation should be allowed in daemon settings file
      *
      * \param[out] settings - current daemon settings
@@ -208,8 +208,8 @@ public:
      */
     virtual bool setDaemonSettings(PWRDaemonSettings settings);
 
-    /** Update or create profile
-     *
+    //! Update or create profile
+    /*!
      * Create new profile or change profile if exist
      *
      * \param profile - new rofile
@@ -218,8 +218,8 @@ public:
      */
     virtual bool updateProfile(PWRProfile profile);
 
-    /** Remove profile
-     *
+    //!  Remove profile
+    /*!
      * Remove profile. Operation should be allowed in daemon settings file
      *
      * \param profile_id - id of profile to remove
@@ -230,7 +230,18 @@ public:
 
 signals:
 
+    //! Connection error signal
+    /*!
+     * Signal will be emmitrd when client could not connected to PWRD or connection was lost
+     */
     void connectionError();
+
+    //! PWRD error signal
+    /*!
+     * Signal will be emmited when PWRD returns error
+     *
+     * \param message - pwrd error message string
+     */
     void pwrdError(QString message);
 
 private slots:
