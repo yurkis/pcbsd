@@ -6,21 +6,25 @@
 
 #include "pwrdtypes.h"
 
+//! Structure holds supported hardware info
 typedef struct PWRDHardwareInfo
 {
-    PWRHWInfo basic;
-    QVector<PWRBatteryHardware>  batteries;
-    QVector<PWRBacklightHardware>backlights;
+    PWRHWInfo basic;                        ///< Basic hardware info
+    QVector<PWRBatteryHardware>  batteries; ///< Batteries hardware info
+    QVector<PWRBacklightHardware>backlights;///< Backlights hardware info
 }PWRDHardwareInfo;
 
+//! Basic profile info. For full profile data: \see PWRProfile
 typedef struct PWRProfileInfoBasic
 {
-    QString id;
-    QString name;
+    QString id;     ///< Profile ID
+    QString name;   ///< Profile description
 }PWRProfileInfoBasic;
 
+//! Private class
 class QPWRDClientPrivate;
 
+//! PWRD daemon client class
 class QPWRDClient:public QObject
 {    
     Q_OBJECT        
@@ -29,8 +33,8 @@ public:
     explicit QPWRDClient(QObject *parent=0);
     ~QPWRDClient();
 
-    /** Connect to pwrd server
-     *
+    //! Connect to pwrd server
+    /*!
      * \param pipe- full path to pwrd pipe
      *
      * \return true if success
@@ -40,21 +44,22 @@ public:
     //! Disconnect from pwrd
     virtual void disconnect();
 
-    /** Get last pwrd error
-     *
+    //! Get last pwrd error
+    /*!
      * \return pwrd error text. If no error- empty string
      */
     virtual QString lastPWRDError();
 
-    /** Get hardware info
-     *
+    //! Get hardware info
+    /*!
      * \param[out] out - hardware info
      *
      * \return true if success. If false check lastPWRDError()
      */
     virtual bool getHardwareInfo(PWRDHardwareInfo &out);
 
-    /** Get levels of all supported backlights
+    //! Get levels of all supported backlights
+    /*!
      *
      * \param[out] out - vector of backlight levels. Index in vaector is backlight number
      *
@@ -62,8 +67,8 @@ public:
      */
     virtual bool getAllBacklighsLevel(QVector<int>& out);
 
-    /** Get specified backlight level
-     *
+    //!Get specified backlight level
+    /*!
      * \param[in] backlight - backlight number
      * \param[out] out - hardware info
      *
@@ -71,8 +76,8 @@ public:
      */
     virtual bool getBacklightLevel(int backlight, int& out);
 
-    /** Set backlight level
-     *
+    //! Set backlight level
+    /*!
      * \param level - backlight level value in percent (0..100)
      * \param backlight - backlight nuber or PWR_ALL for all backlights
      *
@@ -80,8 +85,8 @@ public:
      */
     virtual bool setBacklightLevel(int level, int backlight = PWR_ALL);
 
-    /** Set backlight level relative value
-     *
+    //! Set backlight level relative value
+    /*!
      * \param level - relative backlight level value in percent. Negative numbers are allowed
      * \param backlight - backlight nuber or PWR_ALL for all backlights
      *
@@ -89,8 +94,8 @@ public:
      */
     virtual bool setBacklightLevelRelative(int level, int backlight = PWR_ALL);
 
-    /** Set backlight level as string
-     *
+    //! Set backlight level as string
+    /*!
      * \param level - backlight level value in percent. Strinnng value. Use + and  - for relative values (for example "+15" or "-10")
      * \param backlight - backlight nuber or PWR_ALL for all backlights
      *
@@ -98,8 +103,8 @@ public:
      */
     virtual bool setBacklightLevel(QString level, int backlight = PWR_ALL);
 
-    /** Get current profiles
-     *
+    //! Get current profiles
+    /*!
      * \param[out] ac_profile - profile on ac power (NULL if not need)
      * \param[out] batt_profile - profile on battery power  (NULL if not need)
      * \param[out] low_batt_profile - profile on low battery level (NULL if not need)
@@ -108,8 +113,8 @@ public:
      */
     virtual bool getActiveProfiles(PWRProfileInfoBasic* ac_profile, PWRProfileInfoBasic* batt_profile, PWRProfileInfoBasic* low_batt_profile);
 
-    /** Get all peofiles
-     *
+    //! Get all profiles
+    /*!
      * param[out] profiles - vector of profiles
      *
      * \return true if success. If false check lastPWRDError()
