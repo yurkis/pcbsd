@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>518</width>
-    <height>277</height>
+    <width>591</width>
+    <height>289</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -53,7 +53,7 @@
     <item>
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
-       <number>2</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="tab_updates">
        <attribute name="title">
@@ -360,7 +360,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>518</width>
+     <width>591</width>
      <height>19</height>
     </rect>
    </property>
@@ -376,9 +376,17 @@
     </property>
     <addaction name="actionVulnerabilities"/>
     <addaction name="actionBase_updates_history"/>
+    <addaction name="actionEndOfLife"/>
+   </widget>
+   <widget class="QMenu" name="menuSystem">
+    <property name="title">
+     <string>System</string>
+    </property>
+    <addaction name="actionBranches"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuView"/>
+   <addaction name="menuSystem"/>
   </widget>
   <action name="actionExit">
    <property name="icon">
@@ -405,6 +413,23 @@
    </property>
    <property name="text">
     <string>Base updates history</string>
+   </property>
+  </action>
+  <action name="actionEndOfLife">
+   <property name="icon">
+    <iconset resource="pc-updategui.qrc">
+     <normaloff>:/images/showeol.png</normaloff>:/images/showeol.png</iconset>
+   </property>
+   <property name="text">
+    <string>End of support</string>
+   </property>
+   <property name="toolTip">
+    <string>End of support</string>
+   </property>
+  </action>
+  <action name="actionBranches">
+   <property name="text">
+    <string>Branches</string>
    </property>
   </action>
  </widget>

@@ -5,7 +5,8 @@ if ( ! empty($_GET['deleteJail'] ) )
 {
    // Time to schedule a deletion
    $delJail=$_GET['deleteJail'];
-   run_cmd("iocage destroy -f $delJail");
+   $dccmd = array("iocage destroy -f $delJail");
+   send_dc_cmd($dccmd);
    hideurl();
 }
  
@@ -14,50 +15,64 @@ if ( ! empty($_GET['toggle']) )
 {
   $tjail = $_GET['toggle'];
   $sjail = $_GET['status'];
-  if ( $sjail == "Running" )
-    run_cmd("iocage stop $tjail");
-  else
-    run_cmd("iocage start $tjail");
+  if ( $sjail == "Running" ) {
+    $dccmd = array("iocage stop $tjail");
+    send_dc_cmd($dccmd);
+  } else {
+    $dccmd = array("iocage start $tjail");
+    send_dc_cmd($dccmd);
+  }
   hideurl();
 }
 
 if ( ! empty($_GET['autostart']) )
 {
   $tjail = $_GET['autostart'];
-  run_cmd("iocage set boot=on $tjail");
+  $dccmd = array("iocage set boot=on $tjail");
+  send_dc_cmd($dccmd);
   hideurl();
 }
 
 function print_jail($jail, $status)
 {
+  global $vimage;
 
   // Get some information about this jail
-  global $sc;
+  $sccmd = array("jail $jail autostart", "jail $jail type", "jail $jail tag");
+  $response = send_sc_query($sccmd);
+  $jauto = $response["jail $jail autostart"];
+  $jtype = $response["jail $jail type"];
+  $jtag = $response["jail $jail tag"];
 
-  exec("$sc ". escapeshellarg("jail $jail autostart")
-       . " " . escapeshellarg("jail $jail type")
-       . " " . escapeshellarg("jail $jail ipv4")
-       . " " . escapeshellarg("jail $jail ipv6")
-       , $jailinfo);
-  $jauto = $jailinfo[0];
-  $jtype = $jailinfo[1];
-  
+  $jtag = substr($jtag, 8);
+
   if ( $jauto == "true" )
      $autostatus="Enabled";
   else
      $autostatus="Disabled";
 
   print ("<tr>\n");
-  print("  <td><a href=\"?p=jailinfo&jail=$jail\" style=\"text-decoration: underline;\">$jail</a></td>\n");
+  print("  <td><a href=\"?p=jailinfo&jail=$jail\" style=\"text-decoration: underline;\">$jtag</a></td>\n");
   print("  <td><a href=\"/?p=jails&autostart=$jail\" style=\"text-decoration: underline;\">$autostatus</a></td>\n");
   if ( $status == "Running" )
     print("  <td><a href=\"/?p=jails&toggle=$jail&status=$status\" style=\"color: green; text-decoration: underline;\">$status</a></td>\n");
   else
     print("  <td><a href=\"/?p=jails&toggle=$jail&status=$status\" style=\"color: red; text-decoration: underline;\">$status</a></td>\n");
-  if ( $status == "Running" ) 
-    print("  <td><a href=\"/?p=sysapp&jail=$jail\" style=\"text-decoration: underline;\">View Packages</a></td>\n");
-  else
-    print("  <td>Start jail to view</td>\n");
+  if ( $status == "Running" ) {
+    if ( $vimage == 1 ) {
+      $dccmd = array("iocage getip4 $jail");
+      $response = send_dc_cmd($dccmd);
+      $jip = $response["iocage getip4 $jail"];
+    } else {
+      $sccmd = array("jail $jail ipv4");
+      $response = send_sc_query($sccmd);
+      $jailipv4 = $response["jail $jail ipv4"];
+      $jip = substr(strstr($jailipv4, "|"), 1);
+      $jip = strstr($jip, "/", true);
+    }
+    print("  <td>$jip</td>\n");
+  } else
+    print("  <td></td>\n");
 
   print ("</tr>\n");
 }
@@ -90,7 +105,7 @@ function print_jail($jail, $status)
    <th>Jail Name</th>
    <th>Autostart</th>
    <th>Status</th>
-   <th>Packages</th>
+   <th>IP</th>
 </tr>
 
 <?php

@@ -38,22 +38,39 @@ fi
 # Enable the debug version of pc-sysinstall
 /root/debugpcsysinstall.sh
 
+# Check if we need to prep a network install
+if [ -e "/pcbsd-media-network" ] ; then
+  cp -r /root/pkg-template /root/pkg
+  . /root/config.sh
+  ARCH=`uname -m`
+  FBSDVER=`uname -r | cut -d '-' -f 1-2`
+  MAJORVER="`uname -r | cut -d '-' -f 1 |  cut -d '.' -f 1`.0-RELEASE"
+  # Make sure we are on a -RELEASE, otherwise use the proper uname
+  echo $FBSDVER | grep -q -e 'RELEASE' -e 'STABLE'
+  if [ $? -ne 0 ] ; then MAJORVER="$FBSDVER"; fi
+
+  cp /root/pkg/repos/pcbsd.conf.dist /root/pkg/repos/pcbsd.conf
+  if [ "$INSTALLPACKAGESET" = "EDGE" ] ; then
+     sed -i '' "s|VERSION|${MAJORVER}/edge|g" /root/pkg/repos/pcbsd.conf
+  else
+     sed -i '' "s|VERSION|${MAJORVER}|g" /root/pkg/repos/pcbsd.conf
+  fi
+  sed -i '' "s|ARCH|${ARCH}|g" /root/pkg/repos/pcbsd.conf
+fi
+
 # Check if we are running in a VM and enable guest services
 if [ -e "/usr/local/etc/rc.d/vboxguest" ] ; then
   /usr/local/etc/rc.d/vboxguest onestart
 fi
 
-# Set all NICS to DHCP
-NICS=`ifconfig -l`
-for i in $NICS
-do
-  if [ "$i" = "lo0" ] ; then continue ; fi
+# Source our functions
+. /root/functions.sh
 
-  echo "Enabling networking on ${i}..."
-  echo "ifconfig_${i}_ipv6=\"inet6 accept_rtadv\"" >> /etc/rc.conf
-  echo "ifconfig_${i}=\"DHCP\"" >> /etc/rc.conf
-  (dhclient ${i} >/dev/null 2>/dev/null ) &
-done
+# Set all NICS to DHCP mode
+enable_dhcp_all
+
+# Enable networking
+/etc/rc.d/netif restart
 
 # Check if we are booting in LIVE or INSTALL mode
 if [ -e "/usr/pcbsd-live" ]; then
@@ -72,9 +89,6 @@ if [ -e "/usr/pcbsd-live" ]; then
   sh /root/PCBSDStartLive.sh
   exit 0
 fi
-
-# Source our functions
-. /root/functions.sh
 
 # Check if we have an auto-install directive
 if [ -e "/pc-autoinstall.conf" ]

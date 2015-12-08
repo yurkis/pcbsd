@@ -1,6 +1,6 @@
 #!/bin/sh
 #-
-# Copyright (c) 2010 iXsystems, Inc.  All rights reserved.
+# Copyright (c) 2015 iXsystems, Inc.  All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -260,9 +260,6 @@ delete_all_gpart()
   # Make sure we clear any hidden gpt tables
   clear_backup_gpt_table "${DISK}"
 
-  # Wipe out front of disk
-  rc_nohalt "dd if=/dev/zero of=${DISK} count=3000"
-
 };
 
 # Function to export all zpools before starting an install
@@ -297,7 +294,6 @@ stop_all_gmirror()
       rc_nohalt "gmirror remove $gprov $rmDisk"
       rc_nohalt "gmirror deactivate $gprov $rmDisk"
       rc_nohalt "gmirror clear $rmDisk"
-      #rc_nohalt "dd if=/dev/zero of=/dev/${rmDisk} count=4096"
     done
   done
 };
@@ -417,21 +413,30 @@ setup_disk_slice()
       if [ "${PTYPE}" = "free" ]
       then
         # Lets figure out what number this slice will be
-        LASTSLICE="`gpart show ${DISK} \
-          | grep -v ${DISK} \
+	gDISK=`echo $DISK | sed 's|/dev/||g'`
+        LASTSLICE="`gpart show ${gDISK} \
+          | grep -v ${gDISK} \
           | grep -v ' free' \
           | tr -s '\t' ' ' \
           | cut -d ' ' -f 4 \
           | sed '/^$/d' \
           | tail -n 1`"
-
         if [ -z "${LASTSLICE}" ]
         then
           LASTSLICE="1"
         else
-            LASTSLICE=$((LASTSLICE+1))
+          LASTSLICE=`expr $LASTSLICE + 1`
         fi
 
+        # Set if we are doing GPT/MBR
+	gpart show $gDISK | grep -q "GPT"
+        if [ $? -eq 0 ] ; then
+          LASTSLICETYPE="GPT"
+        else
+          LASTSLICETYPE="MBR"
+        fi
+        # Set that we are doing free space only
+	FREESPACEINSTALL="1"
       fi
     fi
 
@@ -501,11 +506,11 @@ setup_disk_slice()
               gmnum=$((gmknum+1))
             fi
 
-            if [ "$PSCHEME" = "MBR" -o -z "$PSCHEME" ] ; then
-              PSCHEME="MBR"
-              tmpSLICE="${DISK}s1"  
-            else
+            if [ "$PSCHEME" = "GPT" -o -z "$PSCHEME" ] ; then
+              PSCHEME="GPT"
               tmpSLICE="${DISK}p1"  
+            else
+              tmpSLICE="${DISK}s1"  
             fi
 
 	    if [ `uname -m` = "powerpc" -o `uname -m` = "powerpc64" ]
@@ -532,8 +537,21 @@ setup_disk_slice()
             ;;
 
           free)
-            tmpSLICE="${DISK}s${LASTSLICE}"
+	    # We can't take for granted what
+	    # the next partition number is. It could be
+	    # something in-between other partitions
+	    LASTSLICE=$(get_next_part "$DISK")
             run_gpart_free "${DISK}" "${LASTSLICE}" "${BMANAGER}"
+            gpart show ${DISK} | head -n 1 | grep -q MBR
+            if [ $? -eq 0 ] ; then
+              tmpSLICE="${DISK}s${LASTSLICE}"
+	    else
+	      if [ $LASTSLICE -eq 1 ] ; then
+                tmpSLICE="${DISK}p2"
+              else
+                tmpSLICE="${DISK}p${LASTSLICE}"
+              fi
+            fi
             ;;
 
           image)
@@ -669,26 +687,32 @@ init_gpt_full_disk()
 
   echo_log "Running gpart on ${_intDISK}"
   rc_halt "gpart create -s GPT -f active ${_intDISK}"
-  
+
   if [ "${_intBOOT}" = "GRUB" ] ; then
     touch ${TMPDIR}/.grub-full-gpt
-    # Check the boot mode we are using {pc|efi}
-    BOOTMODE=`kenv grub.platform`
-    if [ "$BOOTMODE" = "efi" ]; then
-      # Need to enable EFI booting, lets create the stupid FAT partition
-      rc_halt "gpart add -s 100M -t efi ${_intDISK}"
-      # Doing a GRUB stamp? Lets save it for post-install
-      echo "${_intDISK}" >> ${TMPDIR}/.grub-install
+    echo "${_intDISK}" >> ${TMPDIR}/.grub-install
+  fi
+
+  BOOTMODE=`sysctl -n machdep.bootmethod`
+  # Check the boot mode we are using {pc|efi}
+  if [ "$BOOTMODE" = "UEFI" ]; then
+    # Need to enable EFI booting, lets add the partition
+    rc_halt "gpart add -s 100M -t efi ${_intDISK}"
+    rc_halt "newfs_msdos -F 16 ${_intDISK}p1"
+    if [ -z "${EFI_POST_SETUP}" ] ; then
+      EFI_POST_SETUP="${_intDISK}"
     else
-      # Doing bios-boot partition
-      rc_halt "gpart add -s 1M -t bios-boot ${_intDISK}"
-      # Doing a GRUB stamp? Lets save it for post-install
-      echo "${_intDISK}" >> ${TMPDIR}/.grub-install
+      EFI_POST_SETUP="${EFI_POST_SETUP} ${_intDISK}"
     fi
   else
-    rc_halt "gpart add -s 128 -t freebsd-boot ${_intDISK}"
-    echo_log "Stamping boot sector on ${_intDISK}"
-    rc_halt "gpart bootcode -b /boot/pmbr ${_intDISK}"
+    if [ "${_intBOOT}" = "GRUB" ] ; then
+      # Doing bios-boot partition
+      rc_halt "gpart add -s 1M -t bios-boot ${_intDISK}"
+    else
+      rc_halt "gpart add -s 128 -t freebsd-boot ${_intDISK}"
+      echo_log "Stamping boot sector on ${_intDISK}"
+      rc_halt "gpart bootcode -b /boot/pmbr ${_intDISK}"
+    fi
   fi
 
 }
@@ -718,9 +742,6 @@ init_mbr_full_disk()
   echo_log "Running gpart add on ${_intDISK}"
   rc_halt "gpart add -b 2048 -a 4k -t freebsd -i 1 ${_intDISK}"
   sleep 2
-  
-  echo_log "Cleaning up ${_intDISK}s1"
-  rc_halt "dd if=/dev/zero of=${_intDISK}s1 count=1024"
   
   # Make the partition active
   rc_halt "gpart set -a active -i 1 ${_intDISK}"
@@ -789,20 +810,25 @@ run_gpart_gpt_part()
 
   # We only install boot-loader if using GRUB for dual-boot GPT
   if [ "${_intBOOT}" = "GRUB" ] ; then
-    # Check if the first partition is a bios-boot partition and convert if not
-    gpart show $DISK | grep ' 1 ' | grep -q bios-boot
-    if [ $? -ne 0 ] ; then
-      rc_halt "gpart modify -t bios-boot -i 1 ${DISK}"
-    fi
     # Doing a GRUB stamp? Lets save it for post-install
     grep -q "$DISK" ${TMPDIR}/.grub-install 2>/dev/null
     if [ $? -ne 0 ] ; then
       echo "${DISK}" >> ${TMPDIR}/.grub-install
     fi
+  else
+    # Setting boot for GhostBSD utile grub support is part of the Project.
+    rc_halt "gpart bootcode -b /boot/pmbr ${DISK}"
   fi
 
-  # Add the slice with the :mod tag, so we know we are modifying only
-  slice=`echo "${1}:${3}:gpt:mod" | sed 's|/|-|g'`
+  # Adding slice information
+  if [ "${INSTALLTYPE}" = "GhostBSD" ]
+  then
+    # No slice modification for GhostBSD
+    slice=`echo "${1}:${3}:gpt" | sed 's|/|-|g'`
+  else
+    # Add the slice with the :mod tag, so we know we are modifying only
+    slice=`echo "${1}:${3}:gpt:mod" | sed 's|/|-|g'`
+  fi
 
   # Let's save the slices
   if [ -z "$WORKINGSLICES" ]
@@ -849,10 +875,6 @@ run_gpart_slice()
   rc_halt "gpart modify -t freebsd -i ${slicenum} ${DISK}"
   sleep 2
 
-  # Clean up old partition
-  echo_log "Cleaning up $slice"
-  rc_halt "dd if=/dev/zero of=${DISK}s${slicenum} count=1024"
-
   sleep 1
 
   if [ "${BMANAGER}" = "BSD" ]; then
@@ -885,8 +907,7 @@ run_gpart_free()
 {
   DISK=$1
   SLICENUM=$2
-  if [ -n "$3" ]
-  then
+  if [ -n "$3" ]; then
     BMANAGER="$3"
   fi
 
@@ -894,26 +915,31 @@ run_gpart_free()
   sysctl kern.geom.debugflags=16 >>${LOGOUT} 2>>${LOGOUT}
   sysctl kern.geom.label.disk_ident.enable=0 >>${LOGOUT} 2>>${LOGOUT}
 
-  slice="${DISK}s${SLICENUM}"
-  slicenum="${SLICENUM}" 
-
-  # Working on the first slice, make sure we have GPT setup
+  # Working on the first slice, make sure we have a partition scheme setup
   gpart show ${DISK} >/dev/null 2>/dev/null
   if [ $? -ne 0 -a "$SLICENUM" = "1" ] ; then
-    echo_log "Initializing disk, no existing GPT setup"
+    echo_log "Initializing disk, no existing partition scheme"
     rc_halt "gpart create -s gpt ${DISK}"
   fi
 
   gpart show ${DISK} | head -n 1 | grep -q MBR
   if [ $? -eq 0 ] ; then
-     tag="freembr"
+    tag="freembr"
+    slice="${DISK}s${SLICENUM}"
   else
-     tag="freegpt"
+    tag="freegpt"
+    slice="${DISK}p${SLICENUM}"
   fi
 
   # Check if on MBR and have >4 slices
   if [ "$tag" = "freembr" -a $SLICENUM -gt 4 ]; then
-      exit_err "ERROR: BSD only supports 4 MBR primary partitions, and there are none available on $DISK"
+    exit_err "ERROR: BSD only supports 4 MBR primary partitions, and there are none available on $DISK"
+  fi
+
+  if [ "$tag" = "freegpt" -a "$SLICENUM" -eq 1 ] ; then
+    # Doing bios-boot partition
+    rc_halt "gpart add -s 1M -t bios-boot ${DISK}"
+    SLICENUM="2"
   fi
 
   if [ "${BMANAGER}" = "BSD" ]; then
@@ -926,12 +952,23 @@ run_gpart_free()
 
   slice=`echo "${DISK}:${SLICENUM}:${tag}" | sed 's|/|-|g'`
   # Lets save our slice, so we know what to look for in the config file later on
-  if [ -z "$WORKINGSLICES" ]
-  then
+  if [ -z "$WORKINGSLICES" ]; then
     WORKINGSLICES="${slice}"
     export WORKINGSLICES
   else
     WORKINGSLICES="${WORKINGSLICES} ${slice}"
     export WORKINGSLICES
   fi
+};
+
+get_next_part()
+{
+  local nextnum="1"
+  while :
+  do
+    gpart show $1 | grep -v "GPT" | grep -v "MBR" | awk '{print $2 " " $3 " " $4}'| grep -q " ${nextnum} "
+    if [ $? -ne 0 ] ; then break; fi
+    nextnum=$(expr $nextnum + 1)
+  done
+  echo $nextnum
 };

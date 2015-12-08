@@ -65,7 +65,6 @@ src-sh/pbi-manager/fontconfig/
 src-sh/pbi-manager/pbime/pbirun32
 src-sh/pc-systemflag/install
 src-sh/pc-extractoverlay/install
-src-webui/appweb/install
 src-sh/syscache/client/Makefile
 src-sh/syscache/client/syscache
 src-sh/syscache/daemon/Makefile
@@ -133,4 +132,4 @@ src-sh/pcbsd-utils/pc-sysconfig/client/Makefile
 src-sh/pcbsd-utils/pc-sysconfig/client/pc-sysconfig
 src-sh/pcbsd-utils/pc-sysconfig/daemon/Makefile
 src-sh/pcbsd-utils/pc-sysconfig/daemon/pc-sysconfig-daemon
-
+pc-netmanager/src/Makefile

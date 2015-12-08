@@ -122,8 +122,14 @@ void LPConfig::loadDatasetConfiguration(QString dataset, bool replicated, bool s
     else if(scrubDay == 5) {  ui->combo_scrub_day_week->setCurrentIndex(4); }
     else if(scrubDay == 6) {  ui->combo_scrub_day_week->setCurrentIndex(5); }
     else { ui->combo_scrub_day_week->setCurrentIndex(6); }
-  }else{
+  }else if(scrubSchedule=="monthly"){
     ui->combo_scrub_schedule->setCurrentIndex(2);
+    ui->spin_scrub_day_month->setMaximum(28);
+    ui->spin_scrub_day_month->setValue(scrubDay);
+  }else{
+    //daily interval (in the "scrubDay" field)
+    ui->combo_scrub_schedule->setCurrentIndex(3);
+    ui->spin_scrub_day_month->setMaximum(999);
     ui->spin_scrub_day_month->setValue(scrubDay);
   }
   ui->time_scrub->setTime( QTime(scrubTime, 0) );
@@ -197,8 +203,11 @@ void LPConfig::checkForChanges(){
       else if(ui->combo_scrub_day_week->currentIndex() == 4){ nScrubDay = 5; }
       else if(ui->combo_scrub_day_week->currentIndex() == 5){ nScrubDay = 6; }
       else{ nScrubDay = 7; }
-    }else{
+    }else if(scrubschint ==2){
       nScrubSchedule = "monthly";
+      nScrubDay = ui->spin_scrub_day_month->value();
+    }else{ 
+      nScrubSchedule = "days";
       nScrubDay = ui->spin_scrub_day_month->value();
     }
 
@@ -216,8 +225,8 @@ void LPConfig::checkForChanges(){
   newHosts.clear(); remHosts.clear();
   for(int i=0; i<origHosts.length(); i++){
     bool found = false;
-    for(int j=0; j<remoteHosts.length(); j++){
-      if( origHosts[i] == remoteHosts[j].host() ){ found = true; break;}
+    for(int j=0; j<remoteHosts.length() && !found; j++){
+      if( origHosts[i] == remoteHosts[j].host() ){ found = true; }
     }
     if(!found){ remHosts << origHosts[i]; } //Was removed
   }
@@ -225,6 +234,7 @@ void LPConfig::checkForChanges(){
     if( !origHosts.contains(remoteHosts[j].host()) ){ newHosts << remoteHosts[j].host(); }
   }
   newHosts.removeDuplicates();
+  if(!newHosts.isEmpty() || !remHosts.isEmpty()){ remoteChanged = true; }
   
   //Now apply any changes to the exclude lists
   QStringList tmp;
@@ -299,9 +309,15 @@ void LPConfig::UpdateScrubUI(){
   //Adjust whether the day of week box is enabled
   ui->combo_scrub_day_week->setEnabled( (index == 1) && active);
   //Adjust whether the day of month box is enabled
-  ui->spin_scrub_day_month->setEnabled( (index == 2) && active);
-  // Always make time box enabled
-  ui->time_scrub->setEnabled(active);
+  ui->spin_scrub_day_month->setEnabled( (index >= 2) && active);
+  // Always make time box enabled if not a daily interval
+  ui->time_scrub->setEnabled( (index<3) && active);
+  //hide all the "time" UI elements if an interval of days is selected (just looks strange otherwise)
+  ui->combo_scrub_day_week->setVisible(index<3);
+  ui->time_scrub->setVisible(index<3);
+  ui->label_2->setVisible(index<3); //label
+  ui->label_4->setVisible(index<3); //label
+  ui->label_6->setVisible(index<3); //label
 }
 
 void LPConfig::on_combo_remote_schedule_currentIndexChanged(int index){
@@ -414,18 +430,15 @@ void LPConfig::AddRepHost(){
   //Ask the user to select a target
   QStringList targets;
   for(int i=0; i<targs.length(); i++){
-    targets << targs[i].section(":::",0,0);
+    targets << targs[i].section(":::",0,0) +" (port "+targs[i].section(":::",2,2)+")";
   }
   targets.removeDuplicates(); //remove any duplicates
-  char chost[_POSIX_HOST_NAME_MAX];
-  gethostname(chost, _POSIX_HOST_NAME_MAX);
-  QString host = QString::fromLocal8Bit( chost );
-  //qDebug() << "Hostname:" << host;
-  targets.removeAll( host ); //remove the local system from the list
-  if(targets.isEmpty()){ targets << ""; }
-  bool ok;
-  QString target = QInputDialog::getItem(this, tr("Identify Replication Target"), tr("Detected Hostname or custom IP:"), targets, 0, true, &ok);
-  if(!ok || target.isEmpty() ){ return; } //cancelled
+  targets << tr("<Custom IP>");
+  
+    bool ok;
+    QString target = QInputDialog::getItem(this, tr("Identify Replication Target"), tr("Detected Hostname or custom IP:"), targets, 0, true, &ok);
+    if(!ok || target.isEmpty() ){ return; } //cancelled
+  if(target.contains(" (")){ target = target.section("(",0,0).simplified(); } //remove any comment/info from the end
   //Now look for that target in the list of info
   LPRepHost H;
   for(int i=0; i<targs.length(); i++){

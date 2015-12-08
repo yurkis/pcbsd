@@ -85,6 +85,21 @@ share/PCDM/themes/default/previousDE.png
 share/PCDM/themes/default/splashscreen.png
 share/PCDM/themes/default/system.png
 share/PCDM/themes/default/virtualkeyboard.png
+share/PCDM/themes/enterprise/background.jpg
+share/PCDM/themes/enterprise/banner.png
+share/PCDM/themes/enterprise/default-desktop.png
+share/PCDM/themes/enterprise/default-user.png
+share/PCDM/themes/enterprise/enterprise.theme
+share/PCDM/themes/enterprise/keyboardlayout.png
+share/PCDM/themes/enterprise/localechange.png
+share/PCDM/themes/enterprise/login-stealth.png
+share/PCDM/themes/enterprise/login.png
+share/PCDM/themes/enterprise/nextDE.png
+share/PCDM/themes/enterprise/password.png
+share/PCDM/themes/enterprise/previousDE.png
+share/PCDM/themes/enterprise/splashscreen.png
+share/PCDM/themes/enterprise/system.png
+share/PCDM/themes/enterprise/virtualkeyboard.png
 share/applications/EasyPBI.desktop
 share/applications/about.desktop
 share/applications/fwmanager.desktop
@@ -97,7 +112,6 @@ share/applications/pcbugreport.desktop
 share/applications/pccontrol.desktop
 share/applications/pc-pdfviewer.desktop
 share/applications/pcsyskeyboard.desktop
-share/applications/warden.desktop
 share/applications/softmanager.desktop
 share/apps/ksplash/Themes/pcbsd10/1024x768/background.png
 share/apps/ksplash/Themes/pcbsd10/1280x1024/background.png
@@ -139,6 +153,7 @@ share/pcbsd/icons/input-keyboard.png
 share/pcbsd/icons/ldap.png
 share/pcbsd/icons/mythtv.png
 share/pcbsd/icons/pc-bootconfig.png
+share/pcbsd/icons/pc-dmconf.png
 share/pcbsd/icons/pcbsd-handbook.png
 share/pcbsd/icons/preferences-desktop-theme.png
 share/pcbsd/icons/preferences-desktop.png
@@ -156,6 +171,7 @@ share/pcbsd/pc-controlpanel/icons/cups-icon.png
 share/pcbsd/pc-controlpanel/icons/devices.png
 share/pcbsd/pc-controlpanel/icons/easypbi.png
 share/pcbsd/pc-controlpanel/icons/hwinfo.png
+share/pcbsd/pc-controlpanel/icons/kde-cron.png
 share/pcbsd/pc-controlpanel/icons/lifepreserver.png
 share/pcbsd/pc-controlpanel/icons/lifepreserver64x64.png
 share/pcbsd/pc-controlpanel/icons/nvidia-settings.png
@@ -181,7 +197,8 @@ share/pcbsd/pc-controlpanel/items/de/kde-desktop.desktop
 share/pcbsd/pc-controlpanel/items/de/kde-desktoptheme.desktop
 share/pcbsd/pc-controlpanel/items/de/kde-display.desktop
 share/pcbsd/pc-controlpanel/items/de/kde-kcm_akonadi.desktop
-share/pcbsd/pc-controlpanel/items/de/kde-kcm_nepomuk.desktop
+share/pcbsd/pc-controlpanel/items/de/kde-kcm_baloofile.desktop
+share/pcbsd/pc-controlpanel/items/de/kde-kcm_cron.desktop
 share/pcbsd/pc-controlpanel/items/de/kde-kcmkded.desktop
 share/pcbsd/pc-controlpanel/items/de/kde-kwincompositing.desktop
 share/pcbsd/pc-controlpanel/items/de/kde-kwindecoration.desktop
@@ -254,6 +271,7 @@ share/pcbsd/pc-controlpanel/items/system/gnome-system-log.desktop
 share/pcbsd/pc-controlpanel/items/system/ibus-setup.desktop
 share/pcbsd/pc-controlpanel/items/system/kde-clock.desktop
 share/pcbsd/pc-controlpanel/items/system/kde-kcm_polkitactions.desktop
+share/pcbsd/pc-controlpanel/items/system/kde-sys_kcm_cron.desktop
 share/pcbsd/pc-controlpanel/items/system/ksystemlog.desktop
 share/pcbsd/pc-controlpanel/items/system/lxde-lxtask.desktop
 share/pcbsd/pc-controlpanel/items/system/pc-adsldap.desktop
@@ -268,7 +286,6 @@ share/pcbsd/pc-controlpanel/items/tools/flash-player-properties.desktop
 share/pcbsd/pc-controlpanel/items/tools/kde-kcmdf.desktop
 share/pcbsd/pc-controlpanel/items/tools/lifepreserver.desktop
 share/pcbsd/pc-controlpanel/items/tools/pcbugreport.desktop
-share/pcbsd/pc-controlpanel/items/tools/warden.desktop
 share/pcbsd/pc-controlpanel/items/tools/x11vnc.desktop
 share/pcbsd/pc-hwdetect/agp.xml
 share/pcbsd/pc-hwdetect/audio.xml
@@ -463,7 +480,9 @@ share/pcbsd/xorg-gui/templates/header/vmware.xorg.conf
 share/pcbsd/xorg-gui/templates/header/vmwlegacy.xorg.conf
 share/pcbsd/xorg-gui/templates/header/xorg.conf.generic
 share/pcbsd/xorg-gui/templates/scripts/README
+share/pcbsd/xstartup/disable-beep.sh
 share/pcbsd/xstartup/enable-ibus.sh
+share/pcbsd/xstartup/enable-xprofile.sh
 share/pcbsd/xstartup/gpg-agent.sh
 share/pcbsd/xstartup/ssh-agent.sh
 share/wallpapers/FreeBSD/a_1280x1024.jpg
@@ -490,6 +509,7 @@ share/wallpapers/PCBSD/PCBSD_10_Joule_WP_1920x1080_v2.jpg
 share/wallpapers/PCBSD/PCBSD_10_Joule_WP_1920x1200_v2.jpg
 share/wallpapers/PCBSD/PCBSD_10_Joule_WP_600x400_v2.jpg
 share/wallpapers/PCBSD/PCBSD_10_Joule_WP_800x600_v2.jpg
+share/wallpapers/PCBSD/PCBSD_Enterprise_WP_1920x1080.jpg
 share/wallpapers/PCBSD/a2_1280x1024.jpg
 share/wallpapers/PCBSD/a_1280x1024.jpg
 share/wallpapers/PCBSD/b_1280x1024.jpg
@@ -512,5 +532,3 @@ share/wallpapers/pcbsd10-default/contents/images/1920x1200.jpg
 share/wallpapers/pcbsd10-default/contents/images/800x600.jpg
 share/wallpapers/pcbsd10-default/contents/screenshot.jpg
 share/wallpapers/pcbsd10-default/metadata.desktop
-share/warden/bin/warden-gui
-share/warden/images/warden.png

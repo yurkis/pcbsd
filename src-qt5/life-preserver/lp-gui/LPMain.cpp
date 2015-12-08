@@ -57,7 +57,7 @@ LPMain::LPMain(QWidget *parent) : QMainWindow(parent), ui(new Ui::LPMain){
   //Connect the Menu buttons
   connect(ui->menuManage_Pool, SIGNAL(triggered(QAction*)), this, SLOT(menuAddPool(QAction*)) );
   connect(ui->menuUnmanage_Pool, SIGNAL(triggered(QAction*)), this, SLOT(menuRemovePool(QAction*)) );
-  connect(ui->menuEnable_Offsite_Backups, SIGNAL(triggered(QAction*)), this, SLOT(menuSetupISCSI(QAction*)) );
+  //connect(ui->menuEnable_Offsite_Backups, SIGNAL(triggered(QAction*)), this, SLOT(menuSetupISCSI(QAction*)) );
   connect(ui->action_SaveKeyToUSB, SIGNAL(triggered()), this, SLOT(menuSaveSSHKey()) );
   connect(ui->actionClose_Window, SIGNAL(triggered()), this, SLOT(menuCloseWindow()) );
   connect(ui->menuCompress_Home_Dir, SIGNAL(triggered(QAction*)), this, SLOT(menuCompressHomeDir(QAction*)) );
@@ -72,6 +72,7 @@ LPMain::LPMain(QWidget *parent) : QMainWindow(parent), ui(new Ui::LPMain){
   connect(ui->menuDelete_Snapshot, SIGNAL(triggered(QAction*)), this, SLOT(menuRemoveSnapshot(QAction*)) );
   connect(ui->menuStart_Replication, SIGNAL(triggered(QAction*)), this, SLOT(menuStartReplication(QAction*)) );
   connect(ui->menuInit_Replications, SIGNAL(triggered(QAction*)), this, SLOT(menuInitReplication(QAction*)) );
+  connect(ui->menuReset_Replication_Password, SIGNAL(triggered(QAction*)), this, SLOT(menuResetReplicationPassword(QAction*)) );
   //Update the interface
   QTimer::singleShot(0,this,SLOT(updatePoolList()) );
   
@@ -179,13 +180,13 @@ void LPMain::updatePoolList(){
   }
   ui->menuManage_Pool->setEnabled( !ui->menuManage_Pool->isEmpty() );
   ui->menuUnmanage_Pool->clear();
-  ui->menuEnable_Offsite_Backups->clear();
+  //ui->menuEnable_Offsite_Backups->clear();
   for( int i=0; i<pools.length(); i++){
     ui->menuUnmanage_Pool->addAction(pools[i]);
-    ui->menuEnable_Offsite_Backups->addAction(pools[i]);
+    //ui->menuEnable_Offsite_Backups->addAction(pools[i]);
   }
   ui->menuUnmanage_Pool->setEnabled( !ui->menuUnmanage_Pool->isEmpty() );
-  ui->menuEnable_Offsite_Backups->setEnabled( !ui->menuEnable_Offsite_Backups->isEmpty() );
+  //ui->menuEnable_Offsite_Backups->setEnabled( !ui->menuEnable_Offsite_Backups->isEmpty() );
   qDebug() << "[DEBUG] Update user menus";
   //Now update the user's that are available for home-dir packaging
   QDir hdir("/usr/home");
@@ -225,6 +226,7 @@ void LPMain::updateTabs(){
   //qDebug() << "Update Tabs" << poolSelected;
   qDebug() << "[DEBUG] start updateTabs():" << poolSelected;
   viewChanged();
+  ui->tabWidget->setCurrentWidget(ui->tab_status);
   ui->tabWidget->setEnabled(poolSelected);
   ui->menuView->setEnabled(poolSelected);	
   ui->menuDisks->setEnabled(poolSelected); 
@@ -274,12 +276,15 @@ void LPMain::updateTabs(){
     QStringList repHosts = POOLDATA.repHost;
     ui->menuStart_Replication->clear();
     ui->menuInit_Replications->clear();
+    ui->menuReset_Replication_Password->clear();
     for(int i=0; i<repHosts.length(); i++){
       ui->menuStart_Replication->addAction( repHosts[i] );
       ui->menuInit_Replications->addAction( repHosts[i] );
+      ui->menuReset_Replication_Password->addAction( repHosts[i] );
     }
     ui->menuStart_Replication->setEnabled( !ui->menuStart_Replication->isEmpty() );
     ui->menuInit_Replications->setEnabled( !ui->menuInit_Replications->isEmpty() );
+    ui->menuReset_Replication_Password->setEnabled( !ui->menuReset_Replication_Password->isEmpty() );
     //Now update the disk menu items
     ui->menuRemove_Disk->clear();
     ui->menuSet_Disk_Offline->clear();
@@ -408,47 +413,52 @@ void LPMain::setFileVisibility(){
 }
 
 void LPMain::restoreFiles(){
-  QString filePath = fsModel->filePath( ui->treeView->currentIndex() );
-  qDebug() << " Restore file(s):" << filePath;
-  QFileInfo info(filePath);	
-  QString destDir = filePath;
+  QModelIndexList sel = ui->treeView->selectionModel()->selectedIndexes();
+
+  //The treeView will return one index per column/line, not one per file
+  QStringList oldfiles;	
+  for(int i=0; i<sel.length(); i++){ oldfiles << fsModel->filePath(sel[i]); }
+  oldfiles.removeDuplicates();
+  
+  QStringList errors, newfiles;
+  //Loop over the entire selection and revert all of them
+  for(int i=0; i<oldfiles.length(); i++){
+    QString filePath = oldfiles[i];
+    qDebug() << " Restore file(s):" << filePath;
+    QFileInfo info(filePath);	
+    QString destDir = filePath;
 	destDir.remove("/.zfs/snapshot/"+ui->label_snapshot->text().section("(",0,0).simplified());
 	destDir.chop( filePath.section("/",-1).size()+1 ); //get rid of the filename at the end
 	while(!QFile::exists(destDir)){ destDir.chop( destDir.section("/",-1).size() +1); }
-  QString newFilePath = destDir+"/"+LPGUtils::generateReversionFileName(filePath, destDir);
+    QString newFilePath = destDir+"/"+LPGUtils::generateReversionFileName(filePath, destDir);
   //qDebug() << "Destination:" << newFilePath;
   //Perform the reversion(s)
-  QStringList errors;
-  if( info.isDir() ){
-    //Is a directory
-    showWaitBox( QString(tr("Restoring Directory: %1")).arg(newFilePath) );
-    errors = LPGUtils::revertDir(filePath, newFilePath);
-    hideWaitBox();
-    if(!errors.isEmpty()){
-      qDebug() << "Failed Reversions:" << errors;
-      errors.prepend(tr("File destination(s) that could not be restored:")+"\n");
-      showErrorDialog(tr("Reversion Error"), tr("Some files could not be restored from the snapshot."), errors.join("\n") );
+    if( info.isDir() ){
+      //Is a directory
+      showWaitBox( QString(tr("Restoring Directory: %1")).arg(newFilePath) );
+      QStringList tmperrors = LPGUtils::revertDir(filePath, newFilePath);
+      if(!tmperrors.isEmpty()){
+        qDebug() << "Failed Reversions:" << tmperrors;
+        errors << tmperrors;
+      }
     }else{
-      qDebug() << "Reversion successful";	    
-      QMessageBox::information(this,tr("Restore Successful"),QString(tr("The following directory was succesfully restored: %1")).arg(newFilePath) );
-    }
+      //Just a single file
+      showWaitBox( QString(tr("Restoring file: %1")).arg(newFilePath) );
+      bool ok = LPGUtils::revertFile(filePath, newFilePath);
+      if( !ok ){
+        qDebug() << "Failed Reversion:" << newFilePath;
+	errors << newFilePath;
+      }
+    }	 
+  } //end loop over files/dirs to revert    
+  
+  //Now show the message box about any errors
+  hideWaitBox();
+  if(errors.isEmpty()){
+    showErrorDialog(tr("Reversion Error"), tr("Some file(s) could not be restored from the snapshot."), errors.join("\n") );
   }else{
-    //Just a single file
-    showWaitBox( QString(tr("Restoring file: %1")).arg(newFilePath) );
-    bool ok = LPGUtils::revertFile(filePath, newFilePath);
-    hideWaitBox();
-    if( !ok ){
-      qDebug() << "Failed Reversion:" << newFilePath;
-      errors << QString(tr("Snapshot file: %1")).arg(filePath);
-      errors << QString(tr("Destination: %1")).arg(newFilePath);
-      errors << tr("Please check that the destination directory exists and is writable");
-      showErrorDialog(tr("Reversion Error"), tr("The file could not be restored from the snapshot."), errors.join("\n") );
-    }else{
-      qDebug() << "Reversion successful";
-      QMessageBox::information(this,tr("Restore Successful"),QString(tr("The following file was succesfully restored: %1")).arg(newFilePath) );
-    }
-  }	  
-	
+    QMessageBox::information(this,tr("Restore Successful"),tr("The file(s) were succesfully restored") );
+  }
 }
 
 void LPMain::openConfigGUI(){
@@ -637,12 +647,12 @@ void LPMain::menuSaveSSHKey(){
   }
 }
 
-void LPMain::menuSetupISCSI(QAction *act){
+/*void LPMain::menuSetupISCSI(QAction *act){
   QString ds = act->text(); //this is the zpool
   LPISCSIWizard dlg(this, ds);
     dlg.exec();
 
-}
+}*/
 
 void LPMain::menuCloseWindow(){
   this->close();
@@ -892,4 +902,23 @@ void LPMain::menuInitReplication(QAction* act){
   qDebug() << "Running Command:" << cmd;
   QProcess::startDetached(cmd);
   QMessageBox::information(this, tr("Replication Triggered"), tr("A replication has been queued up for this dataset"));
+}
+
+void LPMain::menuResetReplicationPassword(QAction* act){
+  QString pool = ui->combo_pools->currentText();
+  QString host = act->text();
+  if(host.isEmpty()){ return; } //invalid
+  //Now we need to find the info about this replication host before doing anything
+  QList<LPRepHost> info = LPBackend::replicationInfo(pool);
+  for(int i=0; i<info.length(); i++){
+    if(info[i].host()==host){
+      if(info[i].dataset()=="ISCSI"){
+	QMessageBox::warning(this,tr("Invalid Target"),tr("This is an ISCSI replication target and does not use an SSH password."));
+      }else{
+        bool ok = LPBackend::setupSSHKey(info[i].host(), info[i].user(), info[i].port());
+        if(ok){ QMessageBox::information(this,tr("Reminder"),tr("Don't forget to save your SSH key to a USB stick so that you can restore your system from the remote host later!!")); }	      
+      }	    
+      return;
+    }
+  }
 }

@@ -2,6 +2,7 @@
 #include "ui_configDlg.h"
 
 #include <QUrl>
+#include <QRegExp>
 
 ConfigDlg::ConfigDlg(QWidget *parent) : QDialog(parent), ui(new Ui::ConfigDlg()){
   ui->setupUi(this);
@@ -107,10 +108,16 @@ void ConfigDlg::SaveConfig(){
         contents << "port = 8885";
         contents << "ssl = false";
       }else{
+        QString port = QString::number(ui->spinPort->value());
         contents << "remote = true";
-        contents << "port = "+QString::number(ui->spinPort->value());
+        contents << "port = "+port;
         contents << "ssl = true"; //always require user/pass if enabled with this utility
         contents << "mode = desktop"; //must be desktop since using this utility
+        //Make sure the firewall port is open for remote access
+        cmds << "if [ \"`grep \'"+port+"\' /etc/ipfw.openports`\" == \"\" ]; then"; //see if the port is already open
+        cmds << "  echo \"ip4 "+port+"\" >> /etc/ipfw.openports"; //open the port
+        cmds << "  sh /etc/ipfw.rules"; //reload firewall rules
+        cmds << "fi";
       }
       // Save the contents to a temporary file
       saveFile("/tmp/appcafe.conf", contents);
@@ -129,7 +136,7 @@ void ConfigDlg::SaveConfig(){
     cmds << "pkg update -f";
     cmds << "syscache startsync"; //resync the syscache info now
   }
-  
+  qDebug() << "Commands to run:\n" << cmds.join("\n");
   if(!cmds.isEmpty()){
     cmds.prepend("#/bin/sh");
     saveFile("/tmp/.appscriptrun.sh", cmds);
@@ -139,6 +146,7 @@ void ConfigDlg::SaveConfig(){
     if(QFile::exists("/tmp/pcbsd.conf")){ QFile::remove("/tmp/pcbsd.conf"); }
     QFile::remove("/tmp/.appscriptrun.sh");
   }
+  qDebug() << "Saved Changes:" << savedChanges;
 }
 
 void ConfigDlg::loadPbiConf(){ //fill the UI with the current settings
@@ -148,7 +156,7 @@ void ConfigDlg::loadPbiConf(){ //fill the UI with the current settings
     if(contents[i].startsWith("PACKAGE_SET:")){
       QString val = contents[i].section(":",1,50).simplified();
       if(val=="EDGE"){ ui->radio_edge->setChecked(true); cRepo = val;}
-      if(val=="ENTERPRISE"){ ui->radio_enterprise->setChecked(true); cRepo = val;}
+      else if(val=="ENTERPRISE"){ ui->radio_enterprise->setChecked(true); cRepo = val;}
       else if(val=="PRODUCTION"){ ui->radio_production->setChecked(true); cRepo = val;}
       else if(val=="CUSTOM"){ ui->radio_custom->setChecked(true); cRepo = val;}
       else{ ui->radio_production->setChecked(true); cRepo = "PRODUCTION"; } //default to PRODUCTION
@@ -180,19 +188,35 @@ void ConfigDlg::loadPbiConf(){ //fill the UI with the current settings
 
 void ConfigDlg::savePbiConf(){ //save the current settings to file
   //Assemble the file contents
-  QStringList contents;
-  contents << "# PC-BSD Configuration Defaults";
-  contents << "";
+  QStringList contents = readFile("/usr/local/etc/pcbsd.conf");
+  if(contents.isEmpty()){
+    //generate the headers
+    contents << "# PC-BSD Configuration Defaults";
+    contents << "";
+  }
   QString pkgset = "PRODUCTION"; //default value (just in case)
   if(ui->radio_edge->isChecked()){ pkgset = "EDGE"; }
   else if(ui->radio_enterprise->isChecked()){ pkgset = "ENTERPRISE"; }
   else if(ui->radio_production->isChecked()){ pkgset = "PRODUCTION"; }
   else if(ui->radio_custom->isChecked()){ pkgset = "CUSTOM"; }
-  contents << "PACKAGE_SET: "+pkgset;
+  //Change the current setting if it exists
+    int index = contents.indexOf(QRegExp("PACKAGE_SET: *", Qt::CaseSensitive, QRegExp::WildcardUnix));
+    if(index < 0){
+      contents << "PACKAGE_SET: "+pkgset;
+    }else{
+      contents[index] = "PACKAGE_SET: "+pkgset;
+    }
+  
   if(pkgset.toLower()=="custom"){
     //Also set the custom url
     QString cURL = ui->listWidget->currentItem()->whatsThis();
-    contents << "PACKAGE_URL: "+cURL;
+    //Change the current setting if it exists
+    index = contents.indexOf(QRegExp("PACKAGE_URL: *", Qt::CaseSensitive, QRegExp::WildcardUnix));
+    if(index < 0){
+      contents << "PACKAGE_URL: "+cURL;
+    }else{
+      contents[index] = "PACKAGE_URL: "+cURL;
+    }
   }
   saveFile("/tmp/pcbsd.conf", contents);
 

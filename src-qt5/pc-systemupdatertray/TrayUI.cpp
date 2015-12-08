@@ -8,6 +8,8 @@
 #include <QInputDialog>
 #include <QPainter>
 
+#include <unistd.h>
+
 #include "dialogReminder.h"
 
 //PUBLIC
@@ -20,6 +22,10 @@ TrayUI::TrayUI() : QSystemTrayIcon(){
     connect(watcher, SIGNAL( fileChanged(QString) ), this, SLOT(watcherFileChange(QString)) ); //specific file changed
     connect(watcher, SIGNAL( directoryChanged(QString) ), this, SLOT(watcherDirChange()) ); //directory changed
 	
+  checkTimer = new QTimer(this);
+    checkTimer->setInterval(5*60000); //every 5 minutes
+    connect(checkTimer, SIGNAL(timeout()), this, SLOT(checkForUpdates()) );
+	
   //Create the Menu
   mainMenu = new QMenu();
     this->setContextMenu( mainMenu ); 
@@ -27,15 +33,15 @@ TrayUI::TrayUI() : QSystemTrayIcon(){
   //Populate the menu
   QAction *tmp = mainMenu->addAction(QIcon(":/images/updated.png"), tr("Start the Update Manager") );
 	tmp->setWhatsThis("sys");
-  mainMenu->addSeparator();
-  tmp = mainMenu->addAction(QIcon(":/images/appcafe.png"), tr("Start the AppCafe") );
-	tmp->setWhatsThis("pkg");
-  tmp = mainMenu->addAction(QIcon(":/images/warden.png"), tr("Start the Warden") );
-	tmp->setWhatsThis("warden");
-  mainMenu->addSeparator();
   tmp = mainMenu->addAction(QIcon(":/images/view-refresh.png"), tr("Check for Updates") );
 	tmp->setWhatsThis("update");
   mainMenu->addSeparator();
+  tmp = mainMenu->addAction(QIcon(":/images/appcafe.png"), tr("Start the AppCafe") );
+	tmp->setWhatsThis("pkg");
+  //tmp = mainMenu->addAction(QIcon(":/images/warden.png"), tr("Start the Warden") );
+	//tmp->setWhatsThis("warden");
+  mainMenu->addSeparator();
+
   // - Now the special checkboxes
   runAtStartup = new QCheckBox(tr("Run At Startup"));
     runAtStartup->setChecked(settings->value("/PC-BSD/SystemUpdater/runAtStartup",true).toBool() );
@@ -71,6 +77,7 @@ TrayUI::TrayUI() : QSystemTrayIcon(){
   UpdateAUNotice(); //make sure that we get an icon/info right away
   QTimer::singleShot(1000, this, SLOT(BackendResync()) ); //wait one second before prodding syscache to start a sync
   QTimer::singleShot(15000, this, SLOT(checkForUpdates()) ); //Wait 15 seconds to perform the first update check
+  checkTimer->start();
 }
 
 TrayUI::~TrayUI(){
@@ -140,7 +147,7 @@ void TrayUI::watcherFileChange(QString file){
 void TrayUI::checkForUpdates(){
   if(PerformingCheck){ return; } //Already checking
   PerformingCheck = true;
-  this->setIcon( QIcon(":/images/working.png") );
+  //this->setIcon( QIcon(":/images/working.png") );
   //Verify that the proper files/dirs are currently being watched
   if(watcher->directories().isEmpty()){ watcher->addPath(UPDATE_PROC_DIR); }
   if(watcher->files().isEmpty()){ watcher->addPaths( QStringList() << SYSCACHE_LOG_FILE << PCBSD_CONF_FILE ); }
@@ -188,6 +195,7 @@ void TrayUI::ShowMessage(){
     DialogReminder dlg;
     dlg.show();
     while(dlg.isVisible()){
+	usleep(100000); // 1/10 second pause (prevent overloading the CPU)
        QApplication::processEvents(); //keep the tray functioning during the message
     }
     int minutes = dlg.delayMinutes();

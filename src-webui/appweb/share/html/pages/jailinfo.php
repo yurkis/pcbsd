@@ -1,21 +1,41 @@
 <?php
 defined('DS') OR die('No direct access allowed.');
 
+  $jail = $_GET['jail'];
+
   if ( empty($jail) or $jail == "#system" )
      die("Invalid jail specified!");
 
-  exec("$sc ". escapeshellarg("jail $jail ipv4")
-       . " " . escapeshellarg("jail $jail ipv6")
-       , $jailinfo);
-  $jailipv4 = $jailinfo[0];
-  $jailipv6 = $jailinfo[1];
+  if ( $vimage == 1 )
+  {
+    $sccmd = array("jail $jail tag");
+    $response = send_sc_query($sccmd);
+    $jtag = $response["jail $jail tag"];
+
+    // Get IPv4
+    $dccmd = array("iocage getip4 $jail");
+    $response = send_dc_cmd($dccmd);
+    $jailipv4 = $response["iocage getip4 $jail"];
+
+    $dnic = "";
+  } else {
+    $sccmd = array("jail $jail ipv4",
+           "jail $jail ipv6",
+           "jail $jail tag"
+           );
+    $response = send_sc_query($sccmd);
+    $jailipv4 = $response["jail $jail ipv4"];
+    $dnic = strstr($jailipv4, "|", TRUE);
+    $jailipv4 = substr(strstr($jailipv4, "|"), 1);
+    $jailipv6 = $response["jail $jail ipv6"];
+    $jtag = $response["jail $jail tag"];
+  }
 
   // Get the default network interface for this jail
-  $dnic = run_cmd("iocage get ip4_addr $jail");
-  $dnic = strstr($dnic, "|", TRUE);
+  $defaultnic = exec("netstat -f inet -nrW | grep '^default' | awk '{ print $6 }'");
   if ( empty($dnic) )
-    $dnic = run_cmd("netstat -f inet -nrW | grep '^default' | awk '{ print $6 }'");
-  $jailnic = $dnic[0];
+    $dnic = $defaultnic;
+  $jailnic = $dnic;
 
   // Get the list of nics available
   $nics = get_nics();
@@ -26,7 +46,7 @@ defined('DS') OR die('No direct access allowed.');
      $postjailipv4 = $_POST['jailipv4'];
      $postjailnic = $_POST['jailnic'];
      if ( $postjailnic == "SYSDEFAULT" )
-        $postjailnic="";
+        $postjailnic=$defaultnic;
 
      // Has the IP changed?
      if ( $postjailipv4 != $jailipv4 )
@@ -39,8 +59,8 @@ defined('DS') OR die('No direct access allowed.');
      {
   	$jailnic = $postjailnic;
      }
-     run_cmd("iocage set ip4_addr=\"$postjailnic|$postjailipv4\" $jail");
-
+     $dccmd = array("iocage set ip4_addr=\"$postjailnic|$postjailipv4\" $jail");
+     send_dc_cmd($dccmd);
   }
 
 ?>
@@ -56,20 +76,24 @@ defined('DS') OR die('No direct access allowed.');
 <form method="post" action="?p=jailinfo&jail=<?php echo "$jailUrl"; ?>">
 <tr>
   <td>Jail Nickname</td>
-  <td><?php echo "$jail"; ?></td>
+  <td><?php echo "$jtag"; ?></td>
 </tr>
 <tr>
   <td>Jail IPv4 Address</td>
-  <td><input name="jailipv4" type="text" value="<?php echo "$jailipv4"; ?>" /></td>
+  <td>
+  <?php 
+    if ( $vimage == 1 ) {
+      echo "$jailipv4";
+    } else {
+      echo "<input name=\"jailipv4\" type=\"text\" value=\"$jailipv4\" />";
+    }
+  ?>
+  </td>
 </tr>
 <tr>
   <td>Network Interface</td>
   <td><select name="jailnic">
   <?php
-     if ( empty($jailnic) )
-       echo "<option value=\"SYSDEFAULT\" selected>System Default</option>";
-     else
-       echo "<option value=\"SYSDEFAULT\">System Default</option>";
      foreach($nics as $nic)
      {
        if ( $jailnic == $nic )

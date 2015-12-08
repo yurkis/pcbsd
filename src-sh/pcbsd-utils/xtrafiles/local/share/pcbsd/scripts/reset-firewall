@@ -42,24 +42,24 @@ cmd="ipfw -q add"
 
 # Check the state of packets
 ####################################################################
-\$cmd 00050 check-state
-\$cmd 00100 allow tcp from any to any established
-\$cmd 00110 allow udp from any to any established
+\$cmd 01000 check-state
+\$cmd 01050 allow tcp from any to any established
+\$cmd 01100 allow udp from any to any established
 ####################################################################
 
 # Allow all outgoing packets
 ####################################################################
-\$cmd 00150 allow ip from any to any out keep-state
-\$cmd 00151 allow ip6 from any to any out keep-state
-\$cmd 00152 allow ipv6-icmp from any to any keep-state
-\$cmd 00153 allow icmp from any to any keep-state
+\$cmd 02000 allow ip from any to any out keep-state
+\$cmd 02050 allow ip6 from any to any out keep-state
+\$cmd 02100 allow ipv6-icmp from any to any keep-state
+\$cmd 02150 allow icmp from any to any keep-state
 ####################################################################
 
 # Allow specific ports IN now
 # Add items to /etc/ipfw.openports in the format
 # {tcp|udp} <portnum>
 ####################################################################
-nextnum=200
+nextnum=10000
 if [ -e "/etc/ipfw.openports" ] ; then
   while read line
   do
@@ -74,9 +74,29 @@ if [ -e "/etc/ipfw.openports" ] ; then
 fi
 ####################################################################
 
+# Allow specific IPs incoming traffic now (Used for jails mainly)
+# Add items to /etc/ipfw.openip in the format
+# {ip4|ip6} <ip>
+####################################################################
+nextnum=20000
+if [ -e "/etc/ipfw.openip" ] ; then
+  while read line
+  do
+    echo \$line | grep -q "^#"
+    if [ \$? -eq 0 ] ; then continue ; fi
+    proto="\`echo \$line | awk '{print \$1}'\`"
+    ip="\`echo \$line | awk '{print \$2}'\`"
+    if [ -z "\$proto" -o -z "\$ip" ] ; then continue ; fi
+    \$cmd \$nextnum allow \$proto from any to \$ip in keep-state
+    nextnum=\`expr \$nextnum + 1\`
+  done < /etc/ipfw.openip
+fi
+####################################################################
+
+
 # Deny all other incoming troublemakers
 ####################################################################
-\$cmd 01500 deny log all from any to any
+\$cmd 64000 deny log all from any to any
 ####################################################################
 
 # Check for user custom rules

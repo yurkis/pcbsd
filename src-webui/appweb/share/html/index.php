@@ -1,5 +1,4 @@
-<?
-
+<?php
   // Few defaults
   $remoteAccess = false;
   if ( file_exists("/usr/local/etc/appcafe.conf") )
@@ -36,52 +35,48 @@
 
   require("include/Mobile_Detect.php");
 
+  $loadedglobals = false;
   define('DS',  TRUE); // used to protect includes
   define('USERNAME', $_SESSION['username']);
   define('SELF',  $_SERVER['PHP_SELF'] );
-  $DISPATCHID = $_SESSION['dispatchid'];
+  $APIKEY = $_SESSION['apikey'];
 
-  // Check if calling from a remote host
-  if ( (!USERNAME or isset($_GET['logout'])) ) {
-    // Bypass if called from localhost
-    if ( $CLIENTIP != "127.0.0.1" and $CLIENTIP != "::1" ) {
-      $timeout = false;
-      include('include/login.php');
-      exit(0);
-    }
+  // Check if we need to bring up login page again
+  if ( !USERNAME or isset($_GET['logout']) ) {
+    $timeout = false;
+    $_SESSION['apikey'] = "";
+    include('include/login.php');
+    exit(0);
   }
 
   // See if the timeout has been met (60 minutes)
-  if ( $CLIENTIP != "127.0.0.1" and $CLIENTIP != "::1" ) {
-    if ( $_SESSION['timeout'] + 60 * 60 < time() ) {
-      $timeout = true;
-      include('include/login.php');
-      exit(0);
-    } else {
-      $_SESSION['timeout'] = time();
-    }
+  if ( $_SESSION['timeout'] + 60 * 60 < time() ) {
+    $timeout = true;
+    include('include/login.php');
+    exit(0);
+  } else {
+    $_SESSION['timeout'] = time();
   }
 
+  $login_on_fail = true;
 
-  // Calling from the local system, desktop most likely
-  if ( $CLIENTIP == "127.0.0.1" or $CLIENTIP == "::1" ) {
-
-    // If the client just wants to set a dispatcher ID
-    if ( ! empty($_GET["setDisId"])) {
-       header('Location:  ' . $_SERVER['PHP_SELF']);
-       $_SESSION['dispatchid'] = $_GET["setDisId"];
-       exit(0);
-    }
-
-    // No dispatch ID set? User probably trying to access through browser
-    if ( (! isset($DISPATCHID)) ) {
-       echo "Please access through the AppCafe utility! (pc-softweb command)";
-       exit(0);
-    }
-  }
-
+  // Load our websocket library
+  require('vendor/autoload.php');
   require("include/globals.php");
   require("include/functions.php");
+  require("include/functions-config.php");
+  $loadedglobals = true;
+
+  // Check for VIMAGE support
+  $vimage = exec("/sbin/sysctl -qn kern.features.vimage");
+
+  // Auth this WS connection
+  $sccmd = array("token" => "$APIKEY");
+  $response = send_sc_query($sccmd, "auth_token");
+  if ( $response["code"] == "401" or $response["message"] == "Unauthorized" ) {
+    include('include/login.php');
+    exit(0);
+  }
 
   // Check if we have updates to display
   check_update_reboot();
@@ -91,33 +86,52 @@
      queueDeleteApp();
   if ( ! empty($_GET["installApp"]) )
      queueInstallApp();
+  if ( ! empty($_GET["deletePlugin"]) )
+     queueDeletePlugin();
+  if ( ! empty($_GET["installPlugin"]) )
+     queueInstallPlugin();
 
   // Figure out what page is being requested
   if ( empty($_GET["p"])) {
      $page = "appcafe";
-     get_default_jail();
   } else {
      $page = $_GET["p"];
   }
 
-  // Select the default system / jail to show if we are on appcafe pages
-  if ( empty($jail) and ($page == "appcafe" or $page == "sysapp" or $page == "appcafe-search" or $page == "jails") ) {
-    get_default_jail();
-  }
-
-
-  // If we are running in appliance mode, and don't have any jails yet, flip to the jail page
-  if ( $sysType == "APPLIANCE") {
-    if ( empty($jail) and $page != "jailcreate" ) {
-       $noJails="YES";
-       $page = "jails";
-    }
-  }
-
+  // If we are running in appliance mode flip to the plugins page
+  if ( $sysType == "APPLIANCE" and empty($page))
+    $page = "plugins";
+  if ( $sysType == "APPLIANCE" and $page == "appcafe" )
+    $page = "plugins";
+ 
   // Don't echo headers / nav info if we are saving PBI list
   if ( "$page" == "exportpbis" ) {
     require("pages/exportpbis.php");
     exit(0);
+  }
+
+  // If we are on plugins section, make sure we have a start-end range
+  if ( stripos($page, "plugin") !== false ) {
+    if ( $vimage == 1 )
+    {
+      // Get the iocage pool
+      $curpool = get_iocage_pool();
+      if ( empty($curpool) )
+      {
+        $firstrun=true;
+        $page="pluginconfig";
+      }
+    } else {
+      $dccmd = array("iocage get ip4_autostart default", "iocage get ip4_autoend default");
+      $output = send_dc_cmd($dccmd);
+      $ip4start = $output["iocage get ip4_autostart default"][0];
+      $ip4end = $output["iocage get ip4_autoend default"][0];
+      if ( ( empty($ip4start) or empty($ip4end) ) or ( $ip4start == "none" or $ip4end == "none" ) )
+      {
+        $firstrun=true;
+        $page="pluginconfig";
+      }
+    }
   }
 
   // Set some globals for mobile detection

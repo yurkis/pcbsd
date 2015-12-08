@@ -93,6 +93,8 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
+    ui->refreshButton->setVisible(false); // Refresh button not work as expected now, so disable it
+
     mGroupsLoaded = 0;
 
     //Find DE icon file name for loading screen
@@ -153,7 +155,7 @@ MainWindow::MainWindow(QWidget *parent) :
 ///////////////////////////////////////////////////////////////////////////////
 MainWindow::~MainWindow()
 {
-    delete ui;
+    //delete ui;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -162,12 +164,21 @@ void MainWindow::closeEvent(QCloseEvent *event)
     Q_UNUSED(event);
     saveSettings();
     //Stop all the extra QThreads
+    //qDebug() << "Stopping Threads:";
+    //qDebug() << " - softwareItems";
     softwareItems.exit();
+    //qDebug() << " - systemItems";
     systemItems.exit();
+    //qDebug() << " - hardwareItems";
     hardwareItems.exit();
+    //qDebug() << " - networkingItems";
     networkingItems.exit();
+    //qDebug() << " - deItems";
     deItems.exit();
+    //qDebug() << " - toolsItems";
     toolsItems.exit();
+    //qDebug() << " - done";
+    exit(0); //Make sure to quit now - something in the backend destructors is causing a seg fault during close
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -596,6 +607,7 @@ void MainWindow::slotItemsReady()
     if (++mGroupsLoaded<5)
     {
         items_group->mLoadingIcon->setPixmap(items_group->mGroupIcon->pixmap(QSize(64,64),QIcon::Normal));
+	QApplication::processEvents();
     }
 
     if (mGroupsLoaded == 5 )

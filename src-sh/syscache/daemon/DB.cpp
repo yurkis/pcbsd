@@ -1,4 +1,6 @@
 #include "DB.h"
+#include <QJsonDocument>
+#include <QJsonObject>
 
 /* === Representation of Database ====
   HASH -> Info: [JailList, RepoList] 
@@ -84,20 +86,21 @@ void DB::shutDown(){
   HASH->clear();
 }
 
-QString DB::fetchInfo(QStringList request){
+QString DB::fetchInfo(QStringList request, bool noncli){
   if(HASH->isEmpty()){ 
     startSync();
     QCoreApplication::processEvents();
-    pausems(500); //wait 1/2 second for sync to start up
+    pausems(200); //wait 1/5 second for sync to start up
   }
 	
   QString hashkey, searchterm, searchjail;
   QStringList pkglist;
   int searchmin, searchfilter;
   bool sortnames = false;
-  qDebug() << "Request:" << request << request.length();
+  //qDebug() << "Request:" << request << request.length();
   //Determine the internal hash key for the particular request
   if(request.length()==1){
+    if(request[0]=="help"){ return fetchHelpInfo().join(LISTDELIMITER); }
     if(request[0]=="startsync"){ 
       if( kickoffSync() ){
 	writeToLog("User Sync Request...");
@@ -114,23 +117,36 @@ QString DB::fetchInfo(QStringList request){
     else if(request[0]=="securityupdatelog"){ hashkey = "System/securityUpdateDetails"; }
     else if(request[0]=="haspcbsdupdates"){ hashkey = "System/hasPCBSDUpdates"; }
     else if(request[0]=="pcbsdupdatelog"){ hashkey = "System/pcbsdUpdateDetails"; }
+    
+  }else if(request.length()>1 && request[0]=="cage-summary"){
+    //Simplification routine - assemble the inputs
+    pkglist = request.mid(1); //elements 1+ are cages
+    hashkey="PBI/CAGES/"; //just to cause the request to wait for sync to finish if needed
+    
   }else if(request.length()==2){
+    if(request[0]=="help"){ return fetchHelpInfo(request[1]).join(LISTDELIMITER); }
     if(request[0]=="jail"){
       if(request[1]=="list"){ hashkey = "JailList"; }
+      else if(request[1]=="stoppedcages"){ hashkey = "JailCages"; }
+      else if(request[1]=="runningcages"){ hashkey = "JailCagesRunning"; }
       else if(request[1]=="stoppedlist"){ hashkey = "StoppedJailList"; }
     }
+    
   }else if(request.length()>2 && request[1]=="app-summary"){
     //Simplification routine - assemble the inputs
     pkglist = request.mid(2); //elements 2+ are pkgs
     searchjail = request[0];
     if(searchjail=="#system"){ searchjail = LOCALSYSTEM; }
     hashkey="Repos/"; //just to cause the request to wait for sync to finish if needed
+    
   }else if(request.length()==3){
     if(request[0]=="jail"){
       hashkey = "Jails/"+request[1];
-      if(request[2]=="id"){ hashkey.append("/JID"); }
+      if( static_cast<QStringList>(HASH->keys() ).filter(hashkey+"/").isEmpty() ){ hashkey.clear(); } //invalid jail
+      else if(request[2]=="id"){ hashkey.append("/JID"); }
       else if(request[2]=="ip"){ hashkey.append("/jailIP"); }
       else if(request[2]=="path"){ hashkey.append("/jailPath"); }
+      else if(request[2]=="all"){ hashkey.append("/iocage-all"); }
       else{ hashkey.append("/"+request[2]); }
     }else if(request[0]=="pkg"){
       if(request[1]=="search"){
@@ -150,6 +166,7 @@ QString DB::fetchInfo(QStringList request){
     }else if(request[0]=="pbi"){
       if(request[1]=="list"){
         if(request[2]=="allapps"){ hashkey="PBI/pbiList"; sortnames=true;}
+	else if(request[2]=="cages"){ hashkey = "PBI/CAGES/list"; sortnames=true; }
 	else if(request[2]=="graphicalapps"){ hashkey="PBI/graphicalAppList"; sortnames=true;}
 	else if(request[2]=="textapps"){ hashkey="PBI/textAppList"; sortnames=true;}
 	else if(request[2]=="serverapps"){ hashkey="PBI/serverAppList"; sortnames=true;}
@@ -168,10 +185,14 @@ QString DB::fetchInfo(QStringList request){
 	searchfilter=0; //all
       }		
     }
+    
   }else if(request.length()==4){
     if(request[0]=="pbi"){
       if(request[1]=="app"){
         hashkey = "PBI/"+request[2]+"/"+request[3]; //pkg origin and variable
+      }else if(request[1]=="cage"){
+	hashkey = "PBI/CAGES/"+request[2]+"/"+request[3]; //pkg origin and variable
+	//qDebug() << "Cage Request:" << hashkey;
       }else if(request[1]=="cat"){
 	hashkey = "PBI/cats/"+request[2]+"/"+request[3]; //pkg origin and variable
       }else if(request[1]=="search"){
@@ -196,6 +217,7 @@ QString DB::fetchInfo(QStringList request){
 	searchmin = 10;
       }
     }
+    
   }else if(request.length()==5){
     if(request[0]=="pkg"){
       if(request[1]=="search"){
@@ -241,10 +263,16 @@ QString DB::fetchInfo(QStringList request){
   else{
     validateHash(hashkey);
     //Check if a sync is running and wait a moment until it is done
-    while(isRunning(hashkey)){ pausems(500); } //re-check every 500 ms
+    while(isRunning(hashkey)){
+	if(noncli){ return "[BUSY]"; }
+	pausems(500);  //re-check every 500 ms
+    }
     //Now check for info availability
     if(!searchterm.isEmpty()){
       val = doSearch(searchterm,searchjail, searchmin, searchfilter).join(LISTDELIMITER);
+    }else if(!pkglist.isEmpty() && hashkey=="PBI/CAGES/"){
+      val = FetchCageSummaries(pkglist).join(LINEBREAK);
+      return val; //Skip the LISTDELIMITER/empty checks below - this output is highly formatted
     }else if(!pkglist.isEmpty() && !searchjail.isEmpty()){
       val = FetchAppSummaries(pkglist, searchjail).join(LINEBREAK);
       return val; //Skip the LISTDELIMITER/empty checks below - this output is highly formatted
@@ -253,11 +281,184 @@ QString DB::fetchInfo(QStringList request){
       val = HASH->value(hashkey,"");
       if(sortnames && !val.isEmpty()){ val = sortByName(val.split(LISTDELIMITER)).join(LISTDELIMITER); }
     }
-    val.replace(LISTDELIMITER, ", ");
+    if(!noncli){ val.replace(LISTDELIMITER, ", "); } //for CLI requests, put lists in a comma-delimited order
     if(val.isEmpty()){ val = " "; } //make sure it has a blank space at the minimum
   }
   return val;
 }
+
+QStringList DB::fetchHelpInfo(QString subsystem){
+  //Note: This help info is highly formatted for the non-CLI usage (JSON array output)
+  // Every entry in the list will show up as an element in the output JSON array
+  QStringList info;
+  if(subsystem=="jail"){
+    info << "\"jail list\": List all running jails by name";
+    info << "\"jail stoppedlist\": List all stopped jails by name";
+    info << "\"jail runningcages\": List all installed/running pbicages by origin and iocage ID (<origin> <ID>)";
+    info << "\"jail stoppedcages\": List all installed/stopped pbicages by origin and iocage ID (<origin> <ID>)";
+    info << "\"jail <jailname> <info>\": Get information about a particular jail";
+    info << "Possible Info requests: ";
+    info << "id: 	[RUNNING ONLY] Get the current jail ID # (JID)";
+    info << "ip: 	[RUNNING ONLY] Get the current jail IP address";
+    info << "path:	[RUNNING ONLY] Get the jail directory path on host system";
+    info << "all:	Return the raw iocage information list for the jail (all properties)";
+    info << "WID:	Get the iocage jail ID #";
+    info << "tag:	Get the iocage jail tag";
+    info << "installed: Get the origin of the installed pbicage";
+    info << "ipv4: Get the jail ipv4 address setting";
+    info << "alias-ipv4:	Get the jail ipv4 alias setting";
+    info << "bridge-ipv4:	Get the jail ipv4 bridge setting";
+    info << "alias-bridge-ipv4:	Get the jail ipv4 bridge setting for the alias";
+    info << "defaultrouter-ipv4:	The ipv4 address setting for the default gateway";
+    info << "ipv6:	Get the jail ipv6 address setting";
+    info << "alias-ipv6:	Get the jail ipv6 alias setting";
+    info << "bridge-ipv6:	Get the jail ipv6 bridge setting";
+    info << "alias-bridge-ipv6:	Get the jail ipv6 bridge setting for the alias";
+    info << "defaultrouter-ipv6:	The ipv6 address setting for the default gateway";
+    info << "autostart:	[true/false] Jail is set to start automatically on boot";
+    info << "vnet:	[Disabled/Enabled]";
+    info << "type:	Get the type of jail [portjail, traditional, linux]";
+    info << "hasupdates: [true/false] Return whether the jail has updates available";
+
+  }else if(subsystem=="pbi"){
+    info << "\"pbi list <infolist>\":";
+    info << "Possible Info Lists: ";
+    info << "\"allapps\":	List all applications by pkg origin";
+    info << "\"serverapps\":	List all server applications by pkg origin";
+    info << "\"textapps\":	List all text applications by pkg origin";
+    info << "\"graphicalapps\":	List all graphical applications by pkg origin";
+    info << "\"allcats\":	List all categories";
+    info << "\"servercats\":	List all categories that contain a server application";
+    info << "\"textcats\":	List all categories that contain a text application";
+    info << "\"graphicalcats\":	List all categories that contain a graphical application";
+    info << "\"cages\":		List all known cages by origin";
+    info << "\"pbi app <pkg origin> <info>\":";
+    info << "Possible Application Information: ";
+    info << "\"author\": 	Package author";
+    info << "\"category\":	Primary category where this package belongs";
+    info << "\"confdir\":	Local path to configuration directory";
+    info << "\"dependencies\":	List of *additional* dependencies by pkg origin";
+    info << "\"origin\": 	Package/port origin";
+    info << "\"plugins\":	List of optional plugins by pkg origin";
+    info << "\"rating\":	Current rating (0.00 to 5.00)";
+    info << "\"relatedapps\":	List of similar applications by pkg origin";
+    info << "\"screenshots\":	List of screenshot URLs";
+    info << "\"type\":	Primary category where this package belongs";
+    info << "\"tags\":	List of search tags for application";
+    info << "\"comment\":	(pkg override) Short package summary";
+    info << "\"description\":	(pkg override) Full package description";
+    info << "\"license\":	(pkg override) List of licences for the application";
+    info << "\"maintainer\":	(pkg override) Maintainer email address";
+    info << "\"name\": 	(pkg override) Package name";
+    info << "\"options\":	(pkg override) List of compile-time options used";
+    info << "\"website\":	(pkg override) Application website URL";
+    info << "\"pbi cage <origin> <info>\":";
+    info << "Possible Cage Information: ";
+    info << "\"icon\":	Icon file path";
+    info << "\"name\":	Name of the cage";
+    info << "\"description\":	Application description";
+    info << "\"arch\":	Architecture of the cage";
+    info << "\"fbsdver\":	FreeBSD version used";
+    info << "\"git\":	GIT path for the cage";
+    info << "\"gitbranch\":	GIT granch used";
+    info << "\"screenshots\":	List of screenshot URLs";
+    info << "\"tags\":	List of search tags";
+    info << "\"website\":	Website URL";
+    info << "\"pbi cat <pkg category> <info>\":";
+    info << "Possible Category Information:";
+    info << "\"comment\": 	Short description of the category contents";
+    info << "\"icon\":	Icon file path for the category";
+    info << "\"name\":	Display name to use for the category (Ex: Desktop Utilities)";
+    info << "\"origin\":	pkg name of the category (Ex: deskutils)";
+    info << "\"pbi search <search term> [filter] [minimum results]\":";
+    info << "Possible Filters: ";
+    info << "\"all\" (default): No filtering";
+    info << "\"graphical\": Only search for graphical applications";
+    info << "\"server\": Only search for server applications";
+    info << "\"text\": Only search for text applications";
+    info << "\"notgraphical\": Do not search graphical applications";
+    info << "\"notserver\": Do not search server applications";
+    info << "\"nottext\": Do not search text applications";
+  
+  }else if(subsystem=="pkg"){
+    info << "Note: <jail> = \"#system\" or name of running jail";
+    info << "\"pkg <jail> remotelist\": List all available packages by origin";
+    info << "\"pkg <jail> installedlist\": List all installed packages by origin";
+    info << "\"pkg <jail> hasupdates\": (true/false) Package updates are available";
+    info << "\"pkg <jail> updatemessage\": Full log message from the check for updates";
+    info << "\"pkg search <search term> [<jail>] [minimum results]\": Perform a search and attempt to return the pkg origins for the first [minimum] results.";
+    info << "\"pkg <jail> <local or remote> <pkg origin> <info>\"";
+    info << "Possible <info> requests: ";
+    info << "origin: 	Package/port origin";
+    info << "name: 	Package name";
+    info << "version:	Package version";
+    info << "maintainer:	Maintainer email address";
+    info << "comment:	Short package summary";
+    info << "description:	Full package description";
+    info << "website:	Application website URL";
+    info << "size:	Human-readable package size (installed or to download)";
+    info << "arch:	System architecture the package was built for";
+    info << "timestamp:	[local only] Date/Time the package was installed (epoch time?)";
+    info << "message:	Special message included with the package";
+    info << "isOrphan:	[local only] Is the package orphaned? (true/false)";
+    info << "isLocked:	[local only] Is the package version locked? (true/false)";
+    info << "dependencies:	List of dependencies by pkg origin";
+    info << "rdependencies:	List of reverse dependencies by pkg origin";
+    info << "categories:	List of categories where this package belongs";
+    info << "files:	[local only] List of files installed by this package";
+    info << "options:	List of compile-time options used to build the package";
+    info << "license:	List of licences the application is available under";
+    info << "users:	[local-only] List of users that were created for this package";
+    info << "groups:	[local-only] List of groups that were created for this package";
+
+  }else if(subsystem=="search"){
+    info << "\"<pkg | pbi> search <search term> [<pkg jail>/<pbi filter>] [result minimum]\"";
+    info << "This allows the user to retrieve a list of pkg origins corresponding to the given search term.";
+    info << "Default Values for optional inputs:";
+    info << "<pkg jail> -> \"#system\"";
+    info << "<pbi filter> -> \"all\"";
+    info << "<result minimum> -> 10";
+    info << "Notes: ";
+    info << "1) Each search is performed case-insensitive, with the next highest search priority group added to the end of the list as long as the number of matches is less than the requested minimum.";
+    info << "2) Each search priority/group is arranged alphabetically by name independently of the other groups.";
+    info << "3) Each package origin will always appear in the highest priority group possible with no duplicates later in the output.";
+    info << "Search matching groups/priority is: ";
+        info << "1) Exact Name match";
+        info << "2) Partial Name match (name begins with search term)";
+        info << "3) Partial Name match (search term anywhere in name)";
+        info << "4) Comment match (search term in comment for pkg)";
+        info << "5) Description match (search term in description for pkg)";
+    info << "Initial Filtering: ";
+      info << "For packages, it always searches the entire list of available/remote packages for that particular jail";
+      info << "For PBI's the possible filters are: ";
+      info << "\"all\"";
+      info << "\"graphical\"";
+      info << "\"server\"";
+      info << "\"text\"";
+      info << "\"notgraphical\" (I.E. Show both server and text apps)";
+      info << "\"notserver\" (I.E. Show both graphical and text apps)";
+      info << "\"nottext\" (I.E. Show both graphical and server apps)";
+	  
+  }else{
+    info << "syscache: Interface to retrieve system information from the syscache daemon based on lists of database requests.";
+    info << "\"startsync\": Manually start a system information sync (usually unnecessary)";
+    info << "\"needsreboot\": [true/false] See whether the system needs to reboot to finish updates";
+    info << "\"isupdating\": [true/false] See whether the system is currently performing updates";
+    info << "\"hasupdates\": [true/false] See whether any system updates are available";
+    info << "\"updatelog\": Raw text output from the check for system updates";
+    info << "\"hasmajorupdates\": [true/false] See whether major FreeBSD system updates are available";
+    info << "\"majorupdatelog\": Details about the major update(s)";
+    info << "\"hassecurityupdates\": [true/false] See whether FreeBSD security updates are available";
+    info << "\"securityupdatelog\": Details about any security update(s)";
+    info << "\"haspcbsdupdates\": [true/false] See whether any special PC-BSD hotfixes are available";
+    info << "\"pcbsdupdatelog\": Details about any PC-BSD hotfixes";
+    info << "\"help [jail | pkg | pbi | search]\": Information about DB requests for that subsystem";
+    info << "\"<jail> app-summary <pkg origin 1>  < pkg origin 2> [etc..]\": Returns (one per pkg/line): [<pkg origin>, <name>, <version>, <icon>, <rating>, <type>, <comment>, <confdir>, <installed>, <canremove>]";
+    info << "\"cage-summary <origin 1> <origin 2> [etc..]\": Returns (one per origin/line): [<origin>, <name>, <icon>, <arch>, <fbsdver>]";
+  }
+  return info;
+}
+
 
 // ========
 //   PRIVATE
@@ -471,6 +672,24 @@ QStringList DB::FetchAppSummaries(QStringList pkgs, QString jail){
   return out;
 }
 
+QStringList DB::FetchCageSummaries(QStringList pkgs){
+  QString prefix = "PBI/CAGES/";
+  QStringList out;
+  for(int i=0; i<pkgs.length(); i++){
+    if( HASH->contains(prefix+pkgs[i]+"/icon") ){
+      QStringList info;
+      //Now assemble the information (in order)
+      info << pkgs[i]; //origin first
+      info << HASH->value(prefix+pkgs[i]+"/name");
+      info << HASH->value(prefix+pkgs[i]+"/icon");
+      info << HASH->value(prefix+pkgs[i]+"/arch");
+      info << HASH->value(prefix+pkgs[i]+"/fbsdver");
+      out << info.join("::::");
+    }
+  }
+  return out;
+}
+
 //Check that the DB Hash is filled for the requested field
 void DB::validateHash(QString key){
   static qint64 lastCheck = 0;
@@ -555,6 +774,7 @@ void DB::watcherChange(QString change){
 
 bool DB::kickoffSync(){
   if(sysrun){ return false; } //already running a sync (sysrun is the last one to be finished)
+  if( QProcess::execute(UPDATE_FLAG_CHECK)==0 ){ return false; } //in the middle of updates - no syncing
   writeToLog("Starting Sync: "+QDateTime::currentDateTime().toString(Qt::ISODate) );
   locrun = remrun = pbirun = jrun = sysrun = true; //switch all the flags to running
   //if(!syncThread->isRunning()){ syncThread->start(); } //make sure the other thread is running
@@ -587,6 +807,13 @@ Syncer::Syncer(QObject *parent, QHash<QString,QString> *hash) : QObject(parent){
     longProc->setProcessEnvironment(QProcessEnvironment::systemEnvironment());
     longProc->setProcessChannelMode(QProcess::MergedChannels);   
     connect(longProc, SIGNAL(finished(int, QProcess::ExitStatus)), this, SLOT(LongProcFinished(int, QProcess::ExitStatus)) );
+  applianceMode = false;
+  //Check if the system/appcafe is running in appliance mode (for FreeNAS, etc)
+  QStringList chk = readFile("/usr/local/etc/appcafe.conf").filter("mode").filter("=").filter("appliance");
+  for(int i=0; i<chk.length(); i++){
+    //Just verify that this line is not commented out (filtering above ensures this list is extremely small or empty)
+    if(chk[i].section(";",0,0).section("=",1,1).simplified()=="appliance"){ applianceMode = true; break;}
+  }
 }
 
 Syncer::~Syncer(){
@@ -614,22 +841,33 @@ QStringList Syncer::directSysCmd(QString cmd){ //run command immediately
    //Make sure we use the system environment to properly read system variables, etc.
    p.setProcessEnvironment(QProcessEnvironment::systemEnvironment());
    //Merge the output channels to retrieve all output possible
-   p.setProcessChannelMode(QProcess::MergedChannels);   
-   p.start(cmd);
+   p.setProcessChannelMode(QProcess::MergedChannels);
+   p.start(cmd, QIODevice::ReadOnly);
    //QTimer time(this);
     //time.setSingleShot(true);
     //time.start(5000); //5 second timeout
+   QString tmp;
    while(p.state()==QProcess::Starting || p.state() == QProcess::Running){
      /*if(!time.isActive()){
        p.terminate(); //hung process - kill it
      }*/
-     p.waitForFinished(500); //1/2 second timeout check
+     if( !p.waitForFinished(500) ){ //1/2 second timeout check
+       QString tmp2 = p.readAllStandardOutput(); //this is just any new output - not the full thing
+       //qDebug() << "tmp1:" << tmp;
+       //qDebug() << "tmp2:" << tmp2;
+       if(tmp2.isEmpty() && tmp.simplified().endsWith("]:")){
+        //Interactive prompt? kill the process.
+	p.terminate(); return QStringList();
+       }
+       tmp.append(tmp2);
+     }
      QCoreApplication::processEvents();
      if(stopping){break;}
    }
+   tmp.append(p.readAllStandardOutput());
    //if(time.isActive()){ time.stop(); }
    if(stopping){ p.terminate(); return QStringList(); }
-   QString tmp = p.readAllStandardOutput();
+   //QString tmp = p.readAllStandardOutput();
    p.close();
    if(tmp.contains("database is locked", Qt::CaseInsensitive)){
      return directSysCmd(cmd); //try again - in case the pkg database is currently locked
@@ -637,6 +875,12 @@ QStringList Syncer::directSysCmd(QString cmd){ //run command immediately
      if(tmp.endsWith("\n")){ tmp.chop(1); }
      return tmp.split("\n");
    }
+}
+
+void Syncer::UpdatePkgDB(QString jail){
+  if(jail!=LOCALSYSTEM){ 
+    if(HASH->value("Jails/"+jail+"/haspkg")=="true"){ directSysCmd("pkg -j "+HASH->value("Jails/"+jail+"/JID")+" update"); }
+  }else{ directSysCmd("pkg update"); }
 }
 
 QStringList Syncer::readFile(QString filepath){
@@ -683,6 +927,7 @@ void Syncer::clearPbi(){
 
 bool Syncer::needsLocalSync(QString jail){
   //Checks the pkg database file for modification since the last sync
+  if(applianceMode){ return false; } //never sync pkg info for appliances
   if(!HASH->contains("Jails/"+jail+"/lastSyncTimeStamp")){ return true; }
   else{
     //Previously synced - look at the DB modification time
@@ -697,6 +942,7 @@ bool Syncer::needsLocalSync(QString jail){
     }else{
       //This is inside a jail - need different method
       QString path = HASH->value("Jails/"+jail+"/jailPath","") + "/var/db/pkg/local.sqlite";
+      if( (HASH->value("Jails/"+jail+"/haspkg") != "true") || !QFile::exists(path) ){ return false; }
       qint64 mod = QFileInfo(path).lastModified().toMSecsSinceEpoch();
       qint64 stamp = HASH->value("Jails/"+jail+"/lastSyncTimeStamp","").toLongLong();
       if(mod > stamp){ return true; }//was it modified after the last sync?
@@ -707,8 +953,10 @@ bool Syncer::needsLocalSync(QString jail){
 }
 
 bool Syncer::needsRemoteSync(QString jail){
+  if(applianceMode){ return false; } //never sync pkg info for appliances
   //Checks the pkg repo files for changes since the last sync
-  if(!HASH->contains("Jails/"+jail+"/RepoID")){ return true; } //no repoID yet
+  if( (jail!=LOCALSYSTEM) && HASH->value("Jails/"+jail+"/haspkg") != "true" ){ return false; } //pkg not installed
+  else if(!HASH->contains("Jails/"+jail+"/RepoID")){ return true; } //no repoID yet
   else if(HASH->value("Jails/"+jail+"/RepoID") != generateRepoID(jail) ){ return true; } //repoID changed
   else if( !HASH->contains("Repos/"+HASH->value("Jails/"+jail+"/RepoID")+"/lastSyncTimeStamp") ){ return true; } //Repo Never synced
   else{
@@ -727,15 +975,17 @@ bool Syncer::needsPbiSync(){
   //Check the PBI index to see if it needs to be resynced
   if(!HASH->contains("PBI/lastSyncTimeStamp")){ return true; }
   else{
-    qint64 mod = QFileInfo("/var/db/pbi/index/PBI_INDEX").lastModified().toMSecsSinceEpoch();
+    qint64 mod = QFileInfo("/var/db/pbi/index/PBI-INDEX").lastModified().toMSecsSinceEpoch();
     qint64 stamp = HASH->value("PBI/lastSyncTimeStamp").toLongLong();
+    qint64 mod2 = QFileInfo("/var/db/pbi/cage-index/CAGE-INDEX").lastModified().toMSecsSinceEpoch();
     qint64 dayago = QDateTime::currentDateTime().addDays(-1).toMSecsSinceEpoch();
-    return (mod > stamp || stamp < dayago );
+    return (mod > stamp || mod2 > stamp || stamp < dayago );
   }
   
 }
 
 bool Syncer::needsSysSync(){
+  if(applianceMode){ return false; } //never sync freebsd-update info for appliances
   //Check how long since the last check the
   if(longProc->state() != QProcess::NotRunning){ return false; } //currently running
   if(!HASH->contains("System/lastSyncTimeStamp")){ return true; }
@@ -769,6 +1019,11 @@ void Syncer::performSync(){
   qDebug() << "Syncing system information";
   //First do the operations that can potentially lock the pkg database first, but are fast
   if(stopping){ return; }
+  if(HASH->isEmpty()){
+    qDebug() << " - First Run: Updating pkg repo database:" << QDateTime::currentDateTime().toString(Qt::ISODate);;
+    directSysCmd("pkg update -f"); //make sure this is finished before doing anything else in the syncer
+    if(stopping){ return; }
+  }
   qDebug() << " - Starting Jail Sync:" << QDateTime::currentDateTime().toString(Qt::ISODate);
   syncJailInfo();
   emit finishedJails();
@@ -802,59 +1057,94 @@ void Syncer::syncJailInfo(){
   //Get the internal list of jails
   QStringList jails = HASH->value("JailList","").split(LISTDELIMITER);
   //Now get the current list of running jails and insert individual jail info
-  QStringList info = directSysCmd("jls");
+  QStringList jinfo = directSysCmd("jls");
+  QString sysver = directSysCmd("freebsd-version").join("").section("-",0,0); //remove the "-<tag>" from the end (only need the number)
   QStringList found;
-  for(int i=1; i<info.length() && !stopping; i++){ //skip the header line
-    info[i] = info[i].replace("\t"," ").simplified();
-    QString name = info[i].section(" ",2,2); //hostname
-    found << name; //add it to the new list
-    jails.removeAll(name); //remove from the old list
-    HASH->insert("Jails/"+name+"/JID", info[i].section(" ",0,0));
-    HASH->insert("Jails/"+name+"/jailIP", info[i].section(" ",1,1));
-    HASH->insert("Jails/"+name+"/jailPath", info[i].section(" ",3,3));
+  for(int i=1; i<jinfo.length() && !stopping; i++){ //skip the header line
+    jinfo[i] = jinfo[i].replace("\t"," ").simplified();
   }
-  HASH->insert("JailList", found.join(LISTDELIMITER));
   if(stopping){ return; } //catch for if the daemon is stopping
-  //Remove any old jails from the hash
-  for(int i=0; i<jails.length() && !stopping; i++){ //anything left over in the list
-    clearJail(jails[i]); 
-  }
+  
   //Now also fetch the list of inactive jails on the system
-  info = QStringList(); //directSysCmd("iocage list"); //"warden list -v");
+  QStringList info = directSysCmd("iocage list"); //"warden list -v");
   QStringList inactive;
-  info = info.join("----").simplified().split("id: ");
+  QStringList installedcages, runningcages;
   //qDebug() << "Warden Jail Info:" << info;
-  for(int i=0; i<info.length(); i++){
+  for(int i=1; i<info.length(); i++){ //first line is header (JID, UUID, BOOT, STATE, TAG)
     if(info[i].isEmpty()){ continue; }
-    QStringList tmp = info[i].split("----");
-    //qDebug() << "tmp:" << tmp;
+    QString ID = info[i].section(" ",1,1,QString::SectionSkipEmpty);
+    if(ID.isEmpty()){ continue; }
+    QString TAG = info[i].section(" ",4,4,QString::SectionSkipEmpty);
+    if(!TAG.startsWith("pbicage-") && !TAG.startsWith("pbijail-")){ continue; } //skip this jail
+    QStringList tmp = directSysCmd("iocage get all "+ID);
+    //qDebug() << "iocage all "+ID+":" << tmp;
     //Create the info strings possible
-    QString ID, HOST, IPV4, AIPV4, BIPV4, ABIPV4, ROUTERIPV4, IPV6, AIPV6, BIPV6, ABIPV6, ROUTERIPV6, AUTOSTART, VNET, TYPE;
-    bool isRunning = false;
+    QString HOST, IPV4, AIPV4, BIPV4, ABIPV4, ROUTERIPV4, IPV6, AIPV6, BIPV6, ABIPV6, ROUTERIPV6, AUTOSTART, VNET, TYPE, RELEASE;
+    HOST = ID;
+    jails.removeAll(HOST);
+    bool isRunning = (info[i].section(" ",3,3,QString::SectionSkipEmpty).simplified() != "down");
+    //qDebug() << "IoCage Jail:" << ID << isRunning;
     for(int j=0; j<tmp.length(); j++){
       //Now iterate over all the info for this single jail
-      if(j==0 && !tmp[j].contains(":")){ ID = tmp[j].simplified(); }
-      else if(tmp[j].startsWith("host:")){ HOST = tmp[j].section(":",1,50).simplified(); }
-      else if(tmp[j].startsWith("ipv4:")){ IPV4 = tmp[j].section(":",1,50).simplified(); }
-      else if(tmp[j].startsWith("alias-ipv4:")){ AIPV4 = tmp[j].section(":",1,50).simplified(); }
-      else if(tmp[j].startsWith("bridge-ipv4:")){ BIPV4 = tmp[j].section(":",1,50).simplified(); }
-      else if(tmp[j].startsWith("alias-bridge-ipv4:")){ ABIPV4 = tmp[j].section(":",1,50).simplified(); }
-      else if(tmp[j].startsWith("defaultrouter-ipv4:")){ ROUTERIPV4 = tmp[j].section(":",1,50).simplified(); }
-      else if(tmp[j].startsWith("ipv6:")){ IPV6 = tmp[j].section(":",1,50).simplified(); }
-      else if(tmp[j].startsWith("alias-ipv6:")){ AIPV6 = tmp[j].section(":",1,50).simplified(); }
-      else if(tmp[j].startsWith("bridge-ipv6:")){ BIPV6 = tmp[j].section(":",1,50).simplified(); }
-      else if(tmp[j].startsWith("alias-bridge-ipv6:")){ ABIPV6 = tmp[j].section(":",1,50).simplified(); }
-      else if(tmp[j].startsWith("defaultrouter-ipv6:")){ ROUTERIPV6 = tmp[j].section(":",1,50).simplified(); }
-      else if(tmp[j].startsWith("autostart:")){ AUTOSTART = (tmp[j].section(":",1,50).simplified()=="Enabled") ? "true" : "false"; }
-      else if(tmp[j].startsWith("vnet:")){ VNET = tmp[j].section(":",1,50).simplified(); }
-      else if(tmp[j].startsWith("type:")){ TYPE = tmp[j].section(":",1,50).simplified(); }
-      else if(tmp[j].startsWith("status:")){ isRunning = (tmp[j].section(":",1,50).simplified() == "Running"); }
+      QString val = tmp[j].section(":",1,100).simplified();
+      //if(tmp[j].startsWith("hostname:")){ HOST = val; }
+      //qDebug() << "Line:" << tmp[j] << val;
+      if(tmp[j].startsWith("ip4_addr:")){ IPV4 = val; }
+      //else if(tmp[j].startsWith("alias-ipv4:")){ AIPV4 = val; }
+      //else if(tmp[j].startsWith("bridge-ipv4:")){ BIPV4 = val; }
+      //else if(tmp[j].startsWith("bridge-ipv4:")){ BIPV4 = val; }
+      //else if(tmp[j].startsWith("alias-bridge-ipv4:")){ ABIPV4 = val; }
+      else if(tmp[j].startsWith("defaultrouter:")){ ROUTERIPV4 = val; }
+      else if(tmp[j].startsWith("ip6_addr:")){ IPV6 = val; }
+      //else if(tmp[j].startsWith("alias-ipv6:")){ AIPV6 = val; }
+      //else if(tmp[j].startsWith("bridge-ipv6:")){ BIPV6 = val; }
+      //else if(tmp[j].startsWith("alias-bridge-ipv6:")){ ABIPV6 = val; }
+      else if(tmp[j].startsWith("defaultrouter6:")){ ROUTERIPV6 = val; }
+      else if(tmp[j].startsWith("boot:")){ AUTOSTART = (val=="off") ? "false" : "true"; }
+      else if(tmp[j].startsWith("vnet:")){ VNET = val; }
+      else if(tmp[j].startsWith("type:")){ TYPE = val; }
+      else if(tmp[j].startsWith("release:")) {RELEASE = val; }
     }
-    if(!HOST.isEmpty()){
+      QString inst = TAG.section("-",1,100); //installed cage for this jail
+      //Need to replace the first "-" in the tag with a "/" (category/name format, but name might have other "-" in it)
+      int catdash = inst.indexOf("-");
+      if(catdash>0){ inst = inst.replace(catdash,1,"/"); }
+    //Now compare the jail version with the system version (jail must be same or older)
+    QString shortver = RELEASE.section("-",0,0);
+    bool jnewer=false;
+    for(int i=0; i<=sysver.count(".") && !jnewer; i++){
+      jnewer = (sysver.section(".",i,i).toInt() < shortver.section(".",i,i).toInt());
+    }
+    if(jnewer){ continue; } //skip this jail - newer OS version than the system supports
+      
       //Save this info into the hash
+    QStringList junk = jinfo.filter(ID);
+    if(!junk.isEmpty()){
+      //This jail is running - add extra information
+      bool haspkg = QFile::exists(junk[0].section(" ",3,3)+"/usr/local/sbin/pkg-static");
+      HASH->insert("Jails/"+HOST+"/JID", junk[0].section(" ",0,0));
+      HASH->insert("Jails/"+HOST+"/jailIP", junk[0].section(" ",1,1));
+      HASH->insert("Jails/"+HOST+"/jailPath", junk[0].section(" ",3,3));
+      HASH->insert("Jails/"+HOST+"/haspkg", haspkg ? "true": "false" );
+    }else{
+      HASH->insert("Jails/"+HOST+"/JID", "");
+      HASH->insert("Jails/"+HOST+"/jailIP", "");
+      HASH->insert("Jails/"+HOST+"/jailPath", "");
+      HASH->insert("Jails/"+HOST+"/haspkg", "false" );
+    }
+    
       QString prefix = "Jails/"+HOST+"/";
-      if(!isRunning){ inactive << HOST; } //only save inactive jails - active are already taken care of
-      HASH->insert(prefix+"WID", ID); //Warden ID
+      if(!TAG.startsWith("pbicage-")){
+        if(!isRunning){ inactive << HOST+" "+TAG; } //only save inactive jails - active are already taken care of
+       else{ found << HOST+" "+TAG; }
+      }else{
+	if(isRunning){ runningcages << inst+" "+ID; }
+	else{ installedcages << inst+" "+ID; }
+      }
+      HASH->insert(prefix+"WID", ID); //iocage ID
+      HASH->insert(prefix+"tag",TAG); //iocage tag
+      HASH->insert(prefix+"installed", inst); //Installed pbicage origin
+      HASH->insert(prefix+"iocage-all",tmp.join("<br>") );
       HASH->insert(prefix+"ipv4", IPV4);
       HASH->insert(prefix+"alias-ipv4", AIPV4);
       HASH->insert(prefix+"bridge-ipv4", BIPV4);
@@ -868,16 +1158,33 @@ void Syncer::syncJailInfo(){
       HASH->insert(prefix+"autostart", AUTOSTART);
       HASH->insert(prefix+"vnet", VNET);
       HASH->insert(prefix+"type", TYPE);      
-    }
+
+      //Now check if this jail can be updated and put that into the hash as well
+      // TO-DO - iocage update check command still needs to be written
+      /* It will effectively be: 
+	# cd <jaildir>/root
+	# git remote update
+	# git status -uno | grep -q "is behind"
+	*/
+      //Only need the return code - 0=NoUpdates
+      bool hasup = (QProcess::execute("iocage update -n "+ID)!=0);
+      HASH->insert(prefix+"hasupdates", (hasup ? "true": "false") );
   }
   HASH->insert("StoppedJailList",inactive.join(LISTDELIMITER));
-  
+  HASH->insert("JailList", found.join(LISTDELIMITER));
+  HASH->insert("JailCages", installedcages.join(LISTDELIMITER));
+  HASH->insert("JailCagesRunning", runningcages.join(LISTDELIMITER));
+  //Remove any old jails from the hash (ones that no longer exist)
+  for(int i=0; i<jails.length() && !stopping; i++){ //anything left over in the list
+    clearJail(jails[i]); 
+  }
 }
 
 void Syncer::syncPkgLocalJail(QString jail){
   if(jail.isEmpty()){ return; }
  //Sync the local pkg information
- if(needsLocalSync(jail)){
+ bool LSync = needsLocalSync(jail);
+ if(LSync){
   //qDebug() << "Sync local jail info:" << jail;
   QString prefix = "Jails/"+jail+"/pkg/";
   clearLocalPkg(prefix); //clear the old info from the hash
@@ -889,6 +1196,12 @@ void Syncer::syncPkgLocalJail(QString jail){
   }
   if(stopping){ return; }
   QStringList info = directSysCmd(cmd+opt).join("\n").split("PKG::");
+  if(info.length()==1){
+    //Error in pkg, run the update routine to catch repo changes and try again
+    UpdatePkgDB(jail);
+    info = directSysCmd(cmd+opt).join("\n").split("PKG::");
+  }
+  bool pkgerror = info.length()<2;
   QStringList installed;
   for(int i=0; i<info.length(); i++){
     QStringList line = info[i].split("::::");
@@ -916,126 +1229,132 @@ void Syncer::syncPkgLocalJail(QString jail){
   //Now go through the pkgs and get the more complicated/detailed info
   // -- dependency list
   if(stopping){ return; }
-  info = directSysCmd(cmd+" %o::::%do");
-  installed.clear();
-  QString orig;
-  for(int i=0; i<info.length(); i++){
-    if(orig!=info[i].section("::::",0,0) && !orig.isEmpty()){ 
-      HASH->insert(prefix+orig+"/dependencies", installed.join(LISTDELIMITER));
-      installed.clear();
+  if(!pkgerror){
+    info = directSysCmd(cmd+" %o::::%do");
+    installed.clear();
+    QString orig;
+    for(int i=0; i<info.length(); i++){
+      if(orig!=info[i].section("::::",0,0) && !orig.isEmpty()){ 
+        HASH->insert(prefix+orig+"/dependencies", installed.join(LISTDELIMITER));
+        installed.clear();
+      }
+      orig = info[i].section("::::",0,0);
+      installed << info[i].section("::::",1,1);
     }
-    orig = info[i].section("::::",0,0);
-    installed << info[i].section("::::",1,1);
-  }
-  HASH->insert(prefix+orig+"/dependencies", installed.join(LISTDELIMITER)); //make sure to save the last one too
-  // -- reverse dependency list
-  if(stopping){ return; }
-  info = directSysCmd(cmd+" %o::::%ro");
-  installed.clear();
-  orig.clear();
-  for(int i=0; i<info.length(); i++){
-    if(orig!=info[i].section("::::",0,0) && !orig.isEmpty()){ 
-      HASH->insert(prefix+orig+"/rdependencies", installed.join(LISTDELIMITER));
-      installed.clear();
+    HASH->insert(prefix+orig+"/dependencies", installed.join(LISTDELIMITER)); //make sure to save the last one too
+    // -- reverse dependency list
+    if(stopping){ return; }
+    info = directSysCmd(cmd+" %o::::%ro");
+    installed.clear();
+    orig.clear();
+    for(int i=0; i<info.length(); i++){
+      if(orig!=info[i].section("::::",0,0) && !orig.isEmpty()){ 
+        HASH->insert(prefix+orig+"/rdependencies", installed.join(LISTDELIMITER));
+        installed.clear();
+      }
+      orig = info[i].section("::::",0,0);
+      installed << info[i].section("::::",1,1);
     }
-    orig = info[i].section("::::",0,0);
-    installed << info[i].section("::::",1,1);
-  }
-  HASH->insert(prefix+orig+"/rdependencies", installed.join(LISTDELIMITER)); //make sure to save the last one too
-  // -- categories
-  if(stopping){ return; }
-  info = directSysCmd(cmd+" %o::::%C");
-  installed.clear();
-  orig.clear();
-  for(int i=0; i<info.length(); i++){
-    if(orig!=info[i].section("::::",0,0) && !orig.isEmpty()){ 
-      HASH->insert(prefix+orig+"/categories", installed.join(LISTDELIMITER));
-      installed.clear();
+    HASH->insert(prefix+orig+"/rdependencies", installed.join(LISTDELIMITER)); //make sure to save the last one too
+    // -- categories
+    if(stopping){ return; }
+    info = directSysCmd(cmd+" %o::::%C");
+    installed.clear();
+    orig.clear();
+    for(int i=0; i<info.length(); i++){
+      if(orig!=info[i].section("::::",0,0) && !orig.isEmpty()){ 
+        HASH->insert(prefix+orig+"/categories", installed.join(LISTDELIMITER));
+        installed.clear();
+      }
+      orig = info[i].section("::::",0,0);
+      installed << info[i].section("::::",1,1);
     }
-    orig = info[i].section("::::",0,0);
-    installed << info[i].section("::::",1,1);
-  }
-  HASH->insert(prefix+orig+"/categories", installed.join(LISTDELIMITER)); //make sure to save the last one too
-  // -- files
-  if(stopping){ return; }
-  info = directSysCmd(cmd+" %o::::%Fp");
-  installed.clear();
-  orig.clear();
-  for(int i=0; i<info.length(); i++){
-    if(orig!=info[i].section("::::",0,0) && !orig.isEmpty()){ 
-      HASH->insert(prefix+orig+"/files", installed.join(LISTDELIMITER));
-      installed.clear();
+    HASH->insert(prefix+orig+"/categories", installed.join(LISTDELIMITER)); //make sure to save the last one too
+    // -- files
+    if(stopping){ return; }
+    info = directSysCmd(cmd+" %o::::%Fp");
+    installed.clear();
+    orig.clear();
+    for(int i=0; i<info.length(); i++){
+      if(orig!=info[i].section("::::",0,0) && !orig.isEmpty()){ 
+        HASH->insert(prefix+orig+"/files", installed.join(LISTDELIMITER));
+        installed.clear();
+      }
+      orig = info[i].section("::::",0,0);
+      installed << info[i].section("::::",1,1);
     }
-    orig = info[i].section("::::",0,0);
-    installed << info[i].section("::::",1,1);
-  }
-  HASH->insert(prefix+orig+"/files", installed.join(LISTDELIMITER)); //make sure to save the last one too
-  // -- options
-  if(stopping){ return; }
-  info = directSysCmd(cmd+" %o::::%Ok=%Ov");
-  installed.clear();
-  orig.clear();
-  for(int i=0; i<info.length(); i++){
-    if(orig!=info[i].section("::::",0,0) && !orig.isEmpty()){ 
-      HASH->insert(prefix+orig+"/options", installed.join(LISTDELIMITER));
-      installed.clear();
+    HASH->insert(prefix+orig+"/files", installed.join(LISTDELIMITER)); //make sure to save the last one too
+    // -- options
+    if(stopping){ return; }
+    info = directSysCmd(cmd+" %o::::%Ok=%Ov");
+    installed.clear();
+    orig.clear();
+    for(int i=0; i<info.length(); i++){
+      if(orig!=info[i].section("::::",0,0) && !orig.isEmpty()){ 
+        HASH->insert(prefix+orig+"/options", installed.join(LISTDELIMITER));
+        installed.clear();
+      }
+      orig = info[i].section("::::",0,0);
+      installed << info[i].section("::::",1,1);
     }
-    orig = info[i].section("::::",0,0);
-    installed << info[i].section("::::",1,1);
-  }
-  HASH->insert(prefix+orig+"/options", installed.join(LISTDELIMITER)); //make sure to save the last one too  
-  // -- licenses
-  if(stopping){ return; }
-  info = directSysCmd(cmd+" %o::::%L");
-  installed.clear();
-  orig.clear();
-  for(int i=0; i<info.length(); i++){
-    if(orig!=info[i].section("::::",0,0) && !orig.isEmpty()){ 
-      HASH->insert(prefix+orig+"/license", installed.join(LISTDELIMITER));
-      installed.clear();
+    HASH->insert(prefix+orig+"/options", installed.join(LISTDELIMITER)); //make sure to save the last one too  
+    // -- licenses
+    if(stopping){ return; }
+    info = directSysCmd(cmd+" %o::::%L");
+    installed.clear();
+    orig.clear();
+    for(int i=0; i<info.length(); i++){
+      if(orig!=info[i].section("::::",0,0) && !orig.isEmpty()){ 
+        HASH->insert(prefix+orig+"/license", installed.join(LISTDELIMITER));
+        installed.clear();
+      }
+      orig = info[i].section("::::",0,0);
+      installed << info[i].section("::::",1,1);
     }
-    orig = info[i].section("::::",0,0);
-    installed << info[i].section("::::",1,1);
-  }
-  HASH->insert(prefix+orig+"/license", installed.join(LISTDELIMITER)); //make sure to save the last one too 
-  // -- users
-  if(stopping){ return; }
-  info = directSysCmd(cmd+" %o::::%U");
-  installed.clear();
-  orig.clear();
-  for(int i=0; i<info.length(); i++){
-    if(orig!=info[i].section("::::",0,0) && !orig.isEmpty()){ 
-      HASH->insert(prefix+orig+"/users", installed.join(LISTDELIMITER));
-      installed.clear();
+    HASH->insert(prefix+orig+"/license", installed.join(LISTDELIMITER)); //make sure to save the last one too 
+    // -- users
+    if(stopping){ return; }
+    info = directSysCmd(cmd+" %o::::%U");
+    installed.clear();
+    orig.clear();
+    for(int i=0; i<info.length(); i++){
+      if(orig!=info[i].section("::::",0,0) && !orig.isEmpty()){ 
+        HASH->insert(prefix+orig+"/users", installed.join(LISTDELIMITER));
+        installed.clear();
+      }
+      orig = info[i].section("::::",0,0);
+      installed << info[i].section("::::",1,1);
     }
-    orig = info[i].section("::::",0,0);
-    installed << info[i].section("::::",1,1);
-  }
-  HASH->insert(prefix+orig+"/users", installed.join(LISTDELIMITER)); //make sure to save the last one too
-  // -- groups
-  if(stopping){ return; }
-  info = directSysCmd(cmd+" %o::::%G");
-  installed.clear();
-  orig.clear();
-  for(int i=0; i<info.length(); i++){
-    if(orig!=info[i].section("::::",0,0) && !orig.isEmpty()){ 
-      HASH->insert(prefix+orig+"/groups", installed.join(LISTDELIMITER));
-      installed.clear();
+    HASH->insert(prefix+orig+"/users", installed.join(LISTDELIMITER)); //make sure to save the last one too
+    // -- groups
+    if(stopping){ return; }
+    info = directSysCmd(cmd+" %o::::%G");
+    installed.clear();
+    orig.clear();
+    for(int i=0; i<info.length(); i++){
+      if(orig!=info[i].section("::::",0,0) && !orig.isEmpty()){ 
+        HASH->insert(prefix+orig+"/groups", installed.join(LISTDELIMITER));
+        installed.clear();
+      }
+      orig = info[i].section("::::",0,0);
+      installed << info[i].section("::::",1,1);
     }
-    orig = info[i].section("::::",0,0);
-    installed << info[i].section("::::",1,1);
-  }
-  HASH->insert(prefix+orig+"/groups", installed.join(LISTDELIMITER)); //make sure to save the last one too
- } //done with local pkg sync
- if(needsRemoteSync(jail) || needsLocalSync(jail)){
+    HASH->insert(prefix+orig+"/groups", installed.join(LISTDELIMITER)); //make sure to save the last one too
+   } //done with local pkg sync
+ }
+ if(needsRemoteSync(jail) || LSync){
   //qDebug() << "Sync jail pkg update availability:" << jail;
   //Now Get jail update status/info
   if(stopping){ return; }
   QString cmd = "pkg upgrade -nU";
-  if(jail!=LOCALSYSTEM){ cmd = "pkg -j "+HASH->value("Jails/"+jail+"/JID")+" upgrade -n"; }
+  if(jail!=LOCALSYSTEM){ cmd = "pkg -j "+HASH->value("Jails/"+jail+"/JID")+" upgrade -nU"; }
   QString log = directSysCmd(cmd).join("<br>");
+  if(log.contains("pkg update")){ 
+    UpdatePkgDB(jail); //need to update pkg database - then re-run check
+    log = directSysCmd(cmd).join("<br>");
+  }
   HASH->insert("Jails/"+jail+"/updateLog", log);
-  if(log.contains("Your packages are up to date")){ HASH->insert("Jails/"+jail+"/hasUpdates", "false"); }
+  if(log.contains("Your packages are up to date") ||  log.contains("pkg update") ){ HASH->insert("Jails/"+jail+"/hasUpdates", "false"); }
   else{ HASH->insert("Jails/"+jail+"/hasUpdates", "true"); }
  }
   //Now stamp the current time this jail was checked
@@ -1326,9 +1645,42 @@ void Syncer::syncPbi(){
     HASH->insert("PBI/newappList", newapps.join(LISTDELIMITER));
     HASH->insert("PBI/highappList", highapps.join(LISTDELIMITER));
     HASH->insert("PBI/recappList", recapps.join(LISTDELIMITER));
+    
+    //Now get all the info from pbi-cages
+    QString cprefix = "/var/db/pbi/cage-index/";
+    QStringList cages = readFile(cprefix+"CAGE-INDEX");
+    QStringList allcages;
+    for(int i=0; i<cages.length(); i++){
+      if( !QFile::exists(cprefix+cages[i]+"/MANIFEST.json")){ continue; }
+      allcages << cages[i];
+      //QString cinfo = readFile(cprefix+cages[i]+"/MANIFEST.json").join("\n");
+      //qDebug() << "Manifest File:" << cinfo;
+      QJsonDocument doc = readJsonFile(cprefix+cages[i]+"/MANIFEST.json");  /*QJsonDocument::fromBinaryData(cinfo.toLocal8Bit(),QJsonDocument::BypassValidation);*/
+      //qDebug() << " - JSON Document:" << doc.isObject() << doc.isArray() << doc.isEmpty();
+      QStringList dockeys;
+      if(doc.isObject()){ dockeys = doc.object().keys(); }
+      for(int h=0; h<dockeys.length(); h++){
+	QString val = doc.object().value(dockeys[h]).toString();
+	//qDebug() << " - Variable/Value:" << dockeys[h] << val;
+	HASH->insert("PBI/CAGES/"+cages[i]+"/"+dockeys[h], val);
+	//Note: this will automatically load any variables in the manifest into syscache (lowercase)
+	//Known variables (7/23/15): arch, fbsdver, git, gitbranch, name, screenshots, tags, website
+	// ==== NO LINE BREAKS IN VALUES ====
+      }
+      //If there is a non-empty manifest - go ahead and save the raw contents
+      //qDebug() << " - Cage HASH:" << "PBI/CAGES/"+cages[i]+"/manifest";
+      if(!doc.isEmpty()){ HASH->insert("PBI/CAGES/"+cages[i]+"/manifest", doc.toJson(QJsonDocument::Compact) ); }
+      //Now add the description/icon
+      HASH->insert("PBI/CAGES/"+cages[i]+"/description", readFile(cprefix+cages[i]+"/description").join("<br>") );
+      HASH->insert("PBI/CAGES/"+cages[i]+"/icon", cprefix+cages[i]+"/icon.png");
+    }
+    //Now save the list of all cages
+    HASH->insert("PBI/CAGES/list", allcages.join(LISTDELIMITER));
+    
+    //Update the timestamp
+    HASH->insert("PBI/lastSyncTimeStamp", QString::number(QDateTime::currentMSecsSinceEpoch()));
   }
-  //Update the timestamp
-  HASH->insert("PBI/lastSyncTimeStamp", QString::number(QDateTime::currentMSecsSinceEpoch()));
+  
 }
 
 void Syncer::LongProcFinished(int ret, QProcess::ExitStatus status){

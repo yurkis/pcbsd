@@ -28,7 +28,7 @@ Installer::Installer(QWidget *parent) : QMainWindow(parent, Qt::Window | Qt::Fra
     //Setup the window
     if(!DEBUG){ this->setGeometry( QApplication::primaryScreen()->geometry() ); }//full screen
     else{ this->setWindowFlags(Qt::Window); } //don't keep on bottom/frameless for testing
-    
+
     translator = new QTranslator();
 
     connect(backButton, SIGNAL(clicked()), this, SLOT(slotBack()));
@@ -39,6 +39,7 @@ Installer::Installer(QWidget *parent) : QMainWindow(parent, Qt::Window | Qt::Fra
     connect(pushChangeKeyLayout, SIGNAL(clicked()), this, SLOT(slotPushKeyLayout()));
 
     connect(lineHostname,SIGNAL(textChanged(const QString)),this,SLOT(slotCheckHost()));
+    connect(lineDomainName, SIGNAL(textChanged(const QString &)), this, SLOT(slotCheckDomainName()) );
 
     connect(lineRootPW, SIGNAL(textChanged ( const QString &)), this, SLOT(slotCheckRootPW()));
     connect(lineRootPW2, SIGNAL(textChanged ( const QString &)), this, SLOT(slotCheckRootPW()));
@@ -101,7 +102,10 @@ Installer::Installer(QWidget *parent) : QMainWindow(parent, Qt::Window | Qt::Fra
     }
 
     // Load the hostname
-    lineHostname->setText(pcbsd::Utils::getConfFileValue("/etc/rc.conf", "hostname=", 1));
+     lineHostname->setText(pcbsd::Utils::getConfFileValue("/etc/rc.conf", "hostname=", 1).section(".",0,0));
+
+    // Load the domain name
+    lineDomainName->setText(pcbsd::Utils::getConfFileValue("/etc/rc.conf", "hostname=",1).section(".",1,100));
 
     //Load the available Services into the UI
     LoadServices();
@@ -112,7 +116,8 @@ Installer::Installer(QWidget *parent) : QMainWindow(parent, Qt::Window | Qt::Fra
 
     // Update the status bar
     // This makes the status text more "visible" instead of using the blue background
-    statusBar()->setStyleSheet("background: white");
+    //statusBar()->setStyleSheet("background: white");
+
     
     //Load the audio settings values
     combo_audiodevice->clear();
@@ -256,6 +261,23 @@ void Installer::slotCheckHost()
   nextButton->setEnabled(true);
 }
 
+void Installer::slotCheckDomainName()
+{
+  QRegExp hostnameRegExp("^(([a-zA-Z0-9][a-zA-Z0-9-].*[a-zA-Z0-9])|([a-zA-Z0-9]+))$");
+  nextButton->setEnabled(false);
+  if (lineHostname->text().isEmpty())
+  {
+     lineHostname->setToolTip(tr("Please enter a domain name"));
+     return;
+  }
+  else if (hostnameRegExp.indexIn(lineHostname->text()) == -1)
+  {
+     lineHostname->setToolTip(tr("Domain name may only contain letters and numbers"));
+     return;
+  }
+  nextButton->setEnabled(true);
+}
+
 void Installer::slotCheckUser()
 {
   nextButton->setEnabled(false);
@@ -336,16 +358,16 @@ void Installer::slotNext()
       return;
    }*/
    //Check that there are services available to be enabled
-   if( installStackWidget->currentIndex()==6 && SERVICELIST.isEmpty() ){
-     qDebug() << "Available Services:" << SERVICELIST.length();
+   if( installStackWidget->currentIndex()==5 ){
+     if(DEBUG){ qDebug() << "Available Services:" << SERVICELIST.length(); }
      if(SERVICELIST.isEmpty()){
-       installStackWidget->setCurrentIndex(7); //skip the services page
+       installStackWidget->setCurrentIndex(6); //skip the services page
        if(DEBUG){ qDebug() << "Skipping Services - now index:" << installStackWidget->currentIndex(); }
      }
    }
    
    // Finished screen
-   if ( installStackWidget->currentIndex() == 6 ) {
+   if ( installStackWidget->currentIndex() >= 6 ) {
       // Save the settings
       if(!DEBUG){ saveSettings(); }
       nextButton->setText(tr("&Finish"));
@@ -534,15 +556,16 @@ void Installer::slotQuickConnect(QString key,QString SSID){
   // Run the wifiQuickConnect function
   NetworkInterface::wifiQuickConnect(SSID,key,"wlan0");
  
-  // Move to finish screen
-  installStackWidget->setCurrentIndex(5);
+  // Move to the next page screen
+  nextButton->click();
+  /*installStackWidget->setCurrentIndex(5);
 
   // Save the settings
   saveSettings();
   nextButton->setText(tr("&Finish"));
   backButton->setVisible(false);
   nextButton->disconnect();
-  connect(nextButton, SIGNAL(clicked()), this, SLOT(slotFinished()));
+  connect(nextButton, SIGNAL(clicked()), this, SLOT(slotFinished()));*/
 }
 
 void Installer::slotGetPCDevice(){
@@ -667,17 +690,30 @@ void Installer::saveSettings()
   // Enable Flash for the new user
   QProcess::execute("su", QStringList() << lineUsername->text() << "-c" << "/usr/local/bin/flashpluginctl on" );
   
-  // Do we need to change the system hostname?
-  if ( lineHostname->text() != pcbsd::Utils::getConfFileValue("/etc/rc.conf", "hostname=", 1) )
+  // Do we need to change the system hostname, and set a domain name?
+  if ( lineDomainName->text() != pcbsd::Utils::getConfFileValue("/etc/rc.conf", "hostname=lineHostname.lineDomainName", 1) )
   {
-      pcbsd::Utils::setConfFileValue("/etc/rc.conf", "hostname=", "hostname=\"" + lineHostname->text() + "\"", -1);
-      pcbsd::Utils::setConfFileValue("/etc/hosts", "::1", "::1\t\t\tlocalhost localhost.localdomain " + lineHostname->text() + ".localhost " + lineHostname->text(), -1);
-      pcbsd::Utils::setConfFileValue("/etc/hosts", "127.0.0.1", "127.0.0.1\t\tlocalhost localhost.localdomain " + lineHostname->text() + ".localhost " + lineHostname->text(), -1);
+           pcbsd::Utils::setConfFileValue("/etc/rc.conf", "hostname=", "hostname=\"" + lineHostname->text() + "." + lineDomainName->text() + "\"", -1);
+           pcbsd::Utils::setConfFileValue("/etc/hosts", "::1", "::1\t\t\tlocalhost " + lineHostname->text() + "." + lineDomainName->text() + " " + lineHostname->text(), -1);
+           pcbsd::Utils::setConfFileValue("/etc/hosts", "127.0.0.1", "127.0.0.1\t\tlocalhost " + lineHostname->text() + "." + lineDomainName->text() + " " + lineHostname->text(), -1);
 
       // Now set the hostname on the system
       sethostname(lineHostname->text().toLatin1(), lineHostname->text().length());
+      // Now set the domain name on the system
+      sethostname(lineDomainName->text().toLatin1(), lineDomainName->text().length());
+      QProcess::execute(QString("hostname ") + lineHostname->text() + "." + lineDomainName->text());
   }
+  // Do we need to change the system hostname?
+  else if ( lineHostname->text() != pcbsd::Utils::getConfFileValue("/etc/rc.conf", "hostname=", 1) )
+  {
+      pcbsd::Utils::setConfFileValue("/etc/rc.conf", "hostname=", "hostname=\"" + lineHostname->text() + "\"", -1);
+      pcbsd::Utils::setConfFileValue("/etc/hosts", "::1", "::1\t\t\tlocalhost " + lineHostname->text(), -1);
+      pcbsd::Utils::setConfFileValue("/etc/hosts", "127.0.0.1", "127.0.0.1\t\tlocalhost " + lineHostname->text(), -1);
 
+      // Now set the hostname on the system
+      sethostname(lineHostname->text().toLatin1(), lineHostname->text().length());
+      QProcess::execute(QString("hostname ") + lineHostname->text());
+  }
 
   // Save the PCDM default lang / inputs
   QString curLang;

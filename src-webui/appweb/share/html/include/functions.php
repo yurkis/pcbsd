@@ -18,42 +18,94 @@ function hideurl($newurl = "")
    <?php
 }
 
-// Runs commands through the sudo dispatcher
-function run_cmd($cmd)
+function syscache_ins_pkg_list($jail="")
 {
-   global $DISPATCHID;
-   putenv("PHP_DISID=$DISPATCHID");
-   exec("/usr/local/bin/sudo /usr/local/share/appcafe/dispatcher $cmd", $output);
+   $jail = "#system";
+   $sccmd = array("pkg $jail installedlist");
+   $response = send_sc_query($sccmd);
+   $output = $response["pkg $jail installedlist"];
    return $output;
 }
 
-function syscache_ins_pkg_list($jail="")
+function syscache_ins_plugin_list()
 {
-   if ( empty($jail) )
-      $jail = "#system";
-   else
-      $jail = "$jail";
-
-   exec("/usr/local/bin/syscache ".escapeshellarg("pkg $jail installedlist"), $output);
-   return $output;
+   $sccmd = array("jail stoppedcages", "jail runningcages");
+   $output = send_sc_query($sccmd);
+   if ( empty($output["jail stoppedcages"]) or $output["jail stoppedcages"] == " " )
+     return $output["jail runningcages"];
+   if ( empty($output["jail runningcages"]) or $output["jail runningcages"] == " " )
+     return $output["jail stoppedcages"];
+   return $output["jail stoppedcages"]. "," . $output["jail runningcages"];
 }
 
 function syscache_pbidb_list($flag="allapps")
 {
-   exec("/usr/local/bin/syscache ".escapeshellarg("pbi list $flag"), $output);
-   return $output;
+   $sccmd = array("pbi list $flag");
+   $output = send_sc_query($sccmd);
+   return $output["pbi list $flag"];
+}
+
+function send_dc_cmd($cmdarray)
+{
+  return send_sc_query($cmdarray, "dispatcher");
+}
+
+function send_sc_query($cmdarray, $cmdname="syscache")
+{
+   global $scclient;
+
+   $jarray = array();
+   $jarray["namespace"] = "rpc";
+   $jarray["name"] = "$cmdname";
+   $jarray["id"] = uniqid("", true);
+
+   // Build the json array
+   $num = 0;
+   foreach($cmdarray as $key => $cmd)
+   {
+     // Make sure we don't have a duplicate in the cmd list
+     if ( array_search($cmd, $jarray) === false ) {
+       $jarray["args"][$key] = "$cmd";
+       $num++;
+     }
+   }
+   //echo "<pre>" . json_encode($jarray, JSON_PRETTY_PRINT) ."</pre>";
+   $scclient->send(json_encode($jarray));
+   $rjson = $scclient->receive();
+   //  echo "<pre>" . $rjson ."</pre>";
+   $rarray = json_decode($rjson, true);
+
+   // Search the array for a [BUSY] indicator
+   if ( in_array("[BUSY]", $rarray["args"]))
+     display_busy_dialog();
+
+   return $rarray["args"];
+}
+
+function display_busy_dialog()
+{
+  echo "<div class=\"busydialog\" title=\"AppCafe is busy... Please wait...\"><center><img style=\"background-color: Transparent;background-repeat:no-repeat;border: none;\" height=64 width=64 src=\"images/working.gif\" title=\"Working...\"></center></div>";
+  echo "<script>setTimeout(function(){ window.location.reload(1); }, 3000);</script>";
+  echo "<script>
+     var \$jq = jQuery.noConflict();
+     \$jq( \".busydialog\" ).dialog({ dialogClass: 'no-close' });
+     \$jq(\".ui-dialog-titlebar-close\", $(\".busydialog\").parent()).hide();
+  </script>";
+  exit(0);
 }
 
 function queueInstallApp()
 {
-   global $jail;
-   global $jailUrl;
+   $jail = "#system";
+   $jailUrl="__system__";
 
    $app = $_GET['installApp'];
    $type = $_GET['installAppCmd'];
 
-   if ( ! empty($app) and ! empty($type) and ! empty($jail) )
-      run_cmd("queue $type $app install $jailUrl");
+   if ( ! empty($app) and ! empty($type) and ! empty($jail) ) {
+      $dccmd = array("queue $type $app install $jailUrl");
+      send_dc_cmd($dccmd);
+   }
  
    // Now we can remove those values from the URL
    $newUrl=http_build_query($_GET);
@@ -67,14 +119,16 @@ function queueInstallApp()
 
 function queueDeleteApp()
 {
-   global $jail;
-   global $jailUrl;
+   $jail = "#system";
+   $jailUrl="__system__";
 
    $app = $_GET['deleteApp'];
    $type = $_GET['deleteAppCmd'];
 
-   if ( ! empty($app) and ! empty($type) and ! empty($jail) )
-     run_cmd("queue $type $app delete $jailUrl");
+   if ( ! empty($app) and ! empty($type) and ! empty($jail) ) {
+     $dccmd = array("queue $type $app delete $jailUrl");
+     send_dc_cmd($dccmd);
+   }
 
    // Now we can remove those values from the URL
    $newUrl=http_build_query($_GET);
@@ -86,69 +140,80 @@ function queueDeleteApp()
    hideurl("?".$newUrl);
 }
 
+function queueInstallPlugin()
+{
+   $origin = $_GET['installPlugin'];
+   $ghurl = $_GET['installPluginGH'];
+
+   if ( ! empty($origin) and ! empty($ghurl) ) {
+     $dccmd = array("queue iocage fetch $origin $ghurl");
+     send_dc_cmd($dccmd);
+   }
+
+   // Now we can remove those values from the URL
+   $newUrl=http_build_query($_GET);
+   $origin=str_replace("/", "%2F", $origin);
+   $newUrl=str_replace("&installPlugin=$origin", "", $newUrl);
+   $newUrl=str_replace("installPlugin=$origin", "", $newUrl);
+   hideurl("?".$newUrl);
+}
+
+function queueDeletePlugin()
+{
+   $ioid = $_GET['deletePlugin'];
+   $app = $_GET['app'];
+
+   if ( ! empty($ioid) ) {
+     $dccmd = array("queue iocage destroy $app $ioid");
+     send_dc_cmd($dccmd);
+   }
+
+   // Now we can remove those values from the URL
+   $newUrl=http_build_query($_GET);
+   $newUrl=str_replace("&deletePlugin=$ioid", "", $newUrl);
+   $newUrl=str_replace("deletePlugin=$ioid", "", $newUrl);
+   hideurl("?".$newUrl);
+}
+
 function getDispatcherStatus()
 {
-   return run_cmd("status");
+  global $dispatcherstatus;
+  if ( ! empty($dispatcherstatus) )
+    return $dispatcherstatus;
+
+  $sccmd = array("status");
+  $response = send_dc_cmd($sccmd);
+  $dispatcherstatus = explode("\n", $response["status"]);
+  return $dispatcherstatus;
 }
 
 function get_installed_list($target = "#system")
 {
-  global $sc;
-  exec("$sc ". escapeshellarg("pkg " . $target . " installedlist"), $insarray);
-  return explode(", ", $insarray[0]);
+  $sccmd = array("pkg ". $target . " installedlist");
+  $response = send_sc_query($sccmd);
+  $pbilist = $response["pkg" . $target . " installedlist"];
 }
 
-function parse_details($pbiorigin, $jail, $col, $showRemoval=false, $filter=true)
+function parse_details($pbiorigin, $jail, $col, $showRemoval=false, $filter=true, $pbiarray)
 {
-  global $sc;
-  global $jailUrl;
   global $totalCols;
   global $inslist;
   global $SCERROR;
   global $sysType;
   global $allPBI;
 
-  if ( empty($jail) )
-    $jail="#system";
+  $jail = "#system";
+  $jailUrl="__system__";
 
   if ( empty($inslist) )
     $inslist = get_installed_list($jail);
 
-  /*$cmd="pbi app $pbiorigin";
-  exec("$sc ". escapeshellarg("$cmd name")
-    . " " . escapeshellarg("pkg $jail local $pbiorigin version") 
-    . " " . escapeshellarg("$cmd comment") 
-    . " " . escapeshellarg("$cmd confdir")
-    . " " . escapeshellarg("pkg $jail remote $pbiorigin name") 
-    . " " . escapeshellarg("pkg $jail remote $pbiorigin version")
-    . " " . escapeshellarg("pkg $jail remote $pbiorigin comment")
-    . " " . escapeshellarg("$cmd type")
-    . " " . escapeshellarg("$cmd rating")
-    , $pbiarray);
-
-  $pbiname = $pbiarray[0];
-  $pbiver = $pbiarray[1];
-  $pbicomment = $pbiarray[2];
-  $pbicdir = $pbiarray[3];
-  if ( empty($pbiname) or $pbiname == "$SCERROR" ) {
-    $pbiname = $pbiarray[4];
-    $isPBI=false;
-    $pkgCmd="pkg";
-  } else {
-    $isPBI=true;
-    $pkgCmd="pbi";
+  // If provided the $pbiarray summary, we can skip the 2nd request for it
+  if ( ! isset($pbiarray) ) {
+    $sccmd = array("$jail app-summary $pbiorigin");
+    $response = send_sc_query($sccmd);
+    $pbiarray = $response["$jail app-summary $pbiorigin"];
   }
-  if ( empty($pbiver) or $pbiver == "$SCERROR" )
-    $pbiver = $pbiarray[5];
-  if ( empty($pbiver) or $pbiver == "$SCERROR" )
-    $pbiver = "";
-  if ( empty($pbicomment) or $pbicomment == "$SCERROR" )
-    $pbicomment = $pbiarray[6];
-  $pbitype = $pbiarray[7];
-  $pbirating = $pbiarray[8];
-  */
-  exec("$sc ".escapeshellarg("$jail app-summary $pbiorigin"),$pbiarray);
-  $pbiarray = explode("::::",$pbiarray[0]); //only one line output based on cmd above
   // Output format (4/7/15): [origin, name, version, iconpath, rating, type, comment, confdir, isInstalled, canRemove]
   $pbiname = $pbiarray[1];
   $pbiver = $pbiarray[2];
@@ -156,16 +221,27 @@ function parse_details($pbiorigin, $jail, $col, $showRemoval=false, $filter=true
   $pbirating = $pbiarray[4];
   $pbitype = $pbiarray[5];
   $pbicomment = $pbiarray[6];
+  $pbicomment = str_replace('"', '', $pbicomment);
   $pbicdir = $pbiarray[7];
-  $pbiinstalled = $pbiarray[8];
-  $pbicanremove = $pbiarray[9];
-  if ( empty($pbitype) ) {
+  if ( ! isset($pbiarray[9]) ) {
     $isPBI=false;
     $pkgCmd="pkg";
   } else {
     $isPBI=true;
     $pkgCmd="pbi";
   }
+
+  if ( $isPBI ) {
+    $pbiinstalled = $pbiarray[8];
+    $pbicanremove = $pbiarray[9];
+  } else {
+    $pbiinstalled = $pbiarray[4];
+    $pbicanremove = $pbiarray[5];
+  }
+
+  if ( $pbiorigin == "ports-mgmt/pkg" )
+    $pbicanremove = false;
+
   // If no match, return false
   if ( empty($pbiname) or $pbiname == "$SCERROR" )
      return 1;
@@ -206,29 +282,44 @@ function parse_details($pbiorigin, $jail, $col, $showRemoval=false, $filter=true
   // Get our values from this line
   print("  <td>\n");
 
-  // Is this app installed?
-  //if ( array_search($pbiorigin, $inslist) !== false ) {
-  if ( $pbiinstalled == "true" ){
-    //$output="";
-    //exec("/usr/local/bin/syscache ".escapeshellarg("pkg $jail local $pbiorigin rdependencies"), $output);
-    // Only display the removal option if the app isn't used as a dep on something else
-    //if ( "$output[0]" == "$SCERROR" )
-    if ( $pbicanremove == "true" )
-      print("    <button title=\"Delete $pbiname\" style=\"background-color: Transparent;background-repeat:no-repeat;border: none;float:right;\" onclick=\"delConfirm('" . $pbiname ."','".rawurlencode($pbiorigin)."','".$pkgCmd."','".$jailUrl."')\"><img src=\"/images/application-exit.png\" height=22 width=22></button>\n");
+  if ( strlen($pbiname) > 14 )
+    $pbiname = substr($pbiname, 0, 14) . "..";
+
+  if ( strlen($pbiver) > 14 )
+    $pbiver = substr($pbiver, 0, 14) . "..";
+
+  $appbusy=false;
+  $dStatus = getDispatcherStatus();
+  foreach($dStatus as $curStatus) {
+    if ( strpos($curStatus, "pbi $pbiorigin") !== false ) {
+      $appbusy=true;
+      break;
+    }
+    if ( strpos($curStatus, "pkg $pbiorigin") !== false ) {
+      $appbusy=true;
+      break;
+    }
+  }
+  if ( $appbusy ) {
+    print("<div id='item-working'><img style=\"background-color: Transparent;background-repeat:no-repeat;border: none;float:right;\" height=22 width=22 src=\"images/working.gif\" title=\"Working...\"></div>");
   } else {
-   global $pbiindexdir;
-   if ( file_exists("$pbiindexdir/$pbiorigin/LICENSE") ) {
-     // Read the license data
-     $pbilic = file_get_contents("$pbiindexdir/$pbiorigin/LICENSE");
-     print("    <button title=\"Install $pbiname\" style=\"background-color: Transparent;background-repeat:no-repeat;border: none;float:right;\" onclick=\"addConfirmLic('" . $pbiname ."','".rawurlencode($pbiorigin)."','".$pkgCmd."','".$jailUrl."','".$pbilic."')\"><img src=\"/images/install.png\" height=22 width=22></button>\n");
-   } else {
-     print("    <button title=\"Install $pbiname\" style=\"background-color: Transparent;background-repeat:no-repeat;border: none;float:right;\" onclick=\"addConfirm('" . $pbiname ."','".rawurlencode($pbiorigin)."','".$pkgCmd."','".$jailUrl."')\"><img src=\"/images/install.png\" height=22 width=22></button>\n");
-   }
+
+    // Get the divid for this entry
+    $appdivid = "button-" . str_replace("/", "-", $pbiorigin);
+
+    // Is this app installed?
+    //if ( array_search($pbiorigin, $inslist) !== false ) {
+    if ( $pbiinstalled == "true" ){
+      if ( $pbicanremove == "true" )
+        print("<div id='" . $appdivid . "'><button title=\"Delete $pbiname\" style=\"background-color: Transparent;background-repeat:no-repeat;border: none;float:right;\" onclick=\"delConfirmTiny('" . $pbiname ."','".$pbiorigin."','".$pkgCmd."','".$appdivid."')\"><img src=\"/images/application-exit.png\" height=22 width=22></button></div>\n");
+    } else {
+     print("<div id='" . $appdivid . "'><button title=\"Install $pbiname\" style=\"background-color: Transparent;background-repeat:no-repeat;border: none;float:right;\" onclick=\"addConfirmTiny('" . $pbiname ."','".$pbiorigin."','".$pkgCmd."','".$appdivid."')\"><img src=\"/images/install.png\" height=22 width=22></button>\n");
+    }
   }
 
-  print("    <a href=\"/?p=appinfo&app=".rawurlencode($pbiorigin)."&jail=$jailUrl&allPBI=$allPBI\" title=\"$pbicomment\"><img border=0 align=\"center\" height=48 width=48 src=\"/images/pbiicon.php?i=$pbicdir/icon.png\" style=\"float:left;\"></a>\n");
-  print("    <a href=\"/?p=appinfo&app=".rawurlencode($pbiorigin)."&jail=$jailUrl&allPBI=$allPBI\" style=\"margin-left:5px;\">$pbiname</a><br>\n");
-  print("    <a href=\"/?p=appinfo&app=".rawurlencode($pbiorigin)."&jail=$jailUrl&allPBI=$allPBI\" style=\"margin-left:5px;\">$pbiver</a><br>\n");
+  print("    <a href=\"/?p=appinfo&app=".rawurlencode($pbiorigin)."&allPBI=$allPBI\" title=\"$pbicomment\"><img border=0 align=\"center\" height=48 width=48 src=\"/images/pbiicon.php?i=$pbicdir/icon.png\" style=\"float:left;\"></a>\n");
+  print("    <a href=\"/?p=appinfo&app=".rawurlencode($pbiorigin)."&allPBI=$allPBI\" style=\"margin-left:5px;\">$pbiname</a><br>\n");
+  print("    <a href=\"/?p=appinfo&app=".rawurlencode($pbiorigin)."&allPBI=$allPBI\" style=\"margin-left:5px;\">$pbiver</a><br>\n");
   if ( ! empty($pbirating) and $pbirating != $SCERROR ) {
     if ( strpos($pbirating, "5") === 0 )
       print("<img src=\"/images/rating-5.png\" height=16 width=80 title=\"$pbirating\">");
@@ -251,15 +342,15 @@ function parse_details($pbiorigin, $jail, $col, $showRemoval=false, $filter=true
 
 function display_cats($iconsize = "32")
 {
-  global $sc;
-  global $jailUrl;
-  global $jail;
   global $SCERROR;
   global $sysType;
   global $allPBI;
 
+  $jail = "#system";
+  $jailUrl="__system__";
+
 ?>
-<center>- <b>Categories</b> -</center><br>
+<center>- <b>Categories</b> -&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</center><br>
 <div class="onoffswitch">
     <input type="checkbox" name="onoffswitch" class="onoffswitch-checkbox" id="pbiswitch" onclick="togglePBIMode()" <?php if ( $allPBI == "false" ) { echo "checked"; }?>>
     <label class="onoffswitch-label" for="pbiswitch">
@@ -277,63 +368,111 @@ function display_cats($iconsize = "32")
      $listcmd="pbi list servercats";
 
 
-  exec("$sc ". escapeshellarg($listcmd), $catarray);
-  $catlist = explode(", ", $catarray[0]);
+  $sccmd = array("$listcmd");
+  $response = send_sc_query($sccmd);
+  $catlist = $response["$listcmd"];
+
   foreach ( $catlist as $cat ) {
     if ( empty($cat) )
       continue;
-    exec("$sc ". escapeshellarg("pbi cat $cat name"). " " . escapeshellarg("pbi cat $cat icon"). " " . escapeshellarg("pbi cat $cat comment"), $catdetails);
-    
-    if ( "$catdetails[0]" == "$SCERROR" ) 
-       continue;
 
-    echo "<img height=$iconsize width=$iconsize src=\"/images/pbiicon.php?i=$catdetails[1]\"><a href=\"?p=appcafe&cat=$cat&jail=$jailUrl&allPBI=$allPBI\" title=\"$catdetails[2]\">$catdetails[0]</a><br>\n";
-    unset($catdetails);
+    $sccmd = array("pbi cat $cat name", "pbi cat $cat icon", "pbi cat $cat comment");
+    $response = send_sc_query($sccmd);
+    $catname = $response["pbi cat $cat name"];
+    $caticon = $response["pbi cat $cat icon"];
+    $catcomment = $response["pbi cat $cat comment"];
+
+    echo "<img height=$iconsize width=$iconsize src=\"/images/pbiicon.php?i=$caticon\"><a href=\"?p=appcafe&cat=$cat&allPBI=$allPBI\" class=\"tooltip\" title=\"$catcomment\">$catname</a><br>\n";
   }
 
 }
 
 function get_jail_list($force=false)
 {
-  global $sc;
-  global $jail_list_array;
+  global $saved_jail_list_array;
 
   // If this is set, we have the jail list already
-  if ( ! empty( $jail_list_array) and ! $force )
-     return $jail_list_array;
+  if ( ! empty( $saved_jail_list_array) and ! $force )
+     return $saved_jail_list_array;
 
+  // Query the system for the running jail list
+  $sccmd = array("jail list", "jail stoppedlist");
+  $response = send_sc_query($sccmd);
+
+  // Check if this is a single-item string or array of items
+  if ( gettype($response["jail list"]) == "string" )
+    $jail_list_array[] = $response["jail list"];
+  else
+    $jail_list_array = $response["jail list"];
+
+  if ( gettype($response["jail stoppedlist"]) == "string" )
+    $jail_stopped_list_array[] = $response["jail stoppedlist"];
+  else
+    $jail_stopped_list_array = $response["jail stoppedlist"];
+
+  // Get the UUID of the jails only
+  $jarray = array();
+  foreach($jail_list_array as $jline) {
+    $jitem = explode(", ", $jline);
+    foreach($jitem as $jia) {
+      $jail = explode(" ", $jia);
+      if ( empty($jrunning) )
+        $jrunning =  $jail[0];
+      else
+        $jrunning = $jrunning . ", " . $jail[0];
+    }
+  }
+  $jarray[] = $jrunning;
+
+  // Query the system for the stopped jail list
   unset($jail_list_array);
+  foreach($jail_stopped_list_array as $jline) {
+    $jitem = explode(", ", $jline);
+    foreach($jitem as $jia) {
+      $jail = explode(" ", $jia);
+      if ( empty($jstopped) )
+        $jstopped =  $jail[0];
+      else
+        $jstopped = $jstopped . ", " . $jail[0];
+    }
+  }
+  $jarray[] = $jstopped;
 
-  // Query the system for the jail list
-  exec("$sc ". escapeshellarg("jail list")
-       . " " . escapeshellarg("jail stoppedlist")
-       , $jail_list_array);
-
-  return $jail_list_array;
-
+  $saved_jail_list_array = $jarray;
+  return $jarray;
 }
 
-function display_jail_menu()
+// Check if a particular iocage jail ID is running
+function is_jail_running($jail)
 {
-  $jailoutput = get_jail_list();
-  $running=$jailoutput[0];
-  $stopped=$jailoutput[1];
-  $rarray = explode( ", ", $running);
-  $sarray = explode( ", ", $stopped);
+  // Query the system for the running jail list
+  $sccmd = array("jail list");
+  $response = send_sc_query($sccmd);
+  $string = $response["jail list"];
+  $jail_list_array = explode(", ", $string);
 
-  $djail = $_GET['deleteJail'];
+  if ( array_search($jail, $jail_list_array) !== false )
+    return true; 
 
-  echo "<b>Jails</b><hr align=\"left\" width=\"85%\">";
+  return false;
+}
 
-  if ( ! empty($running) )
-    foreach ($rarray as $jail)
-      if ( $djail != $jail)
-        print("<a href=\"?p=jailinfo&jail=$jail\">$jail</a><br>");
+// Check if a particular iocage pbicage is running
+function is_pbicage_running($jail)
+{
+  // Query the system for the running jail list
+  $sccmd = array("jail runningcages");
+  $response = send_sc_query($sccmd);
+  $string = $response["jail runningcages"];
+  if ( is_array($string) )
+    $jail_list_array = $string;
+  else
+    $jail_list_array = explode(", ", $string);
 
-  if ( ! empty($stopped) )
-    foreach ($sarray as $jail)
-      if ( $djail != $jail)
-        print("<a href=\"?p=jailinfo&jail=$jail\">$jail</a><br>");
+  if ( array_search_partial($jail, $jail_list_array) !== false )
+    return true;
+
+  return false;
 }
 
 function get_nics()
@@ -348,109 +487,6 @@ function get_nics()
      $nicarray[] = $nic;
    }
    return $nicarray;
-}
-
-function display_jail_appcafeselection($page="appcafe")
-{
-  global $sc;
-  global $sysType;
-
-  echo "<table class=\"jaillist\" style=\"width:100%\">\n";
-  echo "<tr>\n";
-  echo " <th>AppCafe Store selection</th>\n";
-  echo "</tr>\n";
-
-  // If we are on appliance, hide the local system access
-  if ( $sysType != "APPLIANCE" )
-    echo "<tr><td><a href=\"/?p=$page&jail=__system__\"><img src=\"/images/system.png\" height=32 width=32> Local System</a></td></tr>";
-
-  $jailoutput = get_jail_list();
-
-  $running=$jailoutput[0];
-  $rarray = explode( ", ", $running);
-
-  foreach ($rarray as $jname) {
-    if ( empty($jname) )
-       continue;
-
-    unset($jarray);
-    exec("$sc ". escapeshellarg("jail ". $jname . " ipv4"), $jarray);
-    $jipv4=$jarray[0];
-
-    echo "<tr><td><a href=\"/?p=$page&jail=$jname\"><img src=\"/images/jail.png\" height=32 width=32> $jname - $jipv4</a></td></tr>";
-  }
-
-  echo "</table>";
-
-} // End of display_jail_appcafeselection
-
-function display_jail_chooser() {
-  global $sc;
-  global $sysType;
-  global $jailUrl;
-  global $jail;
-  global $page;
-
-  echo "<p>Viewing Apps for:</p><br>";
-  echo "<form name=\"jailnav\">\n";
-  echo "<select name=\"jailSelect\" onChange=\"goto(this.form)\" style=\"height: 80%; width: 175px;\">\n";
-
-  if ( $sysType != "APPLIANCE" ) {
-    if ( $jail == "#system" )
-      echo "<option value=\"/?p=$page&jail=__system__\" selected>Local System\n";
-    else
-      echo "<option value=\"/?p=$page&jail=__system__\">Local System\n";
-  }
-
-  $jailoutput = get_jail_list();
-
-  $running=$jailoutput[0];
-  $rarray = explode( ", ", $running);
-
-  foreach ($rarray as $jname) {
-    if ( empty($jname) )
-       continue;
-
-    unset($jarray);
-    exec("$sc ". escapeshellarg("jail ". $jname . " ipv4"), $jarray);
-    $jipv4=$jarray[0];
-
-    if ( $jail == $jname )
-      echo "<option value=\"/?p=$page&jail=$jname\" selected>$jname\n";
-    else
-      echo "<option value=\"/?p=$page&jail=$jname\">$jname\n";
-  }
-
-  echo "</select>\n";
-  echo "</form>\n";
-  echo "<br><hr width=\"80%\"><br>";
-}
-
-function get_default_jail() {
-  global $jail;
-  global $jailUrl;
-  global $sysType;
-
-  // If not in appliance mode, grab the first jail
-  if ( $sysType != "APPLIANCE" ) {
-    $jail = "#system";
-    $jailUrl = "__system__";
-    return 0;
-  }
-
-  // No local system, get first jail in list
-  $jailoutput = get_jail_list();
-
-  $running=$jailoutput[0];
-  $rarray = explode( ", ", $running);
-  if ( ! empty($rarray[0]) )
-  {
-    $jail = $rarray[0];
-    $jailUrl = $rarray[0];
-    return 0;
-  }
-
-  return 1;
 }
 
 function check_update_reboot() {
@@ -485,6 +521,201 @@ function check_update_reboot() {
   }
 
   return 0;
+}
+
+function parse_plugin_details($origin, $col, $showRemoval=false, $filter=true)
+{
+  global $totalCols;
+  global $SCERROR;
+  global $sysType;
+  global $cage_installed;
+
+  $sccmd = array("cage-summary $origin");
+  $response = send_sc_query($sccmd);
+  $pbiarray = $response["cage-summary $origin"];
+  // Output format (4/7/15): [origin, name, iconpath, arch, fbsdver]
+  $pbiname = $pbiarray[1];
+  $pbiicon = $pbiarray[2];
+  $pbiarch = $pbiarray[3];
+  $pbifbsdver = $pbiarray[4];
+
+  // If no match, return false
+  if ( empty($pbiname) or $pbiname == "$SCERROR" )
+     return 1;
+
+  // Set our $cage_installed only once
+  if ( empty($cage_installed) ) {
+    $sccmd = array("jail stoppedcages", "jail runningcages");
+    $response = send_sc_query($sccmd);
+    $cage_installed[] = $response["jail stoppedcages"];
+    $cage_installed[] = $response["jail runningcages"];
+
+  }
+
+  $pbiinstalled=false;
+  if ( array_search_partial($origin . " ", $cage_installed) !== false )
+    $pbiinstalled=true;
+
+  if ( $col == 1 )
+    print ("<tr>\n");
+
+  // Get our values from this line
+  print("  <td>\n");
+
+  if ( strlen($pbiname) > 25 )
+    $pbiname = substr($pbiname, 0, 14) . "..";
+
+  $appbusy=false;
+  $dStatus = getDispatcherStatus();
+  foreach($dStatus as $curStatus) {
+    if ( strpos($curStatus, "iocage fetch $origin") !== false ) {
+      $appbusy=true;
+      break;
+     }
+     if ( strpos($curStatus, "iocage destroy $origin") !== false ) {
+       $appbusy=true;
+       break;
+     }
+   }
+   if ( $appbusy ) {
+     print("<div id='item-working'><img style=\"background-color: Transparent;background-repeat:no-repeat;border: none;float:right;\" height=22 width=22 src=\"images/working.gif\" title=\"Working...\"></div>");
+   } else {
+     // Get the divid for this entry
+     $appdivid = "button-" . str_replace("/", "-", $origin);
+
+     // Is this app installed?
+     if ( $pbiinstalled == true ){
+       $ioid = get_iocage_id_from_origin($origin);
+       print("<div id='". $appdivid ."'><button title=\"Delete $pbiname\" style=\"background-color: Transparent;background-repeat:no-repeat;border: none;float:right;\" onclick=\"delAppConfirmTiny('" . $pbiname ."','".$origin."','".$ioid."','".$appdivid."')\"><img src=\"/images/application-exit.png\" height=22 width=22></button></div>\n");
+     } else {
+       $sccmd = array("pbi cage " . $origin . " git");
+       $response = send_sc_query($sccmd);
+       $ghrepo = $response["pbi cage ". $origin . " git"];
+
+       print("<div id='". $appdivid ."'><button title=\"Install $pbiname\" style=\"background-color: Transparent;background-repeat:no-repeat;border: none;float:right;\" onclick=\"addAppConfirmTiny('" . $pbiname ."','".$origin."','".$ghrepo."','".$appdivid."')\"><img src=\"/images/install.png\" height=22 width=22></button></div>\n");
+     }
+  }
+
+  print("    <a href=\"/?p=plugininfo&app=".rawurlencode($origin)."\" title=\"$pbicomment\"><img border=0 align=\"center\" height=48 width=48 src=\"/images/pbiicon.php?i=$pbiicon\" style=\"float:left;\"></a>\n");
+  print("    <a href=\"/?p=plugininfo&app=".rawurlencode($origin)."\" style=\"margin-left:5px;text-width:100%\">$pbiname</a><br>\n");
+  print("  </td>\n");
+
+  if ( $col == $totalCols )
+    print ("</tr>\n");
+
+  return 0;
+}
+
+
+function array_search_partial($keyword, $arr) {
+  foreach($arr as $index => $string) {
+      if ( is_array($string) ) {
+        foreach($string as $subindex => $substring) {
+          if (strpos($substring, $keyword) !== FALSE)
+              return true;
+        }
+      } else {
+        if (strpos($string, $keyword) !== FALSE)
+            return true;
+      }
+  }
+  return false;
+}
+
+function display_plugin_cats($iconsize = "32")
+{
+  global $SCERROR;
+  global $sysType;
+  global $allPBI;
+
+?>
+<center>- <b>Categories</b> -&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</center><br>
+<?php
+
+  // Get a list of available plugins
+  $sccmd = array("pbi list cages");
+  $response = send_sc_query($sccmd);
+  $plugarray = $response["pbi list cages"];
+
+  // Get all the PBI categories
+  $sccmd = array("pbi list allcats");
+  $response = send_sc_query($sccmd);
+  $catlist = $response["pbi list allcats"];
+
+  foreach ( $catlist as $cat ) {
+    if ( empty($cat) )
+      continue;
+
+    // Skip any categories which have no entries
+    if ( array_search_partial($cat, $plugarray) == false )
+      continue;
+
+    $sccmd = array("pbi cat $cat name", "pbi cat $cat icon", "pbi cat $cat comment");
+    $response = send_sc_query($sccmd);
+    $catname = $response["pbi cat $cat name"];
+    $caticon = $response["pbi cat $cat icon"];
+    $catcomment = $response["pbi cat $cat comment"];
+
+    echo "<img height=$iconsize width=$iconsize src=\"/images/pbiicon.php?i=$caticon\"><a href=\"?p=plugins&cat=$cat\" class=\"tooltip\" title=\"$catcomment\">$catname</a><br>\n";
+  }
+
+}
+
+function get_iocage_id_from_origin($origin)
+{
+  $sccmd = array("jail stoppedcages", "jail runningcages");
+  $response = send_sc_query($sccmd);
+  $stopped = $response["jail stoppedcages"];
+  $running = $response["jail runningcages"];
+  if ( is_array($running) )
+    $runningarray = $running;
+  else
+    $runningarray = explode(", ", $running);
+  if ( is_array($stopped) )
+    $stoppedarray = $stopped;
+  else
+    $stoppedarray = explode(", ", $stopped);
+
+  // Check stopped cages first
+  foreach ( $stoppedarray as $jail ) {
+    if ( stripos($jail, $origin . " ") !== false ) {
+       $jitem = explode(" ", $jail);
+       return $jitem[1];
+    }
+  }
+
+  foreach ( $runningarray as $jail ) {
+    if ( stripos($jail, $origin . " ") !== false ) {
+      $jitem = explode(" ", $jail);
+      return $jitem[1];
+    }
+  }
+
+  return "";
+}
+
+function get_iocage_pool()
+{
+   $dccmd = array("iocage activate");
+   $response = send_dc_cmd($dccmd);
+   $rtn = explode("\n", $response["iocage activate"]);
+   $rtn = explode( " ", $rtn[0]);
+   return $rtn[1];
+}
+
+function get_zpools()
+{
+   exec("/sbin/zpool list ".escapeshellarg("-H"), $output);
+   $zpools = array();
+   foreach ( $output as $pline )
+   {
+     $pline=str_replace("\t", " ", $pline);
+     $zarray = explode(" ", $pline);
+     if ( $zarray[0] == "freenas-boot" )
+       continue;
+     $zpools[] = $zarray[0];
+   }
+   return $zpools;
 }
 
 ?>

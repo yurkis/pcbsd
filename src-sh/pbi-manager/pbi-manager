@@ -311,6 +311,8 @@ init_vars() {
 
         # User overridable variables
 	PBI_DBINDEXDIR="${PBI_DBDIR}/index"
+	PBI_DBCAGEINDEXDIR="${PBI_DBDIR}/cage-index"
+	PBI_CAGEGITURL="https://github.com/pbi-cages/pbicage-index.git"
 	PBI_INDEXDB="${PBI_DBINDEXDIR}/PBI-INDEX"
 	PBI_VERBOSE="NO"
 
@@ -557,13 +559,15 @@ load_pbi_info_index()
 	# No Database? Ain't gona find much..
 	if [ ! -e "$PBI_INDEXDB" ] ; then return 1; fi
 	
-	# Search by name
-	local line=`cat ${PBI_INDEXDB} | grep "^PBI=" | grep -i "${d}${tPBI}${d}" | head -n 1`
-	if [ -z "$line" ] ; then
+	echo $tPBI | grep -q '/'
+	if [ $? -ne 0 ] ; then
+		# Search by name
+		local line=`cat ${PBI_INDEXDB} | grep "^PBI=" | grep -i "${d}${tPBI}${d}" | head -n 1`
+	else
 		# Not by name, search by ORIGIN
-		line=`cat ${PBI_INDEXDB} | grep "^PBI=${tPBI}${d}" | head -n 1`
-		if [ -z "$line" ] ; then return 1; fi
+		local line=`cat ${PBI_INDEXDB} | grep "^PBI=${tPBI}${d}" | head -n 1`
 	fi
+	if [ -z "$line" ] ; then return 1; fi
 
 	# Now get values from this list
 	PBI_PROGNAME=`echo $line | awk -F:::: '{print $2}'`
@@ -582,7 +586,6 @@ load_pbi_info_index()
 	PBI_CONFDIR=`echo $line | awk -F:::: '{print $16}'`
 	PBI_APPARCH=`uname -m`
 	PBI_PROGVERSION=`${PKG_CMD} ${PKG_FLAG} rquery '%v' $PBI_ORIGIN`
-	
 	return 0
 }
 
@@ -720,6 +723,9 @@ do_pbi_pkg_add() {
 
 	# Last, but not least, check for and add any menu icons
 	add_xdg_icon "$PBI_CONFDIR" "menu"
+
+	# Add desktop icons for all users
+	add_xdg_icon "$PBI_CONFDIR" "desktop" "ALLUSERS"
 
 	exit 0
 }
@@ -1012,6 +1018,18 @@ add_xdg_icon() {
 		rm ${PBI_TMPDIR}/$fNam
 	done
 
+	if [ "$3" != "ALLUSERS" ] ; then return ; fi
+
+	# Try to add this desktop icon for all users
+	for user in `ls /home`
+	do
+		# Does this user exist?
+		cat /etc/passwd | grep -q "^${user}:"
+		if [ $? -ne 0 ] ; then continue; fi
+
+		# Remove the icon
+		su $user -c "pbi icon add-desktop $PBI_ORIGIN" 2>/dev/null
+	done
 }
 
 # 1 - .desktop file to check
@@ -1145,8 +1163,41 @@ get_pkgname() {
 	PKGNAME="${name}"
 }
 
+# Grab / update to the latest pbicage index
+check_update_cageindex() {
+	_oPWD=`pwd`
+	PBI_DBCAGEINDEXDIR="${PBI_DBDIR}/cage-index"
+
+	# If the DB dir doesn't exist, time to checkout
+	if [ ! -e "${PBI_DBCAGEINDEXDIR}/README.md" ] ; then
+		echo "Checking out latest pbicage index..."
+		if [ ! -d "${PBI_DBCAGEINDEXDIR}" ] ; then
+			mkdir -p ${PBI_DBCAGEINDEXDIR} 
+		fi
+		git clone --depth=1 ${PBI_CAGEGITURL} ${PBI_DBCAGEINDEXDIR} >/dev/null 2>/dev/null
+		if [ $? -ne 0 ] ; then
+			echo "WARNING: Failed getting pbicage index..."
+		else
+			echo "pbicage index is up-to-date."
+		fi
+	else
+		echo "Updating pbicage index..."
+		cd ${PBI_DBCAGEINDEXDIR}
+		git pull origin master >/dev/null 2>/dev/null
+		if [ $? -ne 0 ] ; then
+			echo "WARNING: Failed updating pbicage index..."
+		else
+			echo "pbicage index is up-to-date."
+		fi
+	fi
+	cd ${_oPWD}
+}
+
 # Check if we need to pull down the updated INDEX file
 check_update_index() {
+
+	# Check if we have any pbicage index updates
+	check_update_cageindex
 
 	# Make sure the repo is enabled
 	cat ${_pRepoFile} | grep -q 'enabled: false'
@@ -1247,10 +1298,10 @@ load_pkg_metadata()
 		PBI_LICENSE="`${PKG_CMD} rquery ${PKG_REPOFLAG} -U '%L' ${PBI_ORIGIN} 2>/dev/null | awk 1 ORS=' '`"
 	fi
 	if [ -z "$PBI_SHORTDESC" ] ; then
-		PBI_SHORTDESC="`${PKG_CMD} rquery ${PKG_REPOFLAG} -U '%c' ${PBI_ORIGIN} 2>/dev/null | sed 's|^$|<br>|g' | tr '\n' ' ' | sed 's|*|-|g'`"
+		PBI_SHORTDESC="`${PKG_CMD} rquery ${PKG_REPOFLAG} -U '%c' ${PBI_ORIGIN} 2>/dev/null | awk '{printf "%s<br>",$0} END {print ""}' | sed 's|*|-|g'`"
 	fi
 	if [ -z "$PBI_DESC" ] ; then
-		PBI_DESC="`${PKG_CMD} rquery ${PKG_REPOFLAG} -U '%e' ${PBI_ORIGIN} 2>/dev/null | sed 's|^$|<br>|g' | tr '\n' ' ' | sed 's|*|-|g'`"
+		PBI_DESC="`${PKG_CMD} rquery ${PKG_REPOFLAG} -U '%e' ${PBI_ORIGIN} 2>/dev/null | awk '{printf "%s<br>",$0} END {print ""}' | sed 's|*|-|g'`"
 	fi
 
 	# Grab all the pkgng info we can in one pass
@@ -1296,63 +1347,6 @@ load_pbi_etcconf() {
 
 }
 
-do_ng_migration()
-{
-	local db="/var/db/pbi/installed"
-
-	# Duh
-	require_root
-
-	# Make sure we update the index first
-	pbi updateindex -f
-
-	# No Database? Ain't gona find much..
-	if [ ! -e "$PBI_INDEXDB" ] ; then
-		echo "No PBING index... Reboot or run this after INDEX is downloaded"
-		exit 1
-	fi
-
-	# Before doing any updates, need to make sure packages on system
-	# are up2date
-	pc-updatemanager pkgupdate
-	if [ $? -ne 0 ] ; then
-	   exit_err "Packages on system need updating before running 'pbi migrate' again."
-	fi
-
-	# Remove user *.desktop files
-	users=""
-	for h in `ls /usr/home`
-	do
-		if [ ! -d "/usr/home/$h/Desktop" ] ; then continue; fi
-		rm /usr/home/${h}/Desktop/PBI-*.desktop 2>/dev/null
-		rm /usr/home/${h}/.local/share/applications/PBI-*.desktop 2>/dev/null
-		users="$users $h"
-	done
-
-	for i in `ls $db`
-	do
-		# Get the PBI name
-		oName=`cat $db/${i}/pbi_name 2>/dev/null`
-		oPath=`cat $db/${i}/pbi_defaultpath 2>/dev/null`
-		if [ -n "$oPath" -a -n "$oName" ] ; then
-			echo "Removing old PBI: $oName"
-			echo "$oPath" | grep -q '/usr/pbi/'
-			if [ $? -eq 0 ] ; then
-				rm -rf $oPath
-			fi
-			rm -rf $db/$i
-
-			echo "Adding PBING: $oName"
-			pbi add $oName
-			pbi icon add-menu $oName
-			for u in $users
-			do
-				su $u -c "pbi icon add-desktop $oName" 2>/dev/null
-			done
-		fi
-	done
-}
-
 app_init()
 {
   cmd=$1
@@ -1369,12 +1363,6 @@ app_init()
 		makeindex) usage_makeindex_pbi ;;
 		*) exit_err "Unknown command" ;;
 	esac
-  fi
-
-  # User requested to run a migration from old PBIs to PBING
-  if [ "$cmd" = "migrate" ] ; then
-     do_ng_migration
-     exit 0
   fi
 
   which -s "pbi_${cmd}" 

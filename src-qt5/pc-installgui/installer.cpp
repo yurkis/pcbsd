@@ -22,7 +22,7 @@ Installer::Installer(QWidget *parent) : QMainWindow(parent, Qt::Window | Qt::Fra
 	
     //Now start loading the rest of the interface
     labelVersion->setText(tr("Version:") + " " + PCBSDVERSION);
-    translator = new QTranslator();
+    //translator = new QTranslator();
     haveWarnedSpace=false;
     force4K = false;
     defaultInstall = true;
@@ -38,6 +38,7 @@ Installer::Installer(QWidget *parent) : QMainWindow(parent, Qt::Window | Qt::Fra
     connect(pushChangeKeyLayout, SIGNAL(clicked()), this, SLOT(slotPushKeyLayout()));
     connect(pushHardware, SIGNAL(clicked()), this, SLOT(slotCheckHardware()));
     connect(pushNetwork, SIGNAL(clicked()), this, SLOT(slotStartNetworkManager()));
+    connect(pushDiskManager, SIGNAL(clicked()), this, SLOT(slotStartDiskManager()));
     connect(pushLoadConfig, SIGNAL(clicked()), this, SLOT(slotLoadConfigUSB()));
     connect(pushSaveConfig, SIGNAL(clicked()), this, SLOT(slotSaveConfigUSB()));
     connect(pushSaveConfig2, SIGNAL(clicked()), this, SLOT(slotSaveConfigUSB()));
@@ -47,10 +48,10 @@ Installer::Installer(QWidget *parent) : QMainWindow(parent, Qt::Window | Qt::Fra
     nextButton->setText(tr("&Next"));
 
     // Init the boot-loader
-    bootLoader = QString("GRUB");
+    bootLoader = QString("BSD");
 
     // We use GPT by default now
-    loadGPT = true;
+    sysPartType="GPT";
 
     // No optional components by default
     fPORTS=false;
@@ -67,11 +68,9 @@ Installer::Installer(QWidget *parent) : QMainWindow(parent, Qt::Window | Qt::Fra
     backButton->setVisible(false);
 
     // Update the status bar
-    // This makes the status text more "visible" instead of using the blue background
-    statusBar()->setStyleSheet("background: white");
 
     // Check if we are running in EFI mode
-    if ( system("kenv grub.platform | grep -q 'efi'") == 0 )
+    if ( system("sysctl -n machdep.bootmethod | grep -q 'UEFI'") == 0 )
       efiMode=true;
     else
       efiMode=false;
@@ -162,7 +161,6 @@ void Installer::initInstall(QSplashScreen *splash)
 
     // Load any package scheme data
     splash->showMessage("Loading packages", Qt::AlignHCenter | Qt::AlignBottom);
-    listDeskPkgs = Scripts::Backend::getPackageData(availDesktopPackageData, QString());
 
     // Do check for available meta-pkgs on boot media
     if ( QFile::exists("/tmp/no-meta-pkgs") )
@@ -209,8 +207,6 @@ void Installer::initInstall(QSplashScreen *splash)
     splash->showMessage("Loading disk information", Qt::AlignHCenter | Qt::AlignBottom);
     loadDiskInfo();
     
-    // Init the desktop wheel
-    initDesktopSelector();
 }
 
 void Installer::loadDiskInfo()
@@ -300,7 +296,7 @@ bool Installer::autoGenPartitionLayout(QString target, bool isDisk)
 
   // If over 1.99TB, we should use GPT mode
   if ( totalSize > 1999900 )
-    loadGPT=true;
+    sysPartType="GPT";
 
   // Add the main zfs pool with standard partitions
   fsType= "ZFS";
@@ -502,37 +498,12 @@ void Installer::slotDiskCustomizeClicked()
   wDisk->setWindowModality(Qt::ApplicationModal);
   if ( radioRestore->isChecked() )
     wDisk->setRestoreMode();
-  connect(wDisk, SIGNAL(saved(QList<QStringList>, QString, bool, QString, bool, QString)), this, SLOT(slotSaveDiskChanges(QList<QStringList>, QString, bool, QString, bool, QString)));
+  connect(wDisk, SIGNAL(saved(QList<QStringList>, QString, QString, QString, bool, QString)), this, SLOT(slotSaveDiskChanges(QList<QStringList>, QString, QString, QString, bool, QString)));
   wDisk->show();
   wDisk->raise();
 }
 
-void Installer::slotDesktopCustomizeClicked()
-{
-  if ( ! radioDesktop->isChecked() )
-     return;
-  desks = new desktopSelection();
-  desks->programInit(listDeskPkgs,selectedPkgs);
-  desks->setWindowModality(Qt::ApplicationModal);
-  customPkgsSet = true;
-  connect(desks, SIGNAL(saved(QStringList)), this, SLOT(slotSaveMetaChanges(QStringList)));
-  desks->show();
-  desks->raise();
-}
-
-void Installer::slotSaveMetaChanges(QStringList sPkgs)
-{
-  selectedPkgs = sPkgs;
-
-  if ( radioDesktop->isChecked() )
-     groupDeskSummary->setTitle(tr("PC-BSD Package Selection"));
-  else
-     groupDeskSummary->setTitle(tr("TrueOS Package Selection"));
-
-  textDeskSummary->setText(tr("The following meta-pkgs will be installed:") + "<br>" + selectedPkgs.join("<br>"));
-}
-
-void Installer::slotSaveDiskChanges(QList<QStringList> newSysDisks, QString BL, bool GPT, QString zName, bool zForce, QString biosMode )
+void Installer::slotSaveDiskChanges(QList<QStringList> newSysDisks, QString BL, QString partType, QString zName, bool zForce, QString biosMode )
 {
 
   bootLoader=BL;
@@ -548,7 +519,7 @@ void Installer::slotSaveDiskChanges(QList<QStringList> newSysDisks, QString BL, 
     efiMode=false;
 
   // Save the new disk layout
-  loadGPT = GPT;
+  sysPartType=partType;
   sysFinalDiskLayout = newSysDisks;
   textEditDiskSummary->clear();
   QStringList summary = getDiskSummary();
@@ -559,82 +530,6 @@ void Installer::slotSaveDiskChanges(QList<QStringList> newSysDisks, QString BL, 
  
   // Regenerate the config
   startConfigGen();
-}
-
-void Installer::slotChangedMetaPkgSelection()
-{
-
-  selectedPkgs.clear();
-  pushDeskCustomize->setEnabled(false);
-  pushDeskCustomize->setVisible(false);
-  if ( radioRestore->isChecked() )
-  {
-     textDeskSummary->setText(tr("Performing a restore from a Life-Preserver backup. Click next to start the restore wizard."));
-     return;
-  }
-
-
-  // Set the default desktop meta-pkgs based upon the selection
-  if ( radioDesktop->isChecked() )
-  {
-      pushDeskCustomize->setEnabled(true);
-      pushDeskCustomize->setVisible(true);
-      selectedPkgs << "KDE";
-      selectedPkgs << "Firefox";
-
-      // Include i18n stuff?
-      if ( comboLanguage->currentIndex() != 0 )
-	 selectedPkgs << "pcbsd-i18n" << "KDE-l10n" << "pcbsd-i18n-qt5";
-
-      // Check if we are using NVIDIA driver and include it automatically
-      QFile file("/var/log/Xorg.0.log");
-      if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-          
-        QTextStream in(&file);
-        while (!in.atEnd()) {
-           QString line = in.readLine();
-           if ( line.indexOf("NVIDIA Unified Driver") != -1 ) {
-	     selectedPkgs << "NVIDIA";
-             break;
-           }
-        }     
-        file.close();
-      } // Done with NVIDIA check
-
-      // Are we on VirtualBox or VMware?
-      QFile filev("/var/log/Xorg.0.log");
-      if (filev.open(QIODevice::ReadOnly | QIODevice::Text)) {
-          
-        QTextStream inv(&filev);
-        while (!inv.atEnd()) {
-           QString line = inv.readLine();
-           if ( line.indexOf("VirtualBox") != -1 ) {
-	     selectedPkgs << "VirtualBoxGuest";
-             break;
-           }
-           if ( line.indexOf("VMware") != -1 ) {
-	     selectedPkgs << "VMwareGuest";
-             break;
-           }
-        }     
-        filev.close();
-      } // End of VM checks
-  }
-
-  slotSaveMetaChanges(selectedPkgs);
-  qDebug() << selectedPkgs;
-
-}
-
-void Installer::initDesktopSelector()
-{
-    // Using default pkg sets for now
-    customPkgsSet = false;
-    connect(pushDeskCustomize,SIGNAL(clicked()), this, SLOT(slotDesktopCustomizeClicked()));
-    connect(radioDesktop,SIGNAL(clicked()), this, SLOT(slotChangedMetaPkgSelection()));
-    connect(radioServer,SIGNAL(clicked()), this, SLOT(slotChangedMetaPkgSelection()));
-    connect(radioRestore,SIGNAL(clicked()), this, SLOT(slotChangedMetaPkgSelection()));
-    slotChangedMetaPkgSelection();
 }
 
 void Installer::proceed(bool forward)
@@ -682,11 +577,6 @@ void Installer::slotNext()
 {
    QString tmp;
 
-   // Update package selection in case user changed language, etc
-   if ( installStackWidget->currentIndex() == 0 && hasPkgsOnMedia && !customPkgsSet) {
-     slotChangedMetaPkgSelection();
-   }
-
    // If no pkgs on media
    if ( installStackWidget->currentIndex() == 0 && ! hasPkgsOnMedia) {
      installStackWidget->setCurrentIndex(2);
@@ -731,6 +621,10 @@ void Installer::slotNext()
       startConfigGen();
       QString msg;
 
+      // Check for any space warnings
+      if ( ! haveWarnedSpace )
+        checkSpaceWarning();
+
       if (radioRestore->isChecked() )
 	msg=tr("Start the restore now?");
       else
@@ -774,11 +668,15 @@ void Installer::slotAbort()
 
 void Installer::slotChangeLanguage()
 {
-    if ( comboLanguage->currentIndex() == -1 )
-      return;
+    static QTranslator *translator = 0;
+    //if ( comboLanguage->currentIndex() == -1 && translator!=0)
+      //return;
 
     // Figure out the language code
-    QString langCode = languages.at(comboLanguage->currentIndex());
+    QString langCode = "en_US";
+    if(comboLanguage->currentIndex() != -1){ 
+      langCode = languages.at(comboLanguage->currentIndex());
+    }
     
     // Grab the language code
     langCode.truncate(langCode.lastIndexOf(")"));
@@ -793,15 +691,16 @@ void Installer::slotChangeLanguage()
 
     //QTranslator *translator = new QTranslator();
     qDebug() << "Remove the translator";
-    if ( ! translator->isEmpty() )
+    if ( translator!=0 && ! translator->isEmpty() )
       QCoreApplication::removeTranslator(translator);
 
+    if(translator==0){ translator = new QTranslator(); }
     if (translator->load( QString("SysInstaller_") + langCode, appDir + "/i18n/" )) {
       qDebug() << "Load new Translator" << langCode;
       QCoreApplication::installTranslator(translator);
-      this->retranslateUi(this);
     }
-
+    this->retranslateUi(this); //For en_US - there is no translation file
+    
     // Change the default keyboard layout
     if ( langCode == "en" ) {
        curKeyModel="pc104";
@@ -817,6 +716,8 @@ void Installer::slotChangeLanguage()
        Scripts::Backend::changeKbMap("pc105", langCode, "" );
     }
     
+    // Reset the version label
+    labelVersion->setText(tr("Version:") + " " + PCBSDVERSION);
 }
 
 QStringList Installer::getGlobalCfgSettings()
@@ -953,9 +854,16 @@ QStringList Installer::getGlobalCfgSettings()
   }
 
 
-  // Doing install from /dist directory
-  tmpList << "installMedium=local"; 
-  tmpList << "localPath=/dist";
+  if ( QFile::exists("/pcbsd-media-network") )  
+  {
+    // Doing install from network media
+    tmpList << "installMedium=ftp"; 
+    tmpList << "ftpPath=http://download.pcbsd.org/iso/%VERSION%/%ARCH%/dist";
+  } else {
+    // Doing install from /dist directory
+    tmpList << "installMedium=local"; 
+    tmpList << "localPath=/dist";
+  }
 
   if ( comboLanguage->currentIndex() != 0 ) {
     QString lang = languages.at(comboLanguage->currentIndex());
@@ -996,9 +904,6 @@ QStringList Installer::getGlobalCfgSettings()
 void Installer::startConfigGen()
 {
 
-  if ( ! haveWarnedSpace )
-     checkSpaceWarning();
-
   QStringList cfgList;
 
   // Generate the config file now
@@ -1014,8 +919,8 @@ void Installer::startConfigGen()
 
     // Now add the freebsd dist files so warden can create a template on first boot
     cfgList+= "";
-    cfgList << "runCommand=mkdir -p /usr/local/tmp/warden-dist/";
-    cfgList << "runExtCommand=cp /dist/*.txz ${FSMNT}/usr/local/tmp/warden-dist/";
+    cfgList << "runCommand=mkdir -p /usr/local/tmp/iocage-dist/";
+    cfgList << "runExtCommand=cp /dist/*.txz ${FSMNT}/usr/local/tmp/iocage-dist/";
     cfgList+= "";
 
     // If doing install from package disk
@@ -1023,36 +928,6 @@ void Installer::startConfigGen()
       cfgList+=getDeskPkgCfg();
 
     cfgList+= "";
-
-    // Check for any AppCafe setup
-    if ( ! appCafeSettings.isEmpty() && appCafeSettings.at(0) == "TRUE" )
-    {
-      // Save the files
-      QFile appuserfile( "/tmp/appcafe-user" );
-      if ( appuserfile.open( QIODevice::WriteOnly ) ) {
-        QTextStream streamuser( &appuserfile );
-        streamuser <<  appCafeSettings.at(1);
-        appuserfile.close();
-      }
-      QFile apppassfile( "/tmp/appcafe-pass" );
-      if ( apppassfile.open( QIODevice::WriteOnly ) ) {
-        QTextStream streampass( &apppassfile );
-        streampass <<  appCafeSettings.at(2);
-        apppassfile.close();
-      }
-      QFile appportfile( "/tmp/appcafe-port" );
-      if ( appportfile.open( QIODevice::WriteOnly ) ) {
-        QTextStream streamport( &appportfile );
-        streamport <<  appCafeSettings.at(3);
-        appportfile.close();
-      }
-
-      // Add the files to the pc-sysinstall config
-      cfgList << "";
-      cfgList << "runExtCommand=mv /tmp/appcafe-user ${FSMNT}/tmp/";
-      cfgList << "runExtCommand=mv /tmp/appcafe-pass ${FSMNT}/tmp/";
-      cfgList << "runExtCommand=mv /tmp/appcafe-port ${FSMNT}/tmp/";
-    }
 
     if ( radioDesktop->isChecked() ) {
       // Doing PC-BSD Install
@@ -1170,7 +1045,7 @@ QStringList Installer::getDiskCfgSettings()
 
     if ( tmpSlice.at(0).isNumber() ) {
       // If we are installing to a GPT partition, mark it as such
-      loadGPT=true;
+      sysPartType="GPT";
       tmpList << "partition=p" + tmpSlice;
     } else {
       tmpList << "partition=" + tmpSlice;
@@ -1180,9 +1055,9 @@ QStringList Installer::getDiskCfgSettings()
     tmpList << "bootManager=" + bootLoader;
 
     // Set the GPT/MBR options
-    if ( loadGPT ) 
+    if ( sysPartType == "GPT" ) 
       tmpList << "partscheme=GPT";
-    else
+    if ( sysPartType == "MBR" )
       tmpList << "partscheme=MBR";
 
     tmpList << "commitDiskPart";
@@ -1355,10 +1230,6 @@ void Installer::startInstall()
      PCSYSINSTALL = "/root/pc-sysinstall/pc-sysinstall";
   else  
      PCSYSINSTALL = "/usr/local/sbin/pc-sysinstall";
-
-  // If the user wants to set UEFI/BIOS mode manually
-  if ( ! forceBIOS.isEmpty() )
-    system("kenv grub.platform='" + forceBIOS.toLatin1() + "'");
 
   QString program = PCSYSINSTALL;
   QStringList arguments;
@@ -1613,9 +1484,12 @@ void Installer::slotReadInstallerOutput()
 	   continue;
         }
 
-	// If we are installing a package, show details to user
-	if ( tmp.indexOf("Installing") == 0 )
-          labelInstallStatus2->setText(tmp.section("...", 0, 0));
+        // Cleanup the installation line
+	if ( tmp.indexOf("-- ") != -1 )
+	   tmp = tmp.remove(0, tmp.indexOf("-- ") + 3);
+
+	// Show other pkgng output text now
+        labelInstallStatus2->setText(tmp);
      }
 
   } // end of while loop
@@ -1633,45 +1507,78 @@ QStringList Installer::getDeskPkgCfg()
    QStringList cfgList, pkgList;
    QString line;
 
-   QList<QStringList> curList;
-
    if ( radioDesktop->isChecked() ) {
-     curList = listDeskPkgs;
-     pkgList << "pcbsd-base";
+     // Our default list of packages that makeup a desktop
+     // This is always able to be changed by user post-install
+     pkgList << "misc/pcbsd-base" << "sysutils/pcbsd-appweb" << "x11/lumina";
+
+     // If using GRUB, make sure the pkgs get loaded
+     if ( bootLoader == "GRUB" )
+       pkgList << "sysutils/grub2-pcbsd" << "sysutils/grub2-efi";
+
+     // The default web-browser and plugins
+     pkgList << "www/firefox" << "java/icedtea-web";
+
+     // Linux Compat stuff
+     pkgList << "emulators/linux_base-c6" << "www/linux-c6-flashplugin11" << "audio/linux-c6-alsa-plugins-oss" << "security/linux-c6-openssl-compat" << "www/nspluginwrapper";
+
+     // The default mail client
+     pkgList << "mail/thunderbird";
+
+     // Multimedia player
+     pkgList << "multimedia/vlc";
+
+     // VirtualBox
+     pkgList << "misc/pcbsd-meta-virtualbox";
+
+     // Office Suite
+     pkgList << "editors/libreoffice";
+
+     // Utilities
+     pkgList << "archivers/unrar" << "archivers/unzip" << "editors/vim";
+
+     // Include i18n stuff?
+     if ( comboLanguage->currentIndex() != 0 )
+       pkgList << "misc/pcbsd-i18n" << "misc/pcbsd-i18n-qt5";
+
+     // Check if we are using NVIDIA driver and include it automatically
+     QFile file("/var/log/Xorg.0.log");
+     if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+       QTextStream in(&file);
+       while (!in.atEnd()) {
+          QString line = in.readLine();
+          if ( line.indexOf("NVIDIA Unified Driver") != -1 ) {
+            pkgList << "x11/nvidia-driver";
+            break;
+          }
+       }     
+       file.close();
+     } // Done with NVIDIA check
+
+     // Are we on VirtualBox or VMware?
+     QFile filev("/var/log/Xorg.0.log");
+     if (filev.open(QIODevice::ReadOnly | QIODevice::Text)) {
+       QTextStream inv(&filev);
+       while (!inv.atEnd()) {
+          QString line = inv.readLine();
+          if ( line.indexOf("VirtualBox") != -1 ) {
+            pkgList << "misc/pcbsd-meta-virtualboxguest";
+            break;
+          }
+          if ( line.indexOf("VMware") != -1 ) {
+            pkgList << "misc/pcbsd-meta-vmwareguest";
+            break;
+          }
+       }     
+       filev.close();
+     } // End of VM checks
+
+     // End of desktop packages
    } else {
-     curList = listServerPkgs;
-     pkgList << "trueos-base";
+     pkgList << "misc/trueos-base";
      // If the user enabled AppCafe remote, install it now
      if ( ! appCafeSettings.isEmpty() && appCafeSettings.at(0) == "TRUE" )
-       pkgList << "pcbsd-appweb";
-   }
-
-   // Loop though list of pkgs, see what to install
-   for ( int d=0; d < curList.count(); ++d) {
-     for ( int i=0; i < selectedPkgs.count(); ++i)
-        // Is the package selected or the base-system?
-	if ( curList.at(d).at(0) == selectedPkgs.at(i) || curList.at(d).at(0) == "base-system" ) {
-
-           // Yay! Lets get a list of packages to install
-	   QFile mFile;
-           mFile.setFileName(curList.at(d).at(6));
-           if ( ! mFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-	      qDebug() << "Invalid meta-pkg list:" << curList.at(d).at(6);
-	      break;
-	   }
-  
-           // Read in the meta pkg list
-           QTextStream in(&mFile);
-           while ( !in.atEnd() ) {
-             line = in.readLine().simplified();
-	     if ( line.isEmpty() )
-                 continue; 
-	     
-             pkgList << line;
-           }
-           mFile.close();
-	   break;
-	}
+       pkgList << "sysutils/pcbsd-appweb";
    }
 
    cfgList << "installPackages=" + pkgList.join(" ");
@@ -1729,15 +1636,13 @@ void Installer::checkSpaceWarning()
   QString target;
   //qDebug() << "Disk layout:" << workingDisk << workingSlice;
 
-  if ( workingSlice == "ALL" ) {
-    targetType = "DRIVE";
-    target = workingDisk;
-    targetLoc = 1;
-  } else {
-    targetType = "SLICE";
-    target = workingDisk + workingSlice;
-    targetLoc = 2;
-  }
+  // Only check full-disk sizes. Other size checks are done in disk wizard
+  if ( workingSlice != "ALL" )
+    return;
+
+  targetType = "DRIVE";
+  target = workingDisk;
+  targetLoc = 1;
   
   // Lets get the size for this disk / partition
   for (int i=0; i < sysDisks.count(); ++i) {
@@ -1875,8 +1780,31 @@ void Installer::slotLoadConfigUSB()
   bool ok;
   QString cfgFile = QInputDialog::getItem(this, tr("PC-BSD Installer"),
                                        tr("Config File:"), cfgs, 0, false, &ok);
-  if (!ok || cfgFile.isEmpty())
+  if (!ok || cfgFile.isEmpty()) {
+    QMessageBox::critical(this, tr("PC-BSD Installer"),
+          tr("Canceled config script install"),
+          QMessageBox::Ok,
+          QMessageBox::Ok);
     return;
+  }
+
+  // Read the contents of this file
+  QStringList fileContents;
+  QFile file("/tmp/pc-sys/" + cfgFile);
+  if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+    QMessageBox::critical(this, tr("PC-BSD Installer"),
+          tr("Failed reading /tmp/pc-sys/") + " " + cfgFile,
+          QMessageBox::Ok,
+          QMessageBox::Ok);
+    return;
+  }
+
+  while (!file.atEnd())
+    fileContents << file.readLine();
+  file.close();
+
+  // Display the file in an OK information box so the user can inspect it
+  QMessageBox::information(this, tr("PC-BSD Installer Config Script"), fileContents.join("\n"), QMessageBox::Ok, QMessageBox::Ok);
   
   ret = QMessageBox::question(this, tr("PC-BSD Installer"),
            tr("Start the install using this config file?") + "\n" + cfgFile,
@@ -1900,6 +1828,11 @@ void Installer::slotLoadConfigUSB()
 void Installer::slotStartNetworkManager() 
 {
   system("/usr/local/bin/pc-netmanager -installer &");
+}
+
+void Installer::slotStartDiskManager() 
+{
+  system("/usr/local/bin/pc-zmanager &");
 }
 
 void Installer::slotSaveRestoreSettings(QStringList Opts)

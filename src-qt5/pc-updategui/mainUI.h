@@ -31,6 +31,8 @@ private:
 
 	void InitUI(); //initialize the UI (widgets, options, menus, current values)
 	
+	void ShowUpdatingNotice();
+
 private slots:
 	void CloseUI(){
 	  this->close();
@@ -57,5 +59,7 @@ private slots:
     void on_actionVulnerabilities_triggered();
     void on_actionExit_triggered();
     void on_actionBase_updates_history_triggered();
+    void on_actionEndOfLife_triggered();
+    void on_actionBranches_triggered();
 };
 #endif

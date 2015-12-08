@@ -320,7 +320,11 @@
          </widget>
         </item>
         <item>
-         <widget class="QTreeView" name="treeView"/>
+         <widget class="QTreeView" name="treeView">
+          <property name="selectionMode">
+           <enum>QAbstractItemView::ExtendedSelection</enum>
+          </property>
+         </widget>
         </item>
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_3">
@@ -375,7 +379,7 @@
      <x>0</x>
      <y>0</y>
      <width>459</width>
-     <height>19</height>
+     <height>20</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -402,19 +406,8 @@
      </property>
      <addaction name="actionPools_2"/>
     </widget>
-    <widget class="QMenu" name="menuEnable_Offsite_Backups">
-     <property name="title">
-      <string>Enable Offsite Backups</string>
-     </property>
-     <property name="icon">
-      <iconset resource="lPreserve.qrc">
-       <normaloff>:/images/upload.png</normaloff>:/images/upload.png</iconset>
-     </property>
-     <addaction name="actionPools_3"/>
-    </widget>
     <addaction name="menuManage_Pool"/>
     <addaction name="menuUnmanage_Pool"/>
-    <addaction name="menuEnable_Offsite_Backups"/>
     <addaction name="separator"/>
     <addaction name="action_SaveKeyToUSB"/>
     <addaction name="separator"/>
@@ -502,11 +495,22 @@
      </property>
      <addaction name="actionJunk_2"/>
     </widget>
+    <widget class="QMenu" name="menuReset_Replication_Password">
+     <property name="title">
+      <string>Reset Replication Password</string>
+     </property>
+     <property name="icon">
+      <iconset resource="lPreserve.qrc">
+       <normaloff>:/images/key.png</normaloff>:/images/key.png</iconset>
+     </property>
+     <addaction name="actionJunk_3"/>
+    </widget>
     <addaction name="action_newSnapshot"/>
     <addaction name="menuDelete_Snapshot"/>
     <addaction name="separator"/>
     <addaction name="menuStart_Replication"/>
     <addaction name="menuInit_Replications"/>
+    <addaction name="menuReset_Replication_Password"/>
    </widget>
    <widget class="QMenu" name="menuClassic_Backups">
     <property name="title">
@@ -687,6 +691,11 @@
    </property>
   </action>
   <action name="actionJunk_2">
+   <property name="text">
+    <string>junk</string>
+   </property>
+  </action>
+  <action name="actionJunk_3">
    <property name="text">
     <string>junk</string>
    </property>

@@ -79,7 +79,7 @@ private slots:
 	void menuAddPool(QAction*);
 	void menuRemovePool(QAction*);
 	void menuSaveSSHKey();
-	void menuSetupISCSI(QAction*);
+	//void menuSetupISCSI(QAction*);
 	void menuCloseWindow();
 	//Classic Backups
 	void menuCompressHomeDir(QAction*);
@@ -96,6 +96,7 @@ private slots:
 	void menuRemoveSnapshot(QAction*);
 	void menuStartReplication(QAction*);
 	void menuInitReplication(QAction*);
+	void menuResetReplicationPassword(QAction*);
 
 signals:
 	void loadSnaps(LPDataset*);

@@ -3,11 +3,14 @@
 
 #include "pkgVulDialog.h"
 #include "updHistoryDialog.h"
+#include "eolDialog.h"
+#include "branchesDialog.h"
 
 #include <QProcess>
 #include <QTimer>
 #include <QMessageBox>
 #include <QScrollBar>
+#include <QThread>
 
 MainUI::MainUI() : QMainWindow(), ui(new Ui::MainUI()){
   ui->setupUi(this); //load designer file
@@ -41,6 +44,8 @@ void MainUI::InitUI(){ //initialize the UI (widgets, options, menus, current val
     watcher->addPath(UPDATE_LOG_FILE);
     watcher->addPath("/tmp/.pcbsdflags");
 	
+  ui->label_sysinfo->setText("");
+  ui->tabWidget->setCurrentIndex(0); 
   //Create/set the list of auto-update options	
   QString AUval = pcbsd::Utils::getValFromPCBSDConf("AUTO_UPDATE").simplified().toLower();
   if(AUval.isEmpty()){ 
@@ -66,19 +71,48 @@ void MainUI::InitUI(){ //initialize the UI (widgets, options, menus, current val
   //Read the current state of the log file
   QString log = pcbsd::Utils::readTextFile(UPDATE_LOG_FILE);
   ui->text_log->setPlainText(log);
-	
+  this->setEnabled(false);
   //Now update the UI based on current system status
   UpdateUI();
 }
 
+void MainUI::ShowUpdatingNotice(){
+  //Now pop up a dialog about updates starting until the update procedure is detected
+  bool started = false;
+  QMessageBox dlg(QMessageBox::NoIcon, tr("Please Wait"), tr("Starting update procedures..."), QMessageBox::NoButton, this, Qt::FramelessWindowHint);
+  dlg.setStandardButtons(QMessageBox::NoButton); //force it again
+  dlg.show();
+  for(int i=0; i<200 && !started; i++){ //60 second maximum wait (200*300ms = 60000 ms)
+    QApplication::processEvents();
+    this->thread()->usleep(300000); //300 ms
+    started = (0==QProcess::execute("pgrep -F /tmp/.updateInProgress"));
+  }
+  dlg.close();
+  QProcess::startDetached("syscache startsync"); //re-sync the database now as well	
+}
+
 void MainUI::watcherChange(QString change){
-  if(change==UPDATE_LOG_FILE){ updateLogChanged(); }
-  else{ UpdateUI(); }
+  if(change==UPDATE_LOG_FILE){ 
+    updateLogChanged();
+    //Make sure the log file was not removed from the watcher for some reason
+    if( !watcher->files().contains(UPDATE_LOG_FILE) ){ watcher->addPath(UPDATE_LOG_FILE); }
+  }else{ UpdateUI(); }
 }
 
 void MainUI::UpdateUI(){ //refresh the entire UI , and system status structure
   //Parse the system status to determine the  updates that are available
   QStringList info = pcbsd::Utils::runShellCommand("syscache needsreboot isupdating hasmajorupdates hassecurityupdates haspcbsdupdates \"pkg #system hasupdates\"");
+  if(info.length() < 6){
+    if(0!=QProcess::execute("pgrep -F /tmp/.updateInProgress")){
+      //Something went wrong with the update/syscache, restart syscache and try again
+      qDebug() << "System Error - no update process running, and syscache is still stopped";
+      qDebug() << " -- restarting syscache";
+      QProcess::startDetached("service syscache start");
+      QTimer::singleShot(100, this, SLOT(UpdateUI()) );
+      return;
+    }
+  }	  
+	
   if(info.length() < 6){ 
     //Is syscache not running?
     //QMessageBox::warning(this, tr("Syscache Not Running?"), tr("The syscache daemon does not appear to be running. It must be running on the system before this utility will function properly.")+"\n\n"+QString(tr("CLI Command:\"%1\" ")).arg("sudo service syscache start") );
@@ -86,43 +120,68 @@ void MainUI::UpdateUI(){ //refresh the entire UI , and system status structure
     info.clear();
     info << "true" << "true" << "false" << "false" << "false" << "false";
     if(!QFile::exists("/tmp/.rebootRequired")){ info[0] = "false"; }
+    if(0!=QProcess::execute("pgrep -F /tmp/.updateInProgress")){ info[1] = "false"; }
   }
+  bool needreboot = (info[0]=="true");
+  bool isupdating = (info[1]=="true");
   bool hasmajor = (info[2]=="true");
   bool hassec = (info[3]=="true");
   bool haspatch = (info[4]=="true");
   bool haspkg = (info[5]=="true");
   
+  //Now make sure that the log file is being watched (in case it did not exist earlier)
+  if(watcher->files().isEmpty()){
+    watcher->addPath(UPDATE_LOG_FILE);
+  }
+  
   //Now Change the UI around based on the current status
+  //int cindex = ui->tabWidget->currentIndex();
   // - First remove the special tabs from the tabWidget (add them as needed)
   for(int i=0; i<ui->tabWidget->count(); i++){
-    if(ui->tabWidget->widget(i)==ui->tab_updates || ui->tabWidget->widget(i)==ui->tab_patches){
+    if( (ui->tabWidget->widget(i)==ui->tab_updates && (needreboot || isupdating || !(hasmajor || hassec || haspkg)) ) \
+	|| ( ui->tabWidget->widget(i)==ui->tab_patches && (needreboot || isupdating || !haspatch)) ){
       ui->tabWidget->removeTab(i);
       i--; //need to back up one value since the list got reduced
     }
   }
   // - Also hide the info label(s) at the top of the window by default
-    ui->label_sysinfo->setVisible(false);
+    //ui->label_sysinfo->setVisible(false);
   //System Needs Reboot
   if(info[0]=="true"){
-    ui->label_sysinfo->setVisible(true);
+    //ui->label_sysinfo->setVisible(true);
     ui->label_sysinfo->setText(tr("System restart required to finish updates!"));
-    ui->tabWidget->setCurrentIndex(0);
+    //if(cindex<0){ ui->tabWidget->setCurrentIndex(0); }
+    //else{ ui->tabWidget->setCurrentIndex(cindex); }
+    this->setEnabled(true);
     return; //None of the update tabs are available at the moment - stop here
   }
   //System currently doing updates
   if(info[1]=="true"){ 
-    ui->label_sysinfo->setVisible(true);
+    //ui->label_sysinfo->setVisible(true);
     ui->label_sysinfo->setText(tr("System currently performing background updates."));
-    ui->tabWidget->setCurrentIndex(0);
+    //if(cindex<0){ ui->tabWidget->setCurrentIndex(0); }
+    //else{ ui->tabWidget->setCurrentIndex(cindex); }
+    this->setEnabled(true);
     return; //None of the update tabs are available at the moment - stop here
   }
   //Now add in the extra tabs as necessary
-  if(hasmajor || hassec || haspkg ){
+  if( (hasmajor || hassec || haspkg) && ui->tabWidget->count()< (haspatch ? 4: 3) ){
     ui->tabWidget->insertTab(0,ui->tab_updates, tr("Updates Available"));
+    ui->tabWidget->setCurrentIndex(0);
+    //cindex++;
   }
   if(haspatch){
     ui->tabWidget->insertTab(0,ui->tab_patches, tr("PC-BSD Patches") );
+    ui->tabWidget->setCurrentIndex(0);
+    //cindex++;
   }
+  
+  if( hasmajor || hassec || haspkg || haspatch ){
+    ui->label_sysinfo->setText(tr("System has updates available"));
+  }else{
+    ui->label_sysinfo->setText(tr("System is current up to date"));
+  }
+  
   //Now add in the information to the update tabs as necessary
   ui->combo_updates->clear(); //clear out the current list
   //  -- NOTE: ui->combo_updates data format: QStringList( <command to install>, <summary of update>)
@@ -133,22 +192,22 @@ void MainUI::UpdateUI(){ //refresh the entire UI , and system status structure
       QString tag = major[i].section("TAG:",1,1).section("<br>",0,0).simplified();
       QString cmd = major[i].section("To install: \"", 1,1).section("\"",0,0);
       if( !tag.isEmpty() && !cmd.isEmpty() ){
-        ui->combo_updates->addItem( QString(tr("Major OS Update: %1")).arg(tag) , QStringList() << cmd << tr("Will install new FreeBSD version, apply security fixes, and update packages."));
+        ui->combo_updates->addItem( QString(tr("Major OS Update: %1")).arg(tag) , QStringList() << "nice "+cmd << tr("Will install new FreeBSD version, apply security fixes, and update packages."));
       }
     }
   }
   //Now do the security + pkg update (if available - special combo command for pc-updatemanager)
   if(hassec && haspkg){
-    ui->combo_updates->addItem( tr("Install Security & Package Updates"), QStringList() << "pc-updatemanager fbsdupdatepkgs" << tr("Will install all security fixes and update all packages") );
+    ui->combo_updates->addItem( tr("Install Security & Package Updates"), QStringList() << "nice pc-updatemanager fbsdupdatepkgs" << tr("Will install all security fixes and update all packages") );
   }
   //Now list the security updates
   if(hassec){
-    ui->combo_updates->addItem( tr("Install Security Updates"), QStringList() << "pc-updatemanager fbsdupdate" << tr("Will only install security updates") );
+    ui->combo_updates->addItem( tr("Install Security Updates"), QStringList() << "nice pc-updatemanager fbsdupdate" << tr("Will only install security updates") );
   }
   //Now list the package updates
   ui->group_details->setVisible(haspkg); //just hide this option if no pkg updates
   if(haspkg){
-    ui->combo_updates->addItem( tr("Install Package Updates"), QStringList() << "pc-updatemanager pkgupdate" << tr("Will only update installed packages") );
+    ui->combo_updates->addItem( tr("Install Package Updates"), QStringList() << "nice pc-updatemanager pkgupdate" << tr("Will only update installed packages") );
     QString pkgdetails = pcbsd::Utils::runShellCommand("syscache \"pkg #system updatemessage\"").join("").replace("<br>","\n");
     ui->text_details->setPlainText(pkgdetails);
   }
@@ -177,11 +236,10 @@ void MainUI::UpdateUI(){ //refresh the entire UI , and system status structure
   patchSelChange(); //make sure the UI is accurate
   
   //Make sure to select the first tab if necessary
-  ui->tabWidget->setCurrentIndex(0);
-  //Now make sure that the log file is being watched (in case it did not exist earlier)
-  if(watcher->files().isEmpty()){
-    watcher->addPath(UPDATE_LOG_FILE);
-  }
+  //if(cindex<0){ ui->tabWidget->setCurrentIndex(0); }
+  //else{ ui->tabWidget->setCurrentIndex(cindex); }
+
+  this->setEnabled(true);
 }
 
 //Update tab
@@ -211,7 +269,8 @@ void MainUI::startUpdates(){ //Start selected update
   QString cmd = up.first();
   qDebug() << "Starting Update:" << cmd;
   QProcess::startDetached(cmd);
-  QTimer::singleShot(500, this, SLOT(UpdateUI()) );
+  ShowUpdatingNotice();
+  UpdateUI();
 }
 
 //Patches tab
@@ -230,10 +289,11 @@ void MainUI::startPatches(){
     }
   }
   if(ups.isEmpty()){ return; } //nothing to do
-  QString cmd = "pc-updatemanager install "+ups.join(" ");
+  QString cmd = "nice pc-updatemanager install "+ups.join(" ");
   qDebug() << "Starting Patches:" << cmd;
   QProcess::startDetached(cmd);
-  QTimer::singleShot(500, this, SLOT(UpdateUI()) );
+  ShowUpdatingNotice();
+  QTimer::singleShot(200, this, SLOT(UpdateUI()) );
 }
 
 //Log tab
@@ -242,6 +302,7 @@ void MainUI::updateLogChanged(){ //this is connected to a file watcher for chang
   if(ui->tabWidget->currentWidget()==ui->tab_log){
     QString log = pcbsd::Utils::readTextFile(UPDATE_LOG_FILE);
     if(log.isEmpty()){ log = pcbsd::Utils::readTextFile(UPDATE_LOG_FILE_PREVIOUS); }
+    if(log.isEmpty()){ log = tr("No update logs available"); }
     //QString clog = ui->text_log->toPlainText();
     //if(clog.length() > log.length() || clog.isEmpty() ){
       //Completely different log than before - reset the entire view
@@ -291,4 +352,41 @@ void MainUI::on_actionBase_updates_history_triggered()
 {
     UpdateHistoryDialog* dlg = new UpdateHistoryDialog(this);
     dlg->execDialog();
+}
+
+void MainUI::on_actionEndOfLife_triggered()
+{
+    EOLDialog* dlg = new EOLDialog(this);
+    QTimer::singleShot(0, dlg, SLOT(setupDialog()) );
+    dlg->exec();
+}
+
+void MainUI::on_actionBranches_triggered()
+{
+    BranchesDialog* dlg = new BranchesDialog(this);
+    QTimer::singleShot(0,dlg, SLOT(setupDialog()) );
+    if (dlg->exec() == QDialog::Accepted)
+    {
+        QMessageBox msg(this);
+        QString dst_branch = dlg->selectedBranch();
+        QString info = tr("Your system will be switched to branch:")+"\n"+dst_branch;
+        if (info.toUpper().indexOf("CURRENT")>=0)
+        {
+            info+= "\n\n"+tr("WARNING! This is an unstable version!");
+        }
+        msg.setText(tr("Are you sure you want to change system branch?"));
+        msg.setInformativeText(info);
+        msg.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+        msg.setDefaultButton(QMessageBox::No);
+        msg.setIcon(QMessageBox::Question);
+        if (msg.exec() == QMessageBox::Yes)
+        {
+            QString cmd = "pc-updatemanager chbranch "+dst_branch;
+            qDebug() << "Starting changing branch:" << cmd;
+            QProcess::startDetached(cmd);
+	    this->thread()->usleep(30000); //300 milliseconds
+	    QProcess::startDetached("syscache startsync");
+            QTimer::singleShot(200, this, SLOT(UpdateUI()) );
+        }
+    }
 }

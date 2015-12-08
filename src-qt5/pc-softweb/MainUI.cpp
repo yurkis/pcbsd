@@ -2,12 +2,15 @@
 
 #include <QKeySequence>
 #include <QApplication>
+#include <QStringList>
+#include <QDebug>
+#include <QShortcut>
 
 MainUI::MainUI(bool debugmode) : QMainWindow(){
   //Setup UI
   DEBUG = debugmode;
-  AUTHCOMPLETE = false; //not performed yet
   this->setWindowTitle(tr("AppCafe"));
+  //Need 1024 wide if possible
   this->resize(1024,600);
   this->setWindowIcon( QIcon(":icons/appcafe.png") );
   if(this->centralWidget()==0){ this->setCentralWidget( new QWidget(this) ); }
@@ -42,6 +45,8 @@ MainUI::MainUI(bool debugmode) : QMainWindow(){
     //Setup the menu for this button
     listMenu = new QMenu();
       listMenu->addAction(QIcon(":icons/configure.png"), tr("Configure"), this, SLOT(GoConfigure() ) );
+      listMenu->addAction(QIcon(":icons/list.png"), tr("Save Pkg List"), this, SLOT(Save_pkglist() ) );
+      listMenu->addSeparator();
       listMenu->addAction(QIcon(":icons/search.png"), tr("Search For Text"), this, SLOT(openSearch() ) );
       listMenu->addSeparator();
       listMenu->addAction(QIcon(":icons/close.png"), tr("Close AppCafe"), this, SLOT(GoClose() ) );
@@ -71,6 +76,8 @@ MainUI::MainUI(bool debugmode) : QMainWindow(){
   ctrlF = new QShortcut( key, this );
   key = QKeySequence(Qt::Key_Escape);
   esc = new QShortcut( key, this );
+  key = QKeySequence(Qt::CTRL | Qt::Key_Q);
+  ctrlQ = new QShortcut( key, this );
     
   //Connect signals/slots
   connect(webview, SIGNAL(linkClicked(const QUrl&)), this, SLOT(LinkClicked(const QUrl&)) );
@@ -82,6 +89,7 @@ MainUI::MainUI(bool debugmode) : QMainWindow(){
   connect(line_search, SIGNAL(returnPressed()), this, SLOT(GoSearch()) );
   connect(ctrlF, SIGNAL(activated()), this, SLOT(openSearch()) );
   connect(esc, SIGNAL(activated()), this, SLOT(closeSearch()) );
+  connect(ctrlQ, SIGNAL(activated()), this, SLOT(GoClose()) );
   if(DEBUG){
     //connect(webview, SIGNAL(statusBarMessage(const QString&)), this, SLOT(StatusTextChanged(const QString&)) );
     connect(webview->page(), SIGNAL(linkHovered(const QString&, const QString&, const QString&)), this, SLOT(StatusTextChanged(const QString&)) );
@@ -232,31 +240,11 @@ void MainUI::loadHomePage(){
   if(usessl){ baseURL = baseURL.replace("http://","https://"); }
   if(DEBUG){ qDebug() << "Base URL:" << baseURL; }
   QString tmpURL = baseURL;
-  if( !AUTHCOMPLETE ){
-    //Only perform the authorization if necessary
-    QString authkey = pcbsd::Utils::getLineFromCommandOutput("pc-su /usr/local/share/appcafe/dispatcher-localauth 2>/dev/null").simplified();
-    AUTHCOMPLETE = !authkey.isEmpty();
-    if(DEBUG){ qDebug() << "Got Auth Key:" << AUTHCOMPLETE << authkey; }
-    if ( authkey.indexOf(":") != -1 )
-      authkey = authkey.section(":", 1, 1);
-    if(AUTHCOMPLETE){ tmpURL.append("/?setDisId="+authkey); }
-  }
   //Now clear the history (if any)
   
   //Now load the page
-  if(AUTHCOMPLETE){
-    webview->load( QUrl(tmpURL) );
-    webview->show();
-  }else{
-    //System waiting to reboot - put up a notice and disable the web viewer
-    webview->setHtml("<p><strong>"+tr("You are not authorized to view the AppCafe. Please contact a system administrator for assistance.")+"</strong></p>");
-    backA->setEnabled(false);
-    forA->setEnabled(false);
-    refA->setVisible(false);
-    stopA->setVisible(false);
-    progA->setVisible(false);	  
-  }
-
+  webview->load( QUrl(tmpURL) );
+  webview->show();
 }
 
 void MainUI::GoBack(){
@@ -352,4 +340,29 @@ void MainUI::openSearch(){
 
 void MainUI::closeSearch(){
   group_search->setVisible(false);	
+}
+
+void MainUI::Save_pkglist(){
+  //Save the list of installed pkgs (top-level only - no reverse dependencies)
+  qDebug() << "Save PKG list";
+  QStringList allInstalled = pcbsd::Utils::runShellCommand("syscache \"pkg #system installedlist\"").join("").split(", ");
+  //Assemble the list of top-level pkgs (do it with 1 syscache process command)
+  QString tmp = " \"pkg #system local %1 rdependencies\"";
+  QString cmd = "syscache";
+  for(int i=0; i<allInstalled.length(); i++){ cmd.append( tmp.arg(allInstalled[i]) ); }
+  QStringList rdeps = pcbsd::Utils::runShellCommand(cmd);
+  //Evaluate the list results and pull out the top-level ones
+  QStringList topList;
+  for(int i=0; i<rdeps.length() && i<allInstalled.length(); i++){
+    //qDebug() << "Line:" << allInstalled[i] << rdeps[i];
+    if(rdeps[i].startsWith("[")){
+      //empty list - this is a top-level pkg
+      //qDebug() << "Found Item:" << allInstalled[i] << rdeps[i];
+      topList << allInstalled[i];
+    }
+  }
+  qDebug() << "Found top-level pkgs:" << topList;
+  QString filepath = QDir::homePath()+"/installed-pkg-"+QDateTime::currentDateTime().toString("yyyy-MM-dd_HH-mm-ss")+".pkglist";
+  pcbsd::Utils::writeTextFile(filepath, topList.join("\n"));
+  QMessageBox::information(this, tr("List Created"), tr("Your list of current top-level packages was just created:")+"\n\n"+filepath);
 }

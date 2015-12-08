@@ -81,6 +81,8 @@ int runSingleSession(int argc, char *argv[]){
   Backend::readDefaultSysEnvironment(lang,kmodel,klayout,kvariant);
   //setenv("LANG", lang.toUtf8(), 0);
   lang = lang.section(".",0,0); //just in case it also had the encoding saved to the file
+  if(lang.isEmpty()){ lang = "en_US"; }
+  setenv("LANG", lang.toUtf8(), 0);
   Backend::changeKbMap(kmodel,klayout,kvariant);
   //Check for the flag to try and auto-login
   bool ALtriggered = false;
@@ -229,6 +231,7 @@ int main(int argc, char *argv[])
 {
  bool neverquit = true;
  bool runonce = true;  //Always set this for now until the internal repeater works properly
+ setenv("MM_CHARSET", "UTF-8", 1); //ensure UTF-8 text formatting
  if(argc==2){ if( QString(argv[1]) == "-once"){ runonce = true; } }
   
  while(neverquit){

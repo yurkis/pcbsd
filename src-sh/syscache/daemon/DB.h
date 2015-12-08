@@ -19,6 +19,7 @@
 #include <QTextStream>
 #include <QThread>
 #include <QTime>
+#include <QJsonDocument>
 
 class Syncer : public QObject{
 	Q_OBJECT
@@ -36,12 +37,20 @@ public slots:
 private:
 	QHash<QString,QString> *HASH;
 	QProcess *longProc;
-	bool stopping;
+	bool stopping, applianceMode;
 
 	//System Command functions 
 	QStringList sysCmd(QString cmd); // ensures only 1 running at a time (for things like pkg)
 	QStringList directSysCmd(QString cmd); //run command immediately
 	QStringList readFile(QString filepath); //read the contents of a text file
+	QJsonDocument readJsonFile(QString fileName){
+	  QFile jsonFile(fileName);
+	  jsonFile.open(QFile::ReadOnly);
+	  QJsonDocument doc = QJsonDocument::fromJson(jsonFile.readAll());
+	  jsonFile.close();
+	  return doc;
+	}
+	void UpdatePkgDB(QString jail);
 
 	//Internal Hash maintenance functions
 	void clearRepo(QString repo);
@@ -91,10 +100,11 @@ public:
 
 	void shutDown();
 
-	QString fetchInfo(QStringList request);
+	QString fetchInfo(QStringList request, bool noncli = false);
 	//Request Format: [<type>, <cmd1>, <cmd2>, .... ]
 
 	void writeToLog(QString message);
+	QStringList fetchHelpInfo(QString subsystem="");
 
 public slots:
 	void startSync();
@@ -114,6 +124,7 @@ private:
 	
 	//Simplification routine for fetching general application info (faster than multiple calls)
 	QStringList FetchAppSummaries(QStringList pkgs, QString jail);
+	QStringList FetchCageSummaries(QStringList pkgs);
 
 	//Internal pause/syncing functions
 	void validateHash(QString key);

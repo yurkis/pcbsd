@@ -1,5 +1,6 @@
 #include "syscache-daemon.h"
 #include <QDateTime>
+#include <unistd.h>
 
 SysCacheDaemon::SysCacheDaemon(QObject *parent) : QObject(parent){
   curSock = 0; //no local socket connected yet
@@ -30,6 +31,10 @@ bool SysCacheDaemon::startServer(){
     return false;
   }
   
+}
+
+void SysCacheDaemon::startSyncNow(){
+  DATA->startSync();
 }
 
 void SysCacheDaemon::stopServer(){
@@ -74,10 +79,16 @@ void SysCacheDaemon::answerRequest(){
   bool stopdaemon=false;
   QTextStream stream(curSock);
   bool done = false;
+  bool nonCLI = false;
   while(!stream.atEnd()){
     req.clear();
     QString line = stream.readLine();
     //qDebug() << "Found Request Line:" << line;
+    if(!line.contains("[/]")){ usleep(600); QCoreApplication::processEvents(); line.append(stream.readLine()); }
+    if(line.contains("[FINISHED]")){done = true; }
+    if(line.contains("[NONCLI]")){ nonCLI = true; }
+    if(line.contains("[")){ line = line.section("[",0,0); }
+    if(line.isEmpty() || line == "[/]"){ continue; }
     //Be careful about quoted strings (only one input, even if multiple words)
     int index = 0;
     int dindex = 0; //start off with the space (lowest priority)
@@ -110,11 +121,11 @@ void SysCacheDaemon::answerRequest(){
     if(req.join("")=="[FINISHED]"){ done = true; break; }
     else{ 
 	
-      QString res = DATA->fetchInfo(req);
+      QString res = DATA->fetchInfo(req, nonCLI);
       //For info not available, try once more time as it can error unexpectedly if it was 
 	// stuck waiting for a sync to finish
       if(res =="[ERROR] Information not available"){ res = DATA->fetchInfo(req); }
-      out << "[INFOSTART]"+ res;
+      out << "[INFOSTART]"+ res+"\n";
     }
   }
   //Now write the output to the socket and disconnect it

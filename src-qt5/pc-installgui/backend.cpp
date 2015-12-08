@@ -288,7 +288,7 @@ QList<QStringList> Backend::hardDrives()
     QStringList partition; //its a "list" so as to also append drive information
 
     QString size, devinfo, type;
-    QString line, info;
+    QString line, info, format;
     QString tmp, dev, lastslice, slice, slabel, ssize;
     bool ok;
 
@@ -347,7 +347,7 @@ QList<QStringList> Backend::hardDrives()
 
                     // Check if we've found the format flag
                     if (info.indexOf(dev + "-format: ") == 0) {
-                      QString format = info.replace(dev + "-format: ", "");
+                      format = info.replace(dev + "-format: ", "");
                       qDebug() << "Found Disk Format: " <<  dev << " - " << format;
                       partition.clear();
                       partition << "FORMAT" << dev << format;
@@ -386,17 +386,25 @@ QList<QStringList> Backend::hardDrives()
                         tmp = tmp.remove(0, tmp.size() - 1);
                         int nextslicenum = tmp.toInt(&ok);
                         if ( ok ) {
-                           if ( nextslicenum < 4) {
+                          if ( format == "MBR" || format == "mbr" ) {
                             nextslicenum++;
                             slice = dev + "s" + tmp.setNum(nextslicenum);
                             slabel = "Unused Space";
                             qDebug() << "Found Slice:" << dev << slice << slabel << ssize;
                             partition.clear();
-                            partition << "SLICE" << dev << slice << ssize << slabel;   
+                            partition << "SLICE" << dev << slice << ssize << slabel;
                             drives.append(partition);
-                           }
-                        }
-                      }
+                          } else if ( format == "GPT" || format == "gpt" ) {
+                            nextslicenum++;
+                            slice = dev + "p" + tmp.setNum(nextslicenum);
+                            slabel = "Unused Space";
+                            qDebug() << "Found Slice:" << dev << slice << slabel << ssize;
+                            partition.clear();
+                            partition << "SLICE" << dev << slice << ssize << slabel;
+                            drives.append(partition);
+ 			  }
+			}
+		      }
                     } // End of Free Space Check
                 }
             }
@@ -404,70 +412,5 @@ QList<QStringList> Backend::hardDrives()
         }
     }
     return drives;
-}
-
-// Function which checks for our GUI package schema data, and sets found if its located
-QList<QStringList> Backend::getPackageData(bool &found, QString pkgset)
-{
-  if ( pkgset.isEmpty() )
-     pkgset="pcbsd";
-  QList<QStringList> metaPkgs;
-  found=false;
-  bool onDisk;
-  onDisk=true; 
-  QString tmp, mName, mDesc, mIcon, mParent, mDesktop, mPkgFileList;
-  QStringList package;
-
-  QProcess pcmp;
-  qDebug() << "Searching for meta-pkgs...";
-  pcmp.start(QString("/root/get-pkgset.sh"), QStringList());
-  if (pcmp.waitForFinished()) {
-    while (pcmp.canReadLine()) {
-        tmp = pcmp.readLine().simplified();
-	if ( tmp.indexOf("Meta Package: ") == 0) {
-		mName = tmp.replace("Meta Package: ", "");
-		continue;
-	}
-	if ( tmp.indexOf("Description: ") == 0) {
-		mDesc = tmp.replace("Description: ", "");
-		continue;
-	}
-	if ( tmp.indexOf("Icon: ") == 0) {
-		mIcon = tmp.replace("Icon: ", "");
-	        mPkgFileList = mIcon;
-                mPkgFileList.replace("pkg-icon.png", "pkg-list");
-		continue;
-	}
-	if ( tmp.indexOf("Parent: ") == 0) {
-		mParent = tmp.replace("Parent: ", "");
-		continue;
-	}
-	if ( tmp.indexOf("Desktop: ") == 0) {
-		mDesktop = tmp.replace("Desktop: ", "");
-		continue;
-	}
-        if ( tmp.indexOf("Category Entry") == 0) {
-		// Now add this category to the string list
-		package.clear();
-		//qDebug() << "Found Category" << mName << mDesc << mIcon << mParent<< mDesktop << "CATEGORY";
-		package << mName << mDesc << mIcon << mParent << mDesktop << "CATEGORY";
-		metaPkgs.append(package);
-		mName=""; mDesc=""; mIcon=""; mParent=""; mDesktop=""; mPkgFileList="";
-        }
-
-	if ( tmp.indexOf("Required Packages:") == 0) {
-		// Now add this meta-pkg to the string list
-		package.clear();
-
-		//qDebug() << "Found Package" << mName << mDesc << mIcon << mParent << mDesktop << "NO" << mPkgFileList;
-		package << mName << mDesc << mIcon << mParent << mDesktop << "NO" << mPkgFileList;
-		metaPkgs.append(package);
-		found = true;
-		mName=""; mDesc=""; mIcon=""; mParent=""; mDesktop=""; mPkgFileList="";
-	}
-    }
-  }
-
-  return metaPkgs;
 }
 

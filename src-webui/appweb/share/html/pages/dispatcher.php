@@ -1,6 +1,8 @@
 <?
 defined('DS') OR die('No direct access allowed.');
 
+   $refPage = $_GET['ref'];
+
    // Did the user request to start updates on a jail / system?
    if ( ! empty($_GET['updateTarget']) ) {
       // Time to queue up some updates for the requested target
@@ -11,7 +13,8 @@ defined('DS') OR die('No direct access allowed.');
         $updateTargetName="$updateTarget";
 
       // Queue it up now
-      run_cmd("pkgupdate $updateTarget");
+      $dccmd = array("pkgupdate $updateTarget");
+      send_dc_cmd($dccmd);
 
       // Now we can remove those values from the URL
       $newUrl=http_build_query($_GET);
@@ -24,13 +27,16 @@ defined('DS') OR die('No direct access allowed.');
    // Did the user request log files?
    if ( ! empty($_GET['log']) )
    {
-      $logoutput=run_cmd("log ". $_GET['log']);
+      $dccmd = array("log ". $_GET['log']);
+      $response = send_dc_cmd($dccmd);
+      $logoutput = explode("\n", $response["log " . $_GET['log']]);
 
 ?>
 
-<h1>Action Log (<a href="?p=dispatcher">Back</a>)</h1>
+<h1>Action Log (<a href="?p=dispatcher&ref=<?php echo $refPage; ?>">Back</a>)</h1>
 <br>
-<table class="jaillist" style="width:768px">
+<table class="status" style="width:768px">
+
 <tr>
    <th>Log output</th>
 </tr>
@@ -82,24 +88,27 @@ defined('DS') OR die('No direct access allowed.');
 
 
        unset($jarray);
-       exec("$sc ". escapeshellarg("pkg ". $jname . " hasupdates"), $jarray);
-       $hasupdates=$jarray[0];
+       $sccmd = array("pkg $jname hasupdates");
+       $response = send_sc_query($sccmd);
+       $hasupdates = $response["pkg $jname hasupdates"];
 
        if ( $hasupdates == "true" ) {
           $pkgUpdates=true;
           // Get the list of updates to show user
           unset($jarray);
-          exec("$sc ". escapeshellarg("pkg ". $jname . " updatemessage"), $jarray);
+          $sccmd = array("pkg $jname updatemessage");
+          $response = send_sc_query($sccmd);
+          $upmsg = $response["pkg $jname updatemessage"];
 
           echo "<div class=\"popbox\">\n";
-          echo "  <a href=\"/?p=dispatcher&updateTarget=$targetUrl\" style=\"text-decoration: underline;\"><img src=\"/images/warning.png\" height=35 width=35 title=\"Updates available!\">Update packages for $target</a>";
+          echo "  <a href=\"/?p=dispatcher&updateTarget=$targetUrl&ref=$refPage\" style=\"text-decoration: underline;\"><img src=\"/images/warning.png\" height=35 width=35 title=\"Updates available!\">Update packages for $target</a>";
           echo " (<a class=\"open\" href=\"#\">details</a>)\n";
           echo "  <div class=\"collapse\">\n";
           echo "    <div class=\"box\">\n";
           echo "      <div class=\"arrow\"></div>\n";
           echo "      <div class=\"arrow-border\"></div>\n";
 	  echo "        <p align=\"left\">\n";
-	  echo "        $jarray[0]</p>\n";
+	  echo "        $upmsg</p>\n";
 	  echo "        <a href=\"#\" class=\"close\">close</a>\n";
           echo "    </div>\n";
           echo "   </div>\n";
@@ -116,12 +125,18 @@ echo "<script type='text/javascript' charset='utf-8'>
 
      // We have updates! Show the notification icon
      if ( ! $pkgUpdates )
-       echo "<h1><img src=\"/images/noupdates.png\" height=24 width=24 title=\"Up to date!\">All packages and jails are up to date!</h1><br>";
+       echo "<h1><center><img src=\"/images/noupdates.png\" height=24 width=24 title=\"Up to date!\">All packages and jails are up to date!</h1><br>";
 
+  // Check if we are currently busy
+  $status = getDispatcherStatus();
+  if ( ! empty($status) and $status != " " )
+  {
+    echo "<div id=\"status-working\"></div>";
+  }
 ?>
-<h1>Recent application actions</h1>
+<h1><center>Recent application actions</h1>
 <br>
-<table class="jaillist" style="width:768px">
+<table class="status" style="width:768px">
 <tr>
    <th>Action</th>
    <th>Application</th>
@@ -131,11 +146,16 @@ echo "<script type='text/javascript' charset='utf-8'>
 
 <?
 
-     $rarray = run_cmd("results");
+     $dccmd = array("results");
+     $response = send_dc_cmd($dccmd);
+     $rarray = explode("\n", $response["results"]);
 
      // Loop through the results
+     $rarray = array_reverse($rarray);
      foreach ($rarray as $res) {
        $results = explode(" ", $res);
+       if ( empty($results[0]) )
+         continue;
        if ( $results[2] == "iocage" ) {
          echo "<tr><td>jail: $results[3]</td>";
          echo "<td>$results[4]</td>";

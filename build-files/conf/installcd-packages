@@ -17,6 +17,7 @@ xorg-drivers-\*.txz
 xorg-libraries-\*.txz
 xorg-server-\*.txz
 xf86-video-intel-\*.txz
+xf86-video-scfb-\*.txz
 xkbcomp-\*.txz
 xkeyboard-config-\*.txz
 xf86-input-synaptics-\*.txz
@@ -27,12 +28,10 @@ xset\*.txz
 dejavu-\*.txz
 font-misc-misc-\*.txz
 font-alias-\*.txz
-font-bitstream-100dpi-\*.txz
 font-cursor-misc\*.txz
 xcursor-themes-\*.txz
 xv-\*.txz
 xterm-\*.txz
-ja-font-vlgothic-\*.txz
 fonts-indic-\*.txz
 ibus-\*.txz
 qt5-core-\*.txz
@@ -43,11 +42,9 @@ nvidia-xconfig-\*.txz
 xwd-\*.txz
 xvkbd-\*.txz
 fribidi-\*.txz
-ko-baekmukfonts-ttf-\*.txz
 pcbsd-utils-qt5-\*.txz
 pcbsd-i18n-qt5-\*.txz
 virtualbox-ose-additions-\*.txz
 grub2-pcbsd-\*.txz
-orca-3\*.txz
-py27-atspi-\*.txz
 stunnel-\*.txz
+diskscrub-\*.txz

@@ -219,8 +219,13 @@ fetch_file()
   EXITFILE="${TMPDIR}/.fetchExit"
 
   rm ${FETCHOUTFILE} 2>/dev/null >/dev/null
+  FSIZE=$(`fetch -s "${FETCHFILE}"`)
+  is_num "$FSIZE"
+  if [ $? -eq 0 ] ; then
+    SIZE=$(expr $FSIZE / 1024 )
+  fi
 
-  SIZE=$(( `fetch -s "${FETCHFILE}"` / 1024 ))
+  echo "Downloading: `basename ${FETCHFILE}`"
   echo "FETCH: ${FETCHFILE}"
   echo "FETCH: ${FETCHOUTFILE}" >>${LOGOUT}
 
@@ -296,9 +301,7 @@ get_zpool_name()
       fi
       zpool list | grep -qw "${NEWNAME}"
       local chk1=$?
-      zpool import | grep -qw "${NEWNAME}"
-      local chk2=$?
-      if [ $chk1 -eq 1 -a $chk2 -eq 1 ] ; then break ; fi 
+      if [ $chk1 -eq 1 ] ; then break ; fi
       NUM=$((NUM+1))
     done
 

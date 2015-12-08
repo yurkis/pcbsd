@@ -64,8 +64,8 @@ unmount_all_filesystems()
 {
   cd /
 
-  # Check if we need to setup GRUB
-  if [ -e "${TMPDIR}/.grub-install" ] ; then setup_grub; fi
+  # Check if we have any boot setup to do
+  post_install_boot_setup
 
   # Copy the logfile to disk before we unmount
   cp ${LOGOUT} ${FSMNT}/root/pc-sysinstall.log
@@ -139,7 +139,7 @@ unmount_all_filesystems()
   if [ ! -z "${FOUNDZFSROOT}" ]
   then
     rc_halt "zfs set mountpoint=legacy ${FOUNDZFSROOT}"
-    rc_halt "zfs set mountpoint=/ ${FOUNDZFSROOT}/ROOT/default"
+    rc_halt "zfs set mountpoint=/ ${FOUNDZFSROOT}/ROOT/${BENAME}"
   fi
 
   # If we need to relabel "/" do it now
@@ -224,43 +224,36 @@ unmount_all_filesystems_failure()
 # Script which stamps grub on the specified disks
 setup_grub() 
 {
-  # Mount devfs
-  rc_halt "mount -t devfs devfs ${FSMNT}/dev"
-
   # Check for a custom beadm.install to copy before we run grub
   if [ -e "/root/beadm.install" ] ; then
      rc_halt "cp /root/beadm.install ${FSMNT}/root/beadm.install"
      rc_halt "chmod 755 ${FSMNT}/root/beadm.install"
   fi
 
-  # Make sure to copy zpool.cache first
-  if [ ! -d "${FSMNT}/boot/zfs/" ] ; then 
-     rc_halt "mkdir ${FSMNT}/boot/zfs"
-  fi
-  rc_halt "cp /boot/zfs/zpool.cache ${FSMNT}/boot/zfs/"
-
-  if [ ! -e "${FSMNT}/boot/kernel/zfs" ] ; then
-    rc_halt "ln -s ../zfs ${FSMNT}/boot/kernel/zfs"
-  fi
-
-  # Copy the hostid so that our zfs cache works
-  rc_nohalt "cp /etc/hostid ${FSMNT}/etc/hostid"
-
   # Are we using GELI?
   if [ -e "${TMPDIR}/.grub-install-geli" ] ; then
      echo "GRUB_ENABLE_CRYPTODISK=y" >> ${FSMNT}/usr/local/etc/default/grub
   fi
 
-  # Did we install full-disk GPT?
+  # Check the first disk, see if this is EFI or BIOS formatted
   EFIMODE="FALSE"
   FORMATEFI="FALSE"
-  if [ -e "${TMPDIR}/.grub-full-gpt" ] ; then
-    # Check if we need to install in EFI mode
-    BOOTMODE=`kenv grub.platform`
-    if [ "$BOOTMODE" = "efi" ]; then
-       GRUBFLAGS="$GRUBFLAGS --efi-directory=/boot/efi --removable --target=x86_64-efi"
-       EFIMODE="TRUE"
-       FORMATEFI="TRUE"
+  BOOTMODE="pc"
+  while read gdisk
+  do
+     gpart show $gdisk | grep -q " efi "
+     if [ $? -eq 0 ] ; then
+       BOOTMODE="efi"
+     fi
+     break
+  done < ${TMPDIR}/.grub-install
+
+  # If on EFI mode, set some grub flags and see if we need to format the EFI partition
+  if [ "$BOOTMODE" = "efi" ]; then
+    GRUBFLAGS="$GRUBFLAGS --efi-directory=/boot/efi --removable --target=x86_64-efi"
+    EFIMODE="TRUE"
+    if [ -e "${TMPDIR}/.grub-full-gpt" -o -e "${TMPDIR}/.grub-full-mbr" ] ; then
+      FORMATEFI="TRUE"
     fi
   fi
 
@@ -276,14 +269,14 @@ setup_grub()
     fi
 
     # Do any EFI creation
-    if [ "$EFIMODE" = "TRUE" -a "$FORMATEFI" = "TRUE" ] ;then
-       # Format the EFI partition
-       echo_log "Formatting EFI / FAT32 partition"
-       rc_halt "newfs_msdos -F 16 ${gDisk}p1"
+    if [ "$EFIMODE" = "TRUE" ] ;then
+       # Installing to disk with existing EFI setup
+       efip=`gpart show $gDisk | grep ' efi ' | awk '{print $3}'`
+       EFIPART="${gDisk}p${efip}"
 
        if [ -z "$DONEEFILABEL" ] ; then
          # Label this sucker
-         rc_halt "glabel label efibsd ${gDisk}p1"
+         rc_halt "glabel label efibsd ${EFIPART}"
 
          # Save to systems fstab file
          echo "/dev/label/efibsd	/boot/efi		msdosfs		rw	0	0" >> ${FSMNT}/etc/fstab
@@ -292,35 +285,7 @@ setup_grub()
 
        # Mount the partition
        mkdir ${FSMNT}/boot/efi
-       rc_halt "mount -t msdosfs ${gDisk}p1 ${FSMNT}/boot/efi"
-    fi
-
-    # Check if we are installing to a targeted partition
-    if [ ! -e "${TMPDIR}/.grub-full-gpt" -a ! -e "${TMPDIR}/.grub-full-mbr" ] ; then
-       gpart show ${gDisk} | grep ' 1 ' | grep -q "efi"
-       if [ $? -eq 0 ] ; then
-          # This disk already has EFI partition setup, lets use it
-	  if [ -e "${gDisk}p1" ] ; then
-	     EFIPART="${gDisk}p1"
-	  else
-	     EFIPART="${gDisk}s1"
-          fi
-          # Label this sucker
-          rc_halt "glabel label efibsd ${EFIPART}"
-
-          # Save to systems fstab file
-          echo "/dev/label/efibsd	/boot/efi		msdosfs		rw	0	0" >> ${FSMNT}/etc/fstab
-	  DONEEFILABEL="YES"
-          mkdir ${FSMNT}/boot/efi
-
-          # Mount the partition
-          rc_halt "mount -t msdosfs ${EFIPART} ${FSMNT}/boot/efi"
-
-          # Set some flags
-          GRUBFLAGS="$GRUBFLAGS --efi-directory=/boot/efi --removable --target=x86_64-efi"
-	  EFIMODE="TRUE"
-       fi
-
+       rc_halt "mount -t msdosfs ${EFIPART} ${FSMNT}/boot/efi"
     fi
 
     # Stamp GRUB now
@@ -338,13 +303,96 @@ setup_grub()
     # warnings / errors, need to investigate further
     rc_nohalt "chroot ${FSMNT} grub-mkconfig -o /boot/grub/grub.cfg"
   else
-    rc_halt "chroot ${FSMNT} grub-mkconfig -o /boot/grub/grub.cfg"
+    # For some reason on GhostBSD this returns non-0 without EFI, but works perfectly fine with no
+    rc_nohalt "chroot ${FSMNT} grub-mkconfig -o /boot/grub/grub.cfg"
   fi
 
   # Sleep and cleanup
   if [ -e "${FSMNT}/root/beadm.install" ] ; then
      rc_halt "rm ${FSMNT}/root/beadm.install"
   fi
-  sleep 5
-  rc_halt "umount ${FSMNT}/dev"
 };
+
+setup_efi_boot()
+{
+  # Read through our disk list and setup EFI loader on each
+  for disk in $EFI_POST_SETUP
+  do
+    # Make sure we have a /dev in front of the disk name
+    echo $disk | grep -q '/dev/'
+    if [ $? -eq 0 ] ; then
+      gDisk="$disk"
+    else
+      gDisk="/dev/$disk"
+    fi
+
+    # Installing to the EFI partition on disk
+    efip=`gpart show $gDisk | grep ' efi ' | awk '{print $3}'`
+    EFIPART="${gDisk}p${efip}"
+
+    if [ -z "$DONEEFILABEL" ] ; then
+       # Label this sucker
+       rc_halt "glabel label efibsd ${EFIPART}"
+
+       # Save to systems fstab file
+       echo "/dev/label/efibsd	/boot/efi		msdosfs		rw	0	0" >> ${FSMNT}/etc/fstab
+       DONEEFILABEL="YES"
+    fi
+
+    # Mount the partition
+    rc_nohalt "mkdir ${FSMNT}/boot/efi"
+    rc_halt "mount -t msdosfs ${EFIPART} ${FSMNT}/boot/efi"
+
+    # Setup the loader.rc file
+    rc_nohalt "mkdir -p ${FSMNT}/boot/efi/boot"
+    cat > ${FSMNT}/boot/efi/boot/loader.rc << EOF
+unload
+set currdev=zfs:${ZPOOLNAME}/ROOT/${BENAME}:
+load /boot/kernel/kernel
+load /boot/kernel/zfs.ko
+autoboot
+EOF
+    # Copy the .efi file
+    rc_nohalt "mkdir -p ${FSMNT}/boot/efi/efi/boot"
+    rc_halt "cp ${FSMNT}/boot/loader.efi ${FSMNT}/boot/efi/efi/boot/BOOTx64.efi"
+
+    # Cleanup
+    rc_halt "umount ${FSMNT}/boot/efi"
+  done
+}
+
+post_install_boot_setup()
+{
+  # Mount devfs
+  rc_halt "mount -t devfs devfs ${FSMNT}/dev"
+
+  # Make sure to copy zpool.cache first
+  if [ ! -d "${FSMNT}/boot/zfs/" ] ; then
+     rc_halt "mkdir ${FSMNT}/boot/zfs"
+  fi
+
+  # GhostBSD doesn't use ZFS.
+  if [ -e "/boot/zfs/zpool.cache" ] ; then
+    rc_halt "cp /boot/zfs/zpool.cache ${FSMNT}/boot/zfs/"
+  fi
+
+  if [ ! -e "${FSMNT}/boot/kernel/zfs" ] ; then
+    rc_halt "ln -s ../zfs ${FSMNT}/boot/kernel/zfs"
+  fi
+
+  # Copy the hostid so that our zfs cache works
+  rc_nohalt "cp /etc/hostid ${FSMNT}/etc/hostid"
+
+  # Check if we need to setup GRUB
+  if [ -e "${TMPDIR}/.grub-install" ] ; then
+    setup_grub
+  else
+    # No GRUB, but do we have post-install EFI setup to do?
+    if [ -n "$EFI_POST_SETUP" ] ; then
+      setup_efi_boot
+    fi
+  fi
+
+  sleep 2
+  rc_halt "umount ${FSMNT}/dev"
+}

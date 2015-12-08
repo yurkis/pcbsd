@@ -220,21 +220,92 @@ gen_glabel_name()
   export VAL="${NAME}${NUM}" 
 };
 
-# Function to determine the size we can safely use when 0 is specified
-get_autosize()
+# Function to determine the GPT size we can safely use when 0 is specified
+get_gpt_autosize()
 {
-  # Disk tag to look for
-  dTag="$1"
+  local dTag="$1"
+  local disk="$2"
+  local configPart="$3"
+  local gptPart="$4"
 
-  # Total MB Avail
-  get_disk_mediasize_mb "$2"
-  local _aSize=$VAL
+  # See if the GPT partition exists
+  gpart show ${disk}p${gptPart} >/dev/null 2>/dev/null
+  if [ $? -ne 0 ] ; then
+    # This is a new GPT partition, get free-space
+    bSize=`gpart show $disk | grep '\- free\ -' | awk '{print $2}' | sort -g | tail -1`
 
+    # Get that in MB
+    bSize=`expr $bSize / 2048`
+
+    # Pad it a bit
+    _aSize=`expr $bSize - 5`
+  else
+    # Get the size of the partition
+    _aSize=`gpart show $disk | grep " $gptPart " | awk '{print $2}'`
+    _aSize=`expr $bSize / 2048`
+  fi
+
+
+  fPart=0
   while read aline
   do
     # Check for data on this slice
     echo $aline | grep -q "^${_dTag}-part=" 2>/dev/null
     if [ $? -ne 0 ] ; then continue ; fi
+
+    fPart=`expr $fPart + 1`
+    # Skip any partitions we've already added to the disk
+    if [ $fPart -lt $configPart ] ; then continue ; fi
+
+    get_value_from_string "${aline}"
+    ASTRING="$VAL"
+
+    # Get the size of this partition
+    SIZE=`echo $ASTRING | tr -s '\t' ' ' | cut -d ' ' -f 2`
+    if [ $SIZE -eq 0 ] ; then continue ; fi
+    _aSize=`expr $_aSize - $SIZE`
+  done <${CFGF}
+
+  VAL="$_aSize"
+  export VAL
+};
+
+# Function to determine the size we can safely use when 0 is specified
+get_autosize()
+{
+  # Disk tag to look for
+  dTag="$1"
+  wDisk="$2"
+  configPart="$3"
+
+  # Total MB Avail
+  if [ -n "$FREESPACEINSTALL" ] ; then
+     # Use only the free space left
+     bSize=`gpart show $2 | grep '\- free\ -' | awk '{print $2}' | sort -g | tail -1`
+
+     # Get that in MB
+     bSize=`expr $bSize / 2048`
+
+     # Pad it a bit
+     bSize=`expr $bSize - 50`
+     VAL="$bSize"
+  else
+    get_disk_mediasize_mb "$2"
+  fi
+  local _aSize=$VAL
+
+  fPart=0
+  while read aline
+  do
+    # Check for data on this slice
+    echo $aline | grep -q "^${_dTag}-part=" 2>/dev/null
+    if [ $? -ne 0 ] ; then continue ; fi
+
+    fPart=`expr $fPart + 1`
+    if [ -n "$FREESPACEINSTALL" ] ; then
+      # Skip any partitions we've already added to the disk
+      if [ $fPart -lt $configPart ] ; then continue ; fi
+    fi
 
     get_value_from_string "${aline}"
     ASTRING="$VAL"
@@ -249,8 +320,8 @@ get_autosize()
   _aSize=`expr $_aSize - 5`
 
   # If installing to UEFI, save 100MB for UEFI partition
-  BOOTMODE=`kenv grub.platform`
-  if [ "$BOOTMODE" = "efi" ]; then
+  BOOTMODE=`sysctl -n machdep.bootmethod`
+  if [ "$BOOTMODE" = "UEFI" ]; then
     _aSize=`expr $_aSize - 100`
   fi
 
@@ -278,26 +349,40 @@ new_gpart_partitions()
     # If we are creating a new MBR primary partition, lets do it now
     CURPART="${_sNum}"
     PARTLETTER="a"
+    local _dAdd=`echo $_pDisk | sed 's|/dev/||g'`
     if [ "$CURPART" = "1" ] ; then
-      rc_halt "gpart add -b 2048 -a 4k -t freebsd -i ${CURPART} ${_pDISK}"
+      rc_halt "gpart add -b 2048 -t freebsd -i ${CURPART} ${_dAdd}"
     else
-      rc_halt "gpart add -a 4k -t freebsd -i ${CURPART} ${_pDISK}"
+      rc_halt "gpart add -a 4k -t freebsd -i ${CURPART} ${_dAdd}"
     fi
+    sleep 2
+    # Use a trick from FreeBSD, create / destroy / create to remove any
+    # backup meta-data which still may exist on the disk/slice
     rc_halt "gpart create -s BSD ${_wSlice}"
+    rc_halt "gpart destroy ${_wSlice}"
+    rc_halt "gpart create -s BSD ${_wSlice}"
+    rc_halt "sync"
     _pType="mbr"
   elif [ "${_pType}" = "freegpt" ] ; then
     CURPART="${_sNum}"
+    if [ "$CURPART" = "1" ] ; then
+       CURPART="2"
+    fi
     _pType="gpt"
   else
     PARTLETTER="a"
     CURPART="1"
     if [ "${_pType}" = "mbr" ] ; then
+      # Use a trick from FreeBSD, create / destroy / create to remove any
+      # backup meta-data which still may exist on the disk/slice
+      rc_halt "gpart create -s BSD ${_wSlice}"
+      rc_halt "gpart destroy ${_wSlice}"
       rc_halt "gpart create -s BSD ${_wSlice}"
     fi
   fi
 
   # Check if the target disk is using GRUB
-  grep -q "$3" ${TMPDIR}/.grub-install 2>/dev/null
+  grep -q "$_pDisk" ${TMPDIR}/.grub-install 2>/dev/null
   if [ $? -eq 0 ] ; then
      local _tBL="GRUB"
   else
@@ -306,6 +391,9 @@ new_gpart_partitions()
 
   # Unset ZFS_CLONE_DISKS
   #ZFS_CLONE_DISKS=""
+
+  # Set counter for number of parts we have found
+  dpart=0
 
   while read line
   do
@@ -317,6 +405,9 @@ new_gpart_partitions()
       # Found a slice- entry, lets get the slice info
       get_value_from_string "${line}"
       STRING="$VAL"
+
+      # Increment number of disk parts we have found
+      dpart=`expr $dpart + 1`
 
       # We need to split up the string now, and pick out the variables
       FS=`echo $STRING | tr -s '\t' ' ' | cut -d ' ' -f 1` 
@@ -369,8 +460,8 @@ new_gpart_partitions()
           exit_err "ERROR: You can not have two partitions with a size of 0 specified!"
 	fi
         case ${_pType} in
-	  gpt|apm) get_autosize "${_dTag}" "$_pDisk" ;;
-	        *) get_autosize "${_dTag}" "$_wSlice" ;;
+	  gpt|apm) get_autosize "${_dTag}" "$_pDisk" "$dpart" ;;
+	        *) get_autosize "${_dTag}" "$_wSlice" "$dpart" ;;
         esac
         SOUT="-s ${VAL}M"
 	USEDAUTOSIZE=1
@@ -394,6 +485,12 @@ new_gpart_partitions()
         if [ "${CURPART}" = "1" -a "$_pType" = "gptslice" ] ; then
           export FOUNDROOT="0"
         fi
+        if [ "$_pType" = "free" ] ; then
+          export FOUNDROOT="0"
+        fi
+	if [ -n "$FREESPACEINSTALL" ] ; then
+          export FOUNDROOT="0"
+	fi
       fi
 
       check_for_mount "${MNT}" "/boot"
@@ -471,7 +568,11 @@ new_gpart_partitions()
       else
         sleep 2
 	# MBR type
-        aCmd="gpart add ${SOUT} -t ${PARTYPE} -i ${CURPART} ${_wSlice}"
+	if [ "$PARTLETTER" = "a" ] ; then
+          aCmd="gpart add -b 16 ${SOUT} -t ${PARTYPE} ${_wSlice}"
+	else
+          aCmd="gpart add ${SOUT} -t ${PARTYPE} ${_wSlice}"
+	fi
       fi
 
       # Run the gpart add command now
@@ -500,7 +601,7 @@ new_gpart_partitions()
       fi
 
       # Check if this is a root / boot partition, and stamp the right loader
-      for TESTMNT in `echo ${MNT} | sed 's|,| |g'`
+      for TESTMNT in `echo ${MNT} | sed 's|,| |g' | cut -d '(' -f 1`
       do
         if [ "${TESTMNT}" = "/" -a -z "${BOOTTYPE}" ] ; then
            BOOTTYPE="${PARTYPE}" 
@@ -515,10 +616,6 @@ new_gpart_partitions()
 	_dFile="`echo $_pDisk | sed 's|/|-|g'`"
         echo "${FS}#${MNT}#${ENC}#${PLABEL}#GPT#${XTRAOPTS}" >${PARTDIR}/${_dFile}p${CURPART}
 
-        # Clear out any headers
-        sleep 2
-        dd if=/dev/zero of=${_pDisk}p${CURPART} count=2048 2>/dev/null
-
         # If we have a enc password, save it as well
         if [ -n "${ENCPASS}" ] ; then
           echo "${ENCPASS}" >${PARTDIR}-enc/${_dFile}p${CURPART}-encpass
@@ -526,10 +623,6 @@ new_gpart_partitions()
       elif [ "${_pType}" = "apm" ] ; then
 	_dFile="`echo $_pDisk | sed 's|/|-|g'`"
         echo "${FS}#${MNT}#${ENC}#${PLABEL}#GPT#${XTRAOPTS}" >${PARTDIR}/${_dFile}s${CURPART}
-
-        # Clear out any headers
-        sleep 2
-        dd if=/dev/zero of=${_pDisk}s${CURPART} count=2048 2>/dev/null
 
         # If we have a enc password, save it as well
         if [ -n "${ENCPASS}" ] ; then
@@ -539,9 +632,6 @@ new_gpart_partitions()
 	# MBR Partition or GPT slice
 	_dFile="`echo $_wSlice | sed 's|/|-|g'`"
         echo "${FS}#${MNT}#${ENC}#${PLABEL}#MBR#${XTRAOPTS}#${IMAGE}" >${PARTDIR}/${_dFile}${PARTLETTER}
-        # Clear out any headers
-        sleep 2
-        dd if=/dev/zero of=${_wSlice}${PARTLETTER} count=2048 2>/dev/null
 
         # If we have a enc password, save it as well
         if [ -n "${ENCPASS}" ] ; then
@@ -551,13 +641,18 @@ new_gpart_partitions()
 
 
       # Increment our parts counter
-      if [ "$_pType" = "gpt" -o "$_pType" = "apm" ] ; then 
-          CURPART=$((CURPART+1))
-        # If this is a gpt/apm partition, 
+      if [ "$_pType" = "gpt" ] ; then
+        CURPART=$(get_next_part "$_pDisk")
+        # If this is a gpt partition,
+        # we can continue and skip the MBR part letter stuff
+        continue
+      elif [  "$_pType" = "apm" ] ; then
+        CURPART=$((CURPART+1))
+        # If this is a apm partition,
         # we can continue and skip the MBR part letter stuff
         continue
       else
-          CURPART=$((CURPART+1))
+        CURPART=$((CURPART+1))
         if [ "$CURPART" = "3" ] ; then CURPART="4" ; fi
       fi
 
@@ -581,10 +676,10 @@ new_gpart_partitions()
     then
 
       # If this is the boot disk, stamp the right gptboot
-      if [ ! -z "${BOOTTYPE}" -a "$_pType" = "gpt" -a "$_tBL" != "GRUB" ] ; then
+      if [ ! -z "${BOOTTYPE}" -a "$_pType" = "gpt" -a "$_tBL" != "GRUB" -a -z "$EFI_POST_SETUP" ] ; then
         case ${BOOTTYPE} in
-          freebsd-ufs) rc_halt "gpart bootcode -p /boot/gptboot -i 1 ${_pDisk}" ;;
-          freebsd-zfs) rc_halt "gpart bootcode -p /boot/gptzfsboot -i 1 ${_pDisk}" ;;
+          freebsd-ufs) rc_halt "gpart bootcode -b /boot/pmbr -p /boot/gptboot -i 1 ${_pDisk}" ;;
+          freebsd-zfs) rc_halt "gpart bootcode -b /boot/pmbr -p /boot/gptzfsboot -i 1 ${_pDisk}" ;;
         esac 
       fi
 
@@ -611,7 +706,8 @@ modify_gpart_partitions()
   local _wSlice="$3"
   local _sNum="$4"
   local _pType="$5"
-  FOUNDPARTS="1"
+  local FOUNDPARTS="1"
+  local CURPART="1"
 
   # Lets read in the config file now and setup our partitions
   if [ "${_pType}" != "gpt" ] ; then
@@ -701,24 +797,43 @@ modify_gpart_partitions()
       *) PARTYPE="freebsd-ufs" ;;
     esac
 
-    # Modify the partition
-    aCmd="gpart modify -i ${_sNum} -t ${PARTYPE} ${_pDisk}"
+    # If we have an auto-size, get it now
+    if [ "$SIZE" = "0" ] ; then
+      get_gpt_autosize "$_dTag" "$_pDisk" "$CURPART" "$_sNum"
+      SIZE="$VAL"
+    fi
 
-    # Run the gpart modify command now
-    rc_halt "$aCmd"
+    if [ -z "$DONEMOD" ] ; then
+      # Resize the partition
+      rc_halt "gpart resize -i ${_sNum} -s ${SIZE}M ${_pDisk}"
+
+      # Modify the partition
+      rc_halt "gpart modify -i ${_sNum} -t ${PARTYPE} ${_pDisk}"
+    else
+      # We have already modified a partition, add a new one
+      gpart add -t ${PARTYPE} -s ${SIZE}M ${_pDisk} 2>${TMPDIR}/.gptOut >${TMPDIR}/.gptOut
+      if [ $? -ne 0 ] ; then
+        cat ${TMPDIR}/.gptOut
+        exit_err "Failed running gpart add -t ${PARTYPE} -s ${SIZE}M ${_pDisk}"
+      fi
+      # Figure out the new partition number
+      _newPart=$(cat ${TMPDIR}/.gptOut | cut -d ' ' -f 1)
+      _rawDisk=$(echo ${_pDisk} | sed 's|/dev/||g')
+      _sNum=$(echo $_newPart | sed "s|${_rawDisk}p||g")
+    fi
 
     # Save this data to our partition config dir
     _dFile="`echo $_pDisk | sed 's|/|-|g'`"
     echo "${FS}#${MNT}#${ENC}#${PLABEL}#GPT#${XTRAOPTS}" >${PARTDIR}/${_dFile}p${_sNum}
 
-    # Clear out any headers
-    sleep 2
-    dd if=/dev/zero of=${_pDisk}p${CURPART} count=2048 2>/dev/null
-
     # If we have a enc password, save it as well
     if [ -n "${ENCPASS}" ] ; then
       echo "${ENCPASS}" >${PARTDIR}-enc/${_dFile}p${_sNum}-encpass
     fi
+
+    # Set that we have modified a partition
+    DONEMOD="YES"
+    CURPART=$(expr $CURPART + 1)
   done <${CFGF}
 };
 
@@ -739,7 +854,9 @@ populate_disk_label()
 
   # Check if we are only modifying an existing GPT partition
   MODONLY="NO"
-  if [ "$mod" = "mod" ] ; then MODONLY="YES"; fi
+  if [ "$mod" = "mod" ] ; then
+    MODONLY="YES"
+  fi
   
   # Set WRKSLICE based upon format we are using
   if [ "$type" = "mbr" -o "$type" = "freembr" ] ; then
@@ -891,7 +1008,11 @@ check_fstab_gpt()
       then
         FOUNDROOT="0"
       else
-        FOUNDROOT="1"
+        if [ -n "$FREESPACEINSTALL" ] ; then
+	   FOUNDROOT="0"
+	else
+	   FOUNDROOT="1"
+	fi
       fi
 
       ROOTIMAGE="1"
@@ -969,12 +1090,12 @@ check_disk_layout()
 
     if [ "${TYPE}" = "MBR" ]
     then
-	  check_fstab_mbr "${slice}" "/mnt"
+      check_fstab_mbr "${slice}" "/mnt"
       F="$?"
 
     elif [ "${TYPE}" = "GPT" ]
     then
-	  check_fstab_gpt "${slice}" "/mnt"
+      check_fstab_gpt "${slice}" "/mnt"
       F="$?"
     fi 
 

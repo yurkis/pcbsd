@@ -1,7 +1,13 @@
 <?
    defined('DS') OR die('No direct access allowed.');
 
-   // Setup global variables and such
+   use WebSocket\Client;
+
+   // Create a websocket connection to syscache
+   $wsport = "12142";
+   $wslocal = "ws://127.0.0.1:" . $wsport;
+   $wsremote = "ws://" . $_SERVER['SERVER_ADDR'] . ":" . $wsport;
+   $scclient = new Client("$wslocal");
 
    // Check if we need to display desktop apps, or just server / CLI
    if ( file_exists("/usr/local/bin/startx") === false )
@@ -9,27 +15,11 @@
    else
      $hasDesktop=true;
 
-   // Location of syscache client
-   $sc="/usr/local/bin/syscache";
-
    // Location of PBI index dir
    $pbiindexdir="/var/db/pbi/index";
 
    // Probally shouldn't modify these below
    ///////////////////////////////////////////////////
-
-   // Figure out what page is being requested
-   $jail = "";
-   if ( ! empty($_GET['jail'])) {
-     if ( $_GET['jail'] == "__system__") {
-        $jail = "#system";
-        $jailUrl = "__system__";
-     } else {
-        $jail = $_GET['jail'];
-        $jailUrl = $_GET['jail'];
-     }
-
-   }
 
    // Set if we are viewing recommended or all PBI
    $allPBI = "false";

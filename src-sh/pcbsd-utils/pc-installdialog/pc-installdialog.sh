@@ -389,7 +389,7 @@ get_sys_type()
 get_sys_bootmanager()
 {
   # Ask the boot-manager
-  get_dlg_ans "--radiolist \"Boot Manager\" 12 50 5 GRUB \"GRUB - Recommended\" on none \"No boot-loader\" off"
+  get_dlg_ans "--radiolist \"Boot Manager\" 12 50 5 BSD \"BSD - Recommended\" on GRUB \"GRUB\" off none \"No boot-loader\" off"
   if [ -z "$ANS" ] ; then
      exit_err "Invalid bootmanager type"
   fi
@@ -515,10 +515,11 @@ get_hardware_info()
 
 get_target_part()
 {
-  # Now prompt for the full-disk or partition to install onto
+  # Now prompt for the full-disk, partition, or free space to install onto
   ${PCSYS} disk-part $SYSDISK > /tmp/.dList.$$
   dOpts="ALL \"Use entire disk\" on"
-  dFmt=`grep "$SYSDISK-format:" /tmp/.dList.$$ | awk '{print $2}'` 
+  dOpts="$dOpts free \"Install to free space\" off"
+  dFmt=`grep "$SYSDISK-format:" /tmp/.dList.$$ | awk '{print $2}'`
   if [ "$dFmt" = "MBR" ] ; then
     dChar="s"
     DISKFORMAT="MBR"
@@ -534,7 +535,8 @@ get_target_part()
      [ -e "/dev/${part}" ] || break
      desc="`cat /tmp/.dList.$$ | grep ^${part}-label | cut -d ':' -f 2`"
      mb="`cat /tmp/.dList.$$ | grep ^${part}-sizemb | awk '{print $2}'`"
-     dOpts="$dOpts $partRAW \"${mb}MB -$desc\" off" 
+     dOpts="$dOpts $partRAW \"${mb}MB -$desc\" off"
+     dFmt=`grep "$SYSDISK-format:" /tmp/.dList.$$ | awk '{print $2}'`
      i="`expr $i + 1`"
   done
   rm /tmp/.dList.$$
@@ -877,8 +879,16 @@ gen_pc-sysinstall_cfg()
    else
      echo "distFiles=base doc kernel" >> ${CFGFILE}
    fi
-   echo "installMedium=local" >>${CFGFILE}
-   echo "localPath=/dist" >>${CFGFILE}
+
+   if [ -e "/pcbsd-media-network" ] ; then
+     # Doing install from network media
+     echo "installMedium=ftp" >>${CFGFILE}
+     echo "ftpPath=ftpPath=http://download.pcbsd.org/iso/%VERSION%/%ARCH%/dist" >>${CFGFILE}
+   else
+     # Doing local installation
+     echo "installMedium=local" >>${CFGFILE}
+     echo "localPath=/dist" >>${CFGFILE}
+   fi
 
    if [ -n "$SYSHOSTNAME" ] ; then
       echo "" >> ${CFGFILE}
@@ -932,16 +942,27 @@ gen_pc-sysinstall_cfg()
    echo "commitDiskLabel" >> ${CFGFILE}
    echo "" >> ${CFGFILE}
 
+   if [ "$SYSBOOTMANAGER" = "GRUB" ]; then
+     BLPKG="sysutils/grub2-pcbsd sysutils/grub2-efi"
+   else
+     BLPKG=""
+   fi
+
    # Now the packages
    if [ "$SYSTYPE" = "desktop" ] ; then
-     echo "installPackages=misc/pcbsd-base misc/pcbsd-meta-kde ${EXTRAPKGS}" >> ${CFGFILE}
+     echo "installPackages=misc/pcbsd-base x11/lumina sysutils/pcbsd-appweb www/firefox emulators/linux_base-c6 www/linux-c6-flashplugin www/nspluginwrapper java/icedtea-web mail/thunderbird multimedia/vlc misc/pcbsd-meta-virtualbox editors/libreoffice archivers/unrar archivers/unzip editors/vim ${EXTRAPKGS} ${BLPKG}" >> ${CFGFILE}
      echo "" >> ${CFGFILE}
      # Set our markers for desktop to run the first-time boot wizards
      echo "runCommand=touch /var/.runxsetup" >> ${CFGFILE}
      echo "runCommand=touch /var/.pcbsd-firstboot" >> ${CFGFILE}
      echo "runCommand=touch /var/.pcbsd-firstgui" >> ${CFGFILE}
    else
-     echo "installPackages=misc/trueos-base sysutils/pcbsd-appweb ${EXTRAPKGS}" >> ${CFGFILE}
+     # TrueOS install
+     if [ "$APPCAFEINSTALL" = "YES" ] ; then
+       echo "installPackages=misc/trueos-base sysutils/pcbsd-appweb ${EXTRAPKGS} ${BLPKG}" >> ${CFGFILE}
+     else
+       echo "installPackages=misc/trueos-base ${EXTRAPKGS} ${BLPKG}" >> ${CFGFILE}
+     fi
      echo "" >> ${CFGFILE}
      echo "" >> ${CFGFILE}
 
@@ -956,20 +977,6 @@ gen_pc-sysinstall_cfg()
      echo "commitUser" >> ${CFGFILE}
    fi
 
-   # If AppCafe is enabled
-   if [ -n "$APPUSER" ] ; then
-     # Save appcafe data to file
-     echo "$APPUSER" > /tmp/appcafe-user
-     echo "$APPPASS" > /tmp/appcafe-pass
-     echo "$APPPORT" > /tmp/appcafe-port
-
-     # Now add pc-sysinstall config stuff
-     echo "" >> ${CFGFILE}
-     echo 'runExtCommand=mv /tmp/appcafe-user ${FSMNT}/tmp/' >> ${CFGFILE}
-     echo 'runExtCommand=mv /tmp/appcafe-pass ${FSMNT}/tmp/' >> ${CFGFILE}
-     echo 'runExtCommand=mv /tmp/appcafe-port ${FSMNT}/tmp/' >> ${CFGFILE}
-   fi
-
    # Run the sys-init
    if [ "$SYSTYPE" = "desktop" ] ; then
      echo "runCommand=sh /usr/local/share/pcbsd/scripts/sys-init.sh desktop en_US" >> ${CFGFILE}
@@ -977,9 +984,9 @@ gen_pc-sysinstall_cfg()
      echo "runCommand=sh /usr/local/share/pcbsd/scripts/sys-init.sh server" >> ${CFGFILE}
    fi
 
-   # Now add the freebsd dist files so warden can create a template on first boot
-   echo 'runCommand=mkdir -p /usr/local/tmp/warden-dist/' >> ${CFGFILE}
-   echo 'runExtCommand=cp /dist/*.txz ${FSMNT}/usr/local/tmp/warden-dist/' >> ${CFGFILE}
+   # Now add the freebsd dist files so iocage can create a template on first boot
+   echo 'runCommand=mkdir -p /usr/local/tmp/iocage-dist/' >> ${CFGFILE}
+   echo 'runExtCommand=cp /dist/*.txz ${FSMNT}/usr/local/tmp/iocage-dist/' >> ${CFGFILE}
 
    # Last cleanup stuff
    echo "" >> ${CFGFILE}
@@ -997,94 +1004,10 @@ gen_pc-sysinstall_cfg()
 #ask if user wants to install appweb
 zans_appweb()
 {
-   if dialog --yesno "Do you want to enable remote access to the AppCafe browser based package manager now?  You will be asked to setup an additional user name and password"  8 60; then
-     install_appweb
+   APPCAFEINSTALL="NO"
+   if dialog --yesno "Do you want to install the AppCafe browser based package manager? This allows remote package / jail management."  8 60; then
+     APPCAFEINSTALL="YES"
    fi
-}
-
-#ask for AppWeb User Name
-appweb_user() {
-  while :
-  do
-    #Ask for user name and make sure it is not empty
-    get_dlg_ans "--inputbox 'Enter a username for AppWeb' 8 40"
-    if [ -z "$ANS" ] ; then
-       echo "Invalid username entered!" >> /tmp/.vartemp.$$
-       dialog --tailbox /tmp/.vartemp.$$ 8 35
-       rm /tmp/.vartemp.$$
-       continue
-    fi   
-    #check for invalid characters
-    echo "$ANS" | grep -q '^[a-zA-Z0-9]*$'
-    if [ $? -eq 1 ] ; then
-       echo "Name contains invalid characters!" >> /tmp/.vartemp.$$
-       dialog --tailbox /tmp/.vartemp.$$ 8 35
-       rm /tmp/.vartemp.$$
-       continue      
-    fi
-    APPUSER="$ANS"
-    break
-  done
-}
-
-#ask for AppWeb Password
-appweb_pass() {
-  while :
-  do
-    get_dlg_ans "--passwordbox \"Enter the password for $APPUSER\" 8 40"
-    if [ -z "$ANS" ] ; then
-       echo "Invalid password entered!  Please Enter a Password!" >> /tmp/.vartemp.$$
-       dialog --tailbox /tmp/.vartemp.$$ 8 35
-       rm /tmp/.vartemp.$$
-       continue
-    fi
-    # Check for invalid characters
-    echo "$ANS" | grep -q '^[a-zA-Z0-9`~!@#$%^&*-_+=|\:;<,>.?/~`''""(()){{}}-]*$'
-    if [ $? -eq 0 ] ; then      
-    else   
-       echo "Password contains invalid characters!" >> /tmp/.vartemp.$$
-       dialog --tailbox /tmp/.vartemp.$$ 8 40
-       rm /tmp/.vartemp.$$
-       continue  
-    fi
-    APPPASS="$ANS"   
-    get_dlg_ans "--passwordbox 'Confirm password' 8 40"
-    if [ -z "$ANS" ] ; then
-       echo "Invalid password entered!  Please Enter a Password!" >> /tmp/.vartemp.$$
-       dialog --tailbox /tmp/.vartemp.$$ 8 35
-       rm /tmp/.vartemp.$$
-       continue
-    fi
-    APPPWCONFIRM="$ANS"
-    if [ "$APPPWCONFIRM" = "$APPPASS" ] ; then break; fi
-    dialog --title "$TITLE" --yesno 'Password Mismatch, try again?' 8 30
-    if [ $? -eq 0 ] ; then continue ; fi
-    exit_err "Failed setting password!"
-  done
-}
-
-appweb_port()
-{
-  while :
-  do
-    get_dlg_ans "--inputbox \"Enter the port to listen on.  The default is 8885.\" 8 35"
-    if [ -z "$ANS" ] ; then
-      echo "Port number can not be blank"  >> /tmp/.vartemp.$$
-      dialog --tailbox /tmp/.vartemp.$$ 8 40
-      rm /tmp/.vartemp.$$
-      continue
-    fi
-    echo "$ANS" | grep -q '^[0-9]*$'
-    if [ $? -eq 1 ] ; then
-      echo "Port number contains invalid characters!" >> /tmp/.vartemp.$$
-      dialog --tailbox /tmp/.vartemp.$$ 8 48
-      rm /tmp/.vartemp.$$
-      continue  
-    else 
-      break
-    fi
-  done
-  APPPORT="$ANS"
 }
 
 change_packages()
@@ -1146,8 +1069,10 @@ start_full_wizard()
      get_user_realname
      get_user_shell
      change_networking
+     zans_appweb
+  else
+     APPCAFEINSTALL="YES"
   fi
-  zans_appweb
   gen_pc-sysinstall_cfg
 }
 
@@ -1157,13 +1082,6 @@ change_networking() {
   get_netconfig
   get_sshd
   gen_pc-sysinstall_cfg
-}
-
-# Setup appweb and syscache
-install_appweb() {
-  appweb_user
-  appweb_pass
-  appweb_port
 }
 
 start_edit_menu_loop()

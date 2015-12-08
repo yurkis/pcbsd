@@ -13,7 +13,6 @@
 #include "ui_installer.h"
 #include "dialogHelp.h"
 #include "dialogKeyboard.h"
-#include "dialogDesktopSelection.h"
 #include "dialogCheckHardware.h"
 #include "wizardFreeBSD.h"
 #include "wizardDisk.h"
@@ -48,7 +47,7 @@ private slots:
 
     // Disk slots
     void slotDiskCustomizeClicked();
-    void slotSaveDiskChanges(QList<QStringList>, QString, bool, QString, bool, QString);
+    void slotSaveDiskChanges(QList<QStringList>, QString, QString, QString, bool, QString);
 
     // Slots for the installation
     void slotInstallProcFinished( int exitCode, QProcess::ExitStatus status);
@@ -67,10 +66,10 @@ private slots:
     // Slot to start the network manager
     void slotStartNetworkManager();
 
+    // Slot to start the disk manager
+    void slotStartDiskManager();
+
     // Desktop selector slots
-    void slotDesktopCustomizeClicked();
-    void slotSaveMetaChanges(QStringList);
-    void slotChangedMetaPkgSelection();
     void slotSaveFBSDSettings(QString, QString, QString, QString, QString, QString, bool, bool, QStringList, QStringList);
 
     // Restore-related slots
@@ -118,7 +117,6 @@ private:
     QList<QStringList> listDeskPkgs; // QStringList for our available desktop pkgs
     QList<QStringList> listServerPkgs; // QStringList for our available server pkgs
     QStringList selectedPkgs; // QStringList for selected packages
-    desktopSelection *desks;
     QGraphicsScene *defaultScene;
     QGraphicsScene *customScene;
     bool customPkgsSet;
@@ -131,7 +129,7 @@ private:
     QList<QStringList> sysPartitions; // Our lists which contains partition info
     QList<QStringList> sysFinalDiskLayout; // Our lists which contains the final disk layout
     QString bootLoader;
-    bool loadGPT;
+    QString sysPartType;
     int systemMemory; // Ammount of system RAM we have in MB
     QList<QStringList> listComponents; // QStringList for our available components
     QStringList languages;
@@ -154,8 +152,6 @@ private:
     // Help Stuff
     dialogHelp *pcHelp;
 
-    // Infobox 
-    dialogInfoBox *dIB;
     QMenu *popup;
 
     // FreeBSD setup wizard
@@ -186,7 +182,7 @@ private:
 
     // Disk setup wizard
     wizardDisk *wDisk;
-    QTranslator *translator;
+    //QTranslator *translator;
 
     // Custom CFG file to install with
     QString customCfgFile;

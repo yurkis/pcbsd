@@ -1,29 +1,48 @@
 <?php
  defined('DS') OR die('No direct access allowed.');
 
- if ( empty($_GET['jail']) or ! empty($_GET['changeappcafejail']))
- {
-    display_jail_appcafeselection("appcafe-search");
-    return;
- }
+$jail = "#system";
+$jailUrl="__system__";
 
- if ( ! empty($_POST['search']) )
-   $header="Searching for: ". $_POST['search'];
- else
-   $header="Package Search";
-
- if ( ! empty($_POST['searchtext']) ) {
-    $searchtext = $_POST['searchtext'];
-    $searchraw = $_POST['searchraw'];
+if ( ! empty($_GET['search']) )
+    $header="Searching for: ". $_GET['search'];
+if ( ! empty($_GET['searchtext']) ) {
+    $searchtext = $_GET['searchtext'];
+    $searchraw = $_GET['searchraw'];
  }
 ?>
 
+<br>
+<br>
+<table class="header" style="width:100%">
+<tr>
+    <th>
+        <h1><center>Package Search</h1>
+    </th>
+</tr>
+</table>
+
+<table class="login" style="width:100%";">
+<tr>
+    <th>
+    </th>
+</tr>
+<tr>
+    <th>
+        <form action="/" method="get">
+        <input type="hidden" name="p" value="appcafe-search">
+        &nbsp&nbspSearch: <input name="searchtext" type="text" float: left; align="middle" value="<?php echo "$searchtext"; ?>" /> <input type="image" style="position:absolute;margin:0 0 0 4px;" width="28" height="28" src="images/search.png" align="middle" alt="Search" /><br>
+    </th>
+</tr>
+<tr>
+    <th>
+        &nbsp&nbspSearch all available PBIs and packages: <input name="searchraw" type="checkbox" value="checked" <?php if ( $searchraw == "checked") { echo "checked"; } ?> /><br>
+    </th>
+</tr>
+
 <h1><?php echo $header; ?></h1>
 <br>
-<form method="post" action="?p=appcafe-search&jail=<?php echo "$jailUrl"; ?>">
-Search: <input name="searchtext" type="text" value="<?php echo "$searchtext"; ?>" /> <input type="image" style="float: relative;" width="28" height="28" src="images/search.png" alt="Search" /><br>
-Search all available PBI and packages: <input name="searchraw" type="checkbox" value="checked" <?php if ( $searchraw == "checked") { echo "checked"; } ?> /><br>
-</form>
+<br>
 
 <?php
 
@@ -58,8 +77,9 @@ Search all available PBI and packages: <input name="searchraw" type="checkbox" v
  else
    $cmd = "pbi search '$searchtext' all 20";
 
- exec("$sc ". escapeshellarg("$cmd"), $pbiarray);
- $pbilist = explode(", ", $pbiarray[0]);
+ $sccmd = array("$cmd");
+ $response = send_sc_query($sccmd);
+ $pbilist = $response["$cmd"];
  $found=0;
 
  // Now loop through pbi origins
@@ -88,19 +108,8 @@ Search all available PBI and packages: <input name="searchraw" type="checkbox" v
     else
       echo "<tr><td colspan=3>No PBIs found! Try searching for all available PBI / Packages.</td></tr>";
  } else {
-   if ($found == 1)
-      echo "<td width='33%'>&nbsp;</td><td width='33%'>&nbsp;</td>";
-   elseif ($found == 2)
-      echo "<td width='%33%'>&nbsp;</td>";
-   elseif($found > 3) {
-      $left = $found % 3;
-      if ($left == 1)
-        echo "<td width='33%'>&nbsp;</td><td width='33%'>&nbsp;</td>";
-       if ($left == 2)
-        echo "<td width='%33%'>&nbsp;</td>";
-   }
-
    echo "</tr>";
  }
 
+ echo "</table>";
 ?>
