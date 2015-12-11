@@ -57,5 +57,7 @@ cpconfig.extra=tar cvf - -C conf . 2>/dev/null | tar xvf - -C $(INSTALL_ROOT)/us
 rcd.path=/usr/local/etc/rc.d
 rcd.extra=cp rc.d/pwrd $(INSTALL_ROOT)/usr/local/etc/rc.d/ && chmod -R 0555 $(INSTALL_ROOT)/usr/local/etc/rc.d/ pwrd
 
-
 INSTALLS += target cleanprofiles mkdirconf cpconfig rcd
+
+doc.commands = cd ../doc/pwrd/ && doxygen && cd ../../pwrd
+QMAKE_EXTRA_TARGETS += doc
