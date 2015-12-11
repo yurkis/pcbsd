@@ -22,6 +22,11 @@
 *   OTHER DEALINGS IN THE SOFTWARE.                                       *
 ***************************************************************************/
 
+/*!
+\file
+\brief Backlight related functions. This covers intel_backlight port controlled backlight
+*/
+
 #ifndef INTEL_BACKLIGHT_H
 #define INTEL_BACKLIGHT_H
 

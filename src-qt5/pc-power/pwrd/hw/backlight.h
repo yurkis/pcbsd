@@ -22,12 +22,20 @@
 *   OTHER DEALINGS IN THE SOFTWARE.                                       *
 ***************************************************************************/
 
+/*!
+\file backlight.h
+\file backlight.cpp
+\brief Backlight related functions. This covers sysctl based backlight control
+*/
+
 #ifndef BACKLIGHT_H
 #define BACKLIGHT_H
 
 #include "pwrdtypes.h"
 
+//! Get backlight hardware info
 bool getBacklightHWInfo(int num, PWRBacklightHardware& out);
+//! Set backlight level
 bool setBacklightLevel(int num, int percentage);
 int backlightLevel(int num);
 

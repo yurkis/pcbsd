@@ -22,6 +22,11 @@
 *   OTHER DEALINGS IN THE SOFTWARE.                                       *
 ***************************************************************************/
 
+/*!
+\file
+\brief Backlight related functions. This covers intel_backlight port controlled backlight
+*/
+
 #include "intel_backlight.h"
 #include <QProcess>
 #include <QStringList>

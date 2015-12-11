@@ -22,6 +22,11 @@
 *   OTHER DEALINGS IN THE SOFTWARE.                                       *
 ***************************************************************************/
 
+/*!
+\file
+\brief Backlight related functions. This covers sysctl based backlight control
+*/
+
 #include "backlight.h"
 #include "sysctlutils.h"
 #include <QDebug>
