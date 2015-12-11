@@ -1,3 +1,9 @@
+
+/*!
+\file
+\brief PWRD data types serializers for JSON protocol
+*/
+
 #ifndef SERIALIZE_H
 #define SERIALIZE_H
 

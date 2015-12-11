@@ -1,3 +1,9 @@
+
+/*!
+\file
+\brief Protocol related string constants (JSON field names, etc)
+*/
+
 #ifndef PROTOCOL_H
 #define PROTOCOL_H
 

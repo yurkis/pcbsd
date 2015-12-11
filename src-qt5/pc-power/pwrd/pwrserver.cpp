@@ -1,5 +1,5 @@
 /**************************************************************************
-*   Copyright (C) 2015 by Yuri Momotyuk                                   *
+*   Copyright (C) 2015- by Yuri Momotyuk                                   *
 *   yurkis@pcbsd.org                                                      *
 *                                                                         *
 *   Permission is hereby granted, free of charge, to any person obtaining *
@@ -21,6 +21,10 @@
 *   ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR *
 *   OTHER DEALINGS IN THE SOFTWARE.                                       *
 ***************************************************************************/
+/*!
+\file
+\brief Main PWRD class implementation (except JSON command handlers)
+*/
 
 #include "pwrserver.h"
 #include "hw/battery.h"
