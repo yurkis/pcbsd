@@ -7,6 +7,7 @@
 #include "widgets/widgetbatteryhw.h"
 
 #include "dialogs/connecterrordialog.h"
+#include "dialogs/profileeditdialog.h"
 
 #include <QSystemTrayIcon>
 #include <QMenu>
@@ -717,4 +718,28 @@ void MainWindow::on_cuurProfilesSaveBtn_clicked()
     client->setDaemonSettings(daemonSettings);
 
     setupProfiles();
+}
+
+void MainWindow::on_addProfileBtn_clicked()
+{
+    ProfileEditDialog* dlg = new ProfileEditDialog(this);
+    dlg->setup(client, ssDescriptions);
+    dlg->exec();
+}
+
+void MainWindow::on_editProfileBtn_clicked()
+{
+    ProfileEditDialog* dlg = new ProfileEditDialog(this);
+/* for (int i=0; i<profiles.size(); i++)
+    {
+        QListWidgetItem* item = new QListWidgetItem(ui->profilesLW);
+        item->setText(profiles[i].name);
+        item->setData(Qt::UserRole, profiles[i].id);
+        ui->profilesLW->addItem(item);
+
+        if (!i) ui->profilesLW->setCurrentItem(item);
+    }*/
+    QListWidgetItem* item = ui->profilesLW->currentItem();
+    dlg->setup(item->data(Qt::UserRole).toString(), client, ssDescriptions);
+    dlg->exec();
 }

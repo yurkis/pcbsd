@@ -365,6 +365,7 @@ QJsonObject PwrServer::oncmdGetBattState()
         JSONBatteryStatus item;
         if (getBatteryStatus(i, item))
         {
+            qDebug()<<item.batteryCapacity;
             item.batteryCritical = (int)item.batteryCapacity<=settings.lowBatteryCapacity;
             arr.append(item.toJSON());
         }
@@ -511,8 +512,8 @@ QJsonObject PwrServer::oncmdUpdateProfile(QJsonObject req)
     if (!settings.allowProfileChange)
         return RESULT_FAIL("Not allowed");
 
-    if (!req.contains(JSONProfile().myname()))
-        return RESULT_FAIL("Bad request");
+    /*if (!req.contains(JSONProfile().myname()))
+        return RESULT_FAIL("Bad request");*/
 
     PWRProfileReader profile;
 

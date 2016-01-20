@@ -6,4 +6,4 @@ lid=S3
 sleep=S3
 power=S5
 [lcd]
-backlight=10
+backlight=50

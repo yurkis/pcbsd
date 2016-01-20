@@ -10,15 +10,11 @@
 #include "QPWRDClient.h"
 #include "QPWRDEvents.h"
 
+#include "ssdescription.h"
+
 namespace Ui {
 class MainWindow;
 }
-
-typedef struct _SSleepStateDescription
-{
-    QString description;
-    QString state;
-}SSleepStateDescription;
 
 class MainWindow : public QMainWindow
 {
@@ -97,6 +93,10 @@ private slots:
     void on_pwrdError(QString message);
 
     void on_cuurProfilesSaveBtn_clicked();
+
+    void on_addProfileBtn_clicked();
+
+    void on_editProfileBtn_clicked();
 
 private:
     Ui::MainWindow *ui;

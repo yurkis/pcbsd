@@ -1,3 +1,5 @@
+
+#include <widgets/widgetbacklight.h>
 #include "widgetbacklight.h"
 #include "ui_widgetbacklight.h"
 
@@ -7,6 +9,8 @@ WidgetBacklight::WidgetBacklight(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::WidgetBacklight)
 {
+    client=NULL;
+    events=NULL;
     ui->setupUi(this);
 }
 
@@ -15,11 +19,25 @@ WidgetBacklight::~WidgetBacklight()
     delete ui;
 }
 
-void WidgetBacklight::setup(int num, QPWRDClient *cl, QPWRDEvents *ev)
+void WidgetBacklight::setup(int num, QPWRDClient *cl, QPWRDEvents *ev, int value)
 {
     blNum =num;
     client = cl;
     events = ev;
+
+    if (value<0) setCurrValue(num);
+    else ui->level->setValue(value);
+
+    ignoreEvents = false;
+
+    if (events)
+    {
+        connect(events, SIGNAL(backlightChanged(int,int)), this, SLOT(pwrdValueChanged(int,int)));
+    }
+}
+
+void WidgetBacklight::setCurrValue(int num)
+{
     if (client)
     {
         QVector<int> vals;
@@ -31,13 +49,16 @@ void WidgetBacklight::setup(int num, QPWRDClient *cl, QPWRDEvents *ev)
             }
         }
     }
+}
 
-    ignoreEvents = false;
+int WidgetBacklight::value()
+{
+    return ui->level->value();
+}
 
-    if (events)
-    {
-        connect(events, SIGNAL(backlightChanged(int,int)), this, SLOT(pwrdValueChanged(int,int)));
-    }
+void WidgetBacklight::setValue(int val)
+{
+    ui->level->setValue(val);
 }
 
 void WidgetBacklight::pwrdValueChanged(int backlight, int value)
