@@ -1,4 +1,3 @@
-bin/EasyPBI
 bin/PCDM-session
 bin/about-gui
 bin/appcafe
@@ -14,7 +13,6 @@ bin/pc-cupscfg
 bin/pc-dmconf
 bin/pc-ethernetconfig
 bin/pc-firstboot
-bin/pc-hwdetect
 bin/pc-mixer
 bin/pc-mounttray
 bin/pc-netmanager
@@ -40,7 +38,6 @@ bin/qsudo
 bin/xlock
 bin/xorg-startupcheck
 etc/pcdm.conf.dist
-etc/rc.d/pc-hwdetect
 etc/rc.d/pcbsdinit
 etc/rc.d/pcdm
 etc/xdg/autostart/pcbsd-life-preserver.desktop
@@ -68,7 +65,6 @@ include/pcbsd-xdgutils.h
 %%QT_LIBDIR%%/%%QT_LIBDIR%%pcbsd-utils.so.0.9
 %%QT_LIBDIR%%/%%QT_LIBDIR%%pcbsd-utils.so.0.9.9
 sbin/PCDMd
-share/EasyPBI/EasyPBIicon.png
 share/PCDM/pcdm-session
 share/PCDM/themes/default/background.jpg
 share/PCDM/themes/default/banner.png
@@ -100,7 +96,6 @@ share/PCDM/themes/enterprise/previousDE.png
 share/PCDM/themes/enterprise/splashscreen.png
 share/PCDM/themes/enterprise/system.png
 share/PCDM/themes/enterprise/virtualkeyboard.png
-share/applications/EasyPBI.desktop
 share/applications/about.desktop
 share/applications/fwmanager.desktop
 share/applications/handbook.desktop
@@ -169,7 +164,6 @@ share/pcbsd/pc-controlpanel/icons/application.png
 share/pcbsd/pc-controlpanel/icons/bluetooth.png
 share/pcbsd/pc-controlpanel/icons/cups-icon.png
 share/pcbsd/pc-controlpanel/icons/devices.png
-share/pcbsd/pc-controlpanel/icons/easypbi.png
 share/pcbsd/pc-controlpanel/icons/hwinfo.png
 share/pcbsd/pc-controlpanel/icons/kde-cron.png
 share/pcbsd/pc-controlpanel/icons/lifepreserver.png
@@ -261,7 +255,6 @@ share/pcbsd/pc-controlpanel/items/hardware/xsane.desktop
 share/pcbsd/pc-controlpanel/items/network/pcnetwork.desktop
 share/pcbsd/pc-controlpanel/items/network/fwmanager.desktop
 share/pcbsd/pc-controlpanel/items/software/appcafe.desktop
-share/pcbsd/pc-controlpanel/items/software/easypbi.desktop
 share/pcbsd/pc-controlpanel/items/software/pc-updategui.desktop
 share/pcbsd/pc-controlpanel/items/software/pkg-q4wine.desktop
 share/pcbsd/pc-controlpanel/items/software/pkg-swine.desktop
@@ -287,12 +280,6 @@ share/pcbsd/pc-controlpanel/items/tools/kde-kcmdf.desktop
 share/pcbsd/pc-controlpanel/items/tools/lifepreserver.desktop
 share/pcbsd/pc-controlpanel/items/tools/pcbugreport.desktop
 share/pcbsd/pc-controlpanel/items/tools/x11vnc.desktop
-share/pcbsd/pc-hwdetect/agp.xml
-share/pcbsd/pc-hwdetect/audio.xml
-share/pcbsd/pc-hwdetect/display.xml
-share/pcbsd/pc-hwdetect/multimedia.xml
-share/pcbsd/pc-hwdetect/network.xml
-share/pcbsd/pc-hwdetect/soundcards.xml
 share/pcbsd/pc-installgui/get-zfs-restore-list.sh
 share/pcbsd/pc-installgui/load-usb-key.sh
 share/pcbsd/pc-installgui/setup-ssh-keys.sh
@@ -389,6 +376,7 @@ share/pcbsd/xorg-gui/bin/setupconf.sh
 share/pcbsd/xorg-gui/cardDetect/XF86Config.compat
 share/pcbsd/xorg-gui/cardDetect/XF86Config.default
 share/pcbsd/xorg-gui/cardDetect/XF86Config.intel
+share/pcbsd/xorg-gui/cardDetect/XF86Config.scfb
 share/pcbsd/xorg-gui/cardDetect/XF86Config.vmware
 share/pcbsd/xorg-gui/cardDetect/x_config.sh
 share/pcbsd/xorg-gui/cardDetect/xorg.conf.virtualbox

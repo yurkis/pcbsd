@@ -17,7 +17,6 @@ SUBDIRS+= libpcbsd \
 	 pc-fwmanager \
 	 pc-servicemanager \
 	 pc-softweb \
-	 pc-hwdetect \
 	 pc-installgui \
 	 pc-pdfviewer \
 	 pc-syskeyboard \
@@ -30,7 +29,6 @@ SUBDIRS+= libpcbsd \
 	 pc-xgui \
 	 pc-zmanager \
 	 qsudo \ 
-	 EasyPBI \
          PCDM
 
 doins.path=/
@@ -56,7 +54,6 @@ pc-netmanager.depends = libpcbsd
 pc-fwmanager.depends = libpcbsd
 pc-servicemanager.depends = libpcbsd
 pc-softweb.depends = libpcbsd
-pc-hwdetect.depends = libpcbsd
 pc-installgui.depends = libpcbsd
 pc-pdfviewer.depends = libpcbsd
 pc-syskeyboard.depends = libpcbsd

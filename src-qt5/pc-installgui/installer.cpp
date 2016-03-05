@@ -282,10 +282,14 @@ bool Installer::autoGenPartitionLayout(QString target, bool isDisk)
     totalSize = totalSize - 110;
 
   // Setup some swap space
-  if ( totalSize > 30000 ) {
-    // 2GB if over 30GB of disk space, 512MB otherwise
+  if ( totalSize > 50000 ) {
+    // 4GB if over 50GB of disk space
+    swapsize = 4096;
+  } else if ( totalSize > 30000 ) {
+    // 2GB if over 30GB of disk space
     swapsize = 2048;
   } else {
+    // Minimum 512MB
     swapsize = 512;
   }
   totalSize = totalSize - swapsize;
@@ -1519,9 +1523,6 @@ QStringList Installer::getDeskPkgCfg()
      // The default web-browser and plugins
      pkgList << "www/firefox" << "java/icedtea-web";
 
-     // Linux Compat stuff
-     pkgList << "emulators/linux_base-c6" << "www/linux-c6-flashplugin11" << "audio/linux-c6-alsa-plugins-oss" << "security/linux-c6-openssl-compat" << "www/nspluginwrapper";
-
      // The default mail client
      pkgList << "mail/thunderbird";
 
@@ -1548,7 +1549,7 @@ QStringList Installer::getDeskPkgCfg()
        while (!in.atEnd()) {
           QString line = in.readLine();
           if ( line.indexOf("NVIDIA Unified Driver") != -1 ) {
-            pkgList << "x11/nvidia-driver";
+            pkgList << "misc/pcbsd-meta-nvidia";
             break;
           }
        }     
