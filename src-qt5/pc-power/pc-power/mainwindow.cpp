@@ -74,6 +74,9 @@ MainWindow::MainWindow(QWidget *parent) :
 
     getInfoAndState();
     initUI();
+
+    notification = new Notification;
+    notification->setup(events);
 }
 
 MainWindow::~MainWindow()
@@ -535,7 +538,7 @@ void MainWindow::refreshProfilesList()
 
 void MainWindow::backlightChanged(int backlight, int value)
 {
-    qDebug()<<"blc: "<<backlight<<" "<<value<<"%";
+
 }
 
 void MainWindow::batteryCapacityChanged(int batt, PWRBatteryStatus stat)

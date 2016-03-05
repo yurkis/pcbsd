@@ -128,16 +128,6 @@ void PwrServer::checkHardware()
     hwInfo.hasSleepButton = sysctlPresent(SLEEP_BUTTON_SYSCTL);
     hwInfo.hasLid = sysctlPresent(LID_SYSCTL);
     hwInfo.possibleACPIStates = sysctl(POSSIBLE_STATES_SYSCTL).split(" ");
-
-    //DEBUG
-    /*
-    hwInfo.possibleACPIStates.clear();
-    hwInfo.possibleACPIStates<<"S3";
-    hwInfo.possibleACPIStates<<"S4";
-    hwInfo.possibleACPIStates<<"S5";
-    hwInfo.hasSleepButton=true;
-    hwInfo.hasLid=true;
-    */
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -564,7 +554,6 @@ void PwrServer::onDEVDEvent()
     while(!devdStream->atEnd())
     {
         QStringList ev = devdStream->readLine().split(" ");
-        QString sys,subsys;
         //"!system=ACPI", "subsystem=ACAD", "type=\_SB_.PCI0.AC0_", "notify=0x01"
 
         if (ev.size()<3)
@@ -739,7 +728,7 @@ void PwrServer::checkState(bool force)
     checkBatts(&currLowBatt);
 
     bool currPower = isOnACPower();
-
+    
     if (force)
     {
         if (currPower)
@@ -805,11 +794,5 @@ void PwrServer::checkState(bool force)
         applyProfile(profileName);
     }
     onACPower = currPower;
-    /*bool currPower = isOnACPower();
-    if ((currPower == onACPower) && (!force))
-        return;    
-    onACPower = currPower;
-
-    applyProfile(onACPower?settings.onACProfile:settings.onBatteryProfile);*/
 }
 

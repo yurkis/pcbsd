@@ -3,6 +3,7 @@
 
 #include <QString>
 #include <QVector>
+#include <QObject>
 
 #include "pwrdtypes.h"
 

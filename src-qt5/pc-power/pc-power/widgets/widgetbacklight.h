@@ -32,13 +32,15 @@ private slots:
 
     void on_level_sliderReleased();
 
+    //void on_level_sliderPressed();
+
 private:
     int blNum;
     QPWRDClient* client;
     QPWRDEvents* events;
 
     bool ignoreEvents;
-
+    int eventsToIgnore;
     Ui::WidgetBacklight *ui;
 
     void refreshUI(int value);

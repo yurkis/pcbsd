@@ -11,6 +11,7 @@ WidgetBacklight::WidgetBacklight(QWidget *parent) :
 {
     client=NULL;
     events=NULL;
+    eventsToIgnore = 0;
     ui->setupUi(this);
 }
 
@@ -29,6 +30,7 @@ void WidgetBacklight::setup(int num, QPWRDClient *cl, QPWRDEvents *ev, int value
     else ui->level->setValue(value);
 
     ignoreEvents = false;
+    eventsToIgnore = 0;
 
     if (events)
     {
@@ -64,19 +66,19 @@ void WidgetBacklight::setValue(int val)
 void WidgetBacklight::pwrdValueChanged(int backlight, int value)
 {
     if (backlight != blNum) return;
-    if (!ignoreEvents) refreshUI(value);
+    refreshUI(value);
 }
 
 void WidgetBacklight::refreshUI(int value)
 {
+    ui->level->blockSignals(true);
     ui->level->setValue(value);
+    ui->level->blockSignals(false);
 }
 
 void WidgetBacklight::on_level_sliderMoved(int position)
 {
     if (!client) return;
-    ignoreEvents= true;
-    qDebug()<<position;
     client->setBacklightLevel(position, blNum);
 }
 
@@ -85,11 +87,10 @@ void WidgetBacklight::on_level_valueChanged(int value)
     Q_UNUSED(value)
     if (!client) return;
 
-    //client->setBacklightLevel(value, blNum);
-    //ignoreEvents= false;
+    client->setBacklightLevel(value, blNum);
 }
 
 void WidgetBacklight::on_level_sliderReleased()
 {
-    ignoreEvents= false;
+
 }

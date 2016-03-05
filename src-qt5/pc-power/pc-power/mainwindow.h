@@ -12,6 +12,8 @@
 
 #include "ssdescription.h"
 
+#include "dialogs/notification.h"
+
 namespace Ui {
 class MainWindow;
 }
@@ -48,6 +50,8 @@ protected:
     int trayBattNo;
 
     QVector<SSleepStateDescription> ssDescriptions;
+
+    Notification* notification;
 
     virtual void closeEvent(QCloseEvent *event);
 

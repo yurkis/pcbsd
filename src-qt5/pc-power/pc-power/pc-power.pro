@@ -24,7 +24,8 @@ SOURCES += main.cpp\
     widgets/widgetsleepbuttons.cpp \
     dialogs/connecterrordialog.cpp \
     dialogs/profileeditdialog.cpp \
-    widgets/widgetbtnsettings.cpp
+    widgets/widgetbtnsettings.cpp \
+    dialogs/notification.cpp
 
 HEADERS  += mainwindow.h \
     ../libpwrd/QPWRDClient.h \
@@ -39,7 +40,8 @@ HEADERS  += mainwindow.h \
     ../common/include/serialize.h \
     dialogs/profileeditdialog.h \
     widgets/widgetbtnsettings.h \
-    ssdescription.h
+    ssdescription.h \
+    dialogs/notification.h
 
 FORMS    += mainwindow.ui \
     widgets/widgetbatteryhw.ui \
@@ -48,7 +50,8 @@ FORMS    += mainwindow.ui \
     widgets/widgetsleepbuttons.ui \
     dialogs/connecterrordialog.ui \
     dialogs/profileeditdialog.ui \
-    widgets/widgetbtnsettings.ui
+    widgets/widgetbtnsettings.ui \
+    dialogs/notification.ui
 
 INCLUDEPATH += ../common/include ../libpwrd  /usr/local/include/pwrd
 LIBS += -L/usr/local/lib
