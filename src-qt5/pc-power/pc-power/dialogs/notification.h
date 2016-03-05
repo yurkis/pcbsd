@@ -5,6 +5,7 @@
 #include <QTimer>
 
 #include <QPWRDEvents.h>
+#include <QPWRDClient.h>
 
 namespace Ui {
 class Notification;
@@ -18,7 +19,7 @@ public:
     explicit Notification(QWidget *parent = 0);
     ~Notification();
 
-    void setup(QPWRDEvents* _ev);
+    void setup(QPWRDEvents* _ev, QPWRDClient* _cl);
 
 private slots:
     void backlightChanged(int backlight, int value);
@@ -26,11 +27,25 @@ private slots:
     void acLineStateChanged(bool onExternalPower);
     void profileChanged(QString profileID);
 
+    void hideMe();
+
 private:
     Ui::Notification *ui;
 
     QPWRDEvents* ev;
+    QPWRDClient* cl;
     QTimer* timer;
+
+    typedef enum{
+        eCN_AC,
+        eCN_PROFILE,
+        eCN_BACKLIGHT,
+        eCN_NONE
+    }ECurrentNotification;
+
+    ECurrentNotification currNotification;
+
+    void notify(ECurrentNotification level, int page_no);
 };
 
 #endif // NOTIFICATION_H

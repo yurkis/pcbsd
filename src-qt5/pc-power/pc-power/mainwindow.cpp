@@ -76,7 +76,7 @@ MainWindow::MainWindow(QWidget *parent) :
     initUI();
 
     notification = new Notification;
-    notification->setup(events);
+    notification->setup(events, client);
 }
 
 MainWindow::~MainWindow()
