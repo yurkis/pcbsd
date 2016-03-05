@@ -15,6 +15,10 @@ Notification::Notification(QWidget *parent) :
     setGeometry(QStyle::alignedRect(Qt::LeftToRight, Qt::AlignCenter, size(), qApp->desktop()->availableGeometry()));
     setAttribute(Qt::WA_ShowWithoutActivating);
 
+    setParent(0); // Create TopLevel-Widget
+    //setAttribute(Qt::WA_NoSystemBackground, true);
+    //setAttribute(Qt::WA_TranslucentBackground, true);
+
     timer = new QTimer(this);
     connect(timer, SIGNAL(timeout()), this, SLOT(hideMe()));
     currNotification = eCN_NONE;
@@ -45,7 +49,14 @@ void Notification::backlightChanged(int backlight, int value)
 void Notification::batteryStateChanged(int bat, PWRBatteryStatus stat)
 {
     static bool last_low = stat.batteryCritical;
-    //if
+    if (last_low != stat.batteryCritical)
+    {
+        last_low = stat.batteryCritical;
+        if (last_low)
+        {
+            notify(eCN_BATT_CRITICAL, 2);
+        }//if low battery
+    }//if batteryCritical state changed
 }
 
 void Notification::acLineStateChanged(bool onExternalPower)
@@ -55,7 +66,19 @@ void Notification::acLineStateChanged(bool onExternalPower)
     else img = QString(":/images/batt_power.png");
 
     ui->ACStateImage->setPixmap(QPixmap(img));
-    notify(eCN_AC, 0);
+
+    PWRProfileInfoBasic currp;
+    if (cl)
+    {
+        cl->getCurrentProfileID(currp);
+    }
+    ui->profileNameLabel->setText(currp.name);
+
+    if (notify(eCN_AC, 0))
+    {
+        QString msg = (onExternalPower)?tr("AC adaptor plugged in"):tr("AC adaptor unplugged");
+        ui->reasonLabel->setText(msg);
+    }
 }
 
 void Notification::profileChanged(QString profileID)
@@ -71,7 +94,10 @@ void Notification::profileChanged(QString profileID)
 
     ui->profileNameLabel->setText(currp.name);
 
-    notify(eCN_PROFILE, 0);
+    if (notify(eCN_PROFILE, 0))
+    {
+        ui->reasonLabel->setText(tr("Profile changed"));
+    }
 }
 
 void Notification::hideMe()
@@ -80,10 +106,10 @@ void Notification::hideMe()
     hide();
 }
 
-void Notification::notify(Notification::ECurrentNotification level, int page_no)
+bool Notification::notify(Notification::ECurrentNotification level, int page_no)
 {
     if (level>currNotification)
-        return;
+        return false;
     currNotification = level;
 
     ui->mainStack->setCurrentIndex(page_no);
@@ -92,4 +118,5 @@ void Notification::notify(Notification::ECurrentNotification level, int page_no)
 
     timer->stop();
     timer->start(1000);
+    return true;
 }

@@ -38,6 +38,7 @@ private:
 
     typedef enum{
         eCN_AC,
+        eCN_BATT_CRITICAL,
         eCN_PROFILE,
         eCN_BACKLIGHT,
         eCN_NONE
@@ -45,7 +46,7 @@ private:
 
     ECurrentNotification currNotification;
 
-    void notify(ECurrentNotification level, int page_no);
+    bool notify(ECurrentNotification level, int page_no);
 };
 
 #endif // NOTIFICATION_H

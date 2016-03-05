@@ -727,6 +727,8 @@ void PwrServer::checkState(bool force)
     checkBacklights();
     checkBatts(&currLowBatt);
 
+    //qDebug()<<"Low batt: "<<currLowBatt;
+
     bool currPower = isOnACPower();
     
     if (force)

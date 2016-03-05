@@ -88,7 +88,7 @@ void QPWRDEventsPrivate::onEvent()
     {
         QString line;
         line = stream.readLine();
-        qDebug()<<line;
+        //qDebug()<<line;
         QJsonDocument evdoc = QJsonDocument::fromJson(line.toUtf8());
         QJsonObject event = evdoc.object();
 
